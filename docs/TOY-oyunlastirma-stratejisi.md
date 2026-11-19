@@ -100,7 +100,7 @@
 | Yatırım / hibe teklifi | Dışsal (büyük) | Değişken oran + bekleme süresi (30/15 gün) |
 | Takım sıralaması | Sosyal | Sürekli |
 | Gerçek dünya becerisi (kanvas, pitch) | İçsel (anlam) | Markdown pitch deck indirme |
-| Sertifika / rapor | Dışsal (kurum) | ⬜ Oturum sonu PDF |
+| Sertifika / rapor | Dışsal (kurum) | ✅ Oturum raporu (admin → Raporlar → 📄, yazdır → PDF) |
 
 ## 8 · Teknoloji
 
@@ -146,6 +146,6 @@
 ## Sonraki Sprint Önerisi (öncelik sırasıyla)
 
 1. **Kalıcılık (Supabase):** oyuncu hesabı, rozet, görev ve NPC koleksiyonu; RLS ile yalnızca kendi verisi. Bu olmadan D1/D7 ölçülemez.
-2. **Oturum raporu:** admin için PDF/CSV; kim ne kurdu, hazırlık puanları, anket sonuçları. Bölüm 1'deki B2B hedefini (H1) destekler.
+2. ✅ **Oturum raporu (yapıldı):** admin için PDF/CSV; kim ne kurdu, hazırlık puanları, anket sonuçları. Bölüm 1'deki B2B hedefini (H1) destekler.
 3. **Canlı Demo Day modu:** admin seçilen şirketin pitch deck'ini tüm ekranlara yansıtır, katılımcılar jüri olarak oy verir (anket altyapısı hazır).
 4. **Sezon:** 4 haftalık "Demo Day Sezonu"; takım sıralaması sıfırlanır, sezon rozeti verilir.

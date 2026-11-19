@@ -144,6 +144,8 @@
         <select id="repPeriod"><option value="month">Aylık</option><option value="quarter">Çeyreklik (Q1–Q4)</option><option value="year">Yıllık</option></select>
         <button id="repLoad" class="primary">🔄 Raporu Oluştur</button>
         <button id="expCsv">⬇ CSV</button>
+        <button id="expSession">📄 Oturum Raporu (PDF)</button>
+        <button id="expSessionCsv">⬇ Oturum CSV</button>
         <button id="expJson">⬇ Rapor JSON</button>
         <button id="expState">⬇ Tüm Oyun Yedeği</button>
         <label class="row" style="gap:4px"><span>⬆ Yedek Yükle</span><input id="impFile" type="file" accept="application/json"></label>
@@ -439,6 +441,13 @@ async function download(path, filename) {
   const blob = await res.blob(); const a = el('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
 }
 $('expCsv').onclick = () => download(`/report?${qs()}&format=csv`, `rapor-${$('repPeriod').value}.csv`);
+const needRoom = () => { if (!$('repRoom').value) { alert('Önce bir oda seç.'); return false; } return true; };
+$('expSession').onclick = async () => {
+  if (!needRoom()) return;
+  const res = await api('/session-report?room=' + encodeURIComponent($('repRoom').value)); if (!res.ok) return alert('Hata: ' + res.status);
+  const url = URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' })); window.open(url, '_blank');
+};
+$('expSessionCsv').onclick = () => needRoom() && download('/session-report?format=csv&room=' + encodeURIComponent($('repRoom').value), `oturum-${$('repRoom').value}.csv`);
 $('expJson').onclick = () => download(`/report?${qs()}`, `rapor-${$('repPeriod').value}.json`);
 $('expState').onclick = () => download('/export', `finbuu-yedek-${Date.now()}.json`);
 $('impFile').onchange = async e => {

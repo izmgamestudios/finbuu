@@ -981,6 +981,22 @@ adminApi.get('/report', (req, res) => {
   }
   res.json(report);
 });
+adminApi.get('/session-report', (req, res) => {
+  const st = rooms[clean(req.query.room, 20)];
+  if (!st) return res.status(404).json({ error: 'room not found' });
+  const rows = Object.values(st.companies).filter(c => !c.isNpc).map(c => ({
+    company: c.name || c.nameKey, founders: c.founders.map(id => (st.players[id] || st.pastPlayers?.[id])?.name || '?').join(', '),
+    canvas: canvasFilled(c), pitchWords: (c.pitch || '').trim().split(/\s+/).filter(Boolean).length, cash: c.cash, sales: c.sales,
+    status: R.analyze(c, st.day || 0).status, readiness: readiness(st, c).score, funded: !!(c.npcEquity || c.offer) }));
+  const d = R.sessionData(st, rows);
+  if (req.query.format === 'csv') {
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="session-${st.id}-${Date.now()}.csv"`);
+    return res.send(R.sessionCSV(d));
+  }
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(R.sessionHTML(d));
+});
 adminApi.get('/export', (req, res) => {
   const data = { version: 1, exportedAt: new Date().toISOString(),
     config: { startCoins: SEED.startCoins, salary: SEED.salary, npcEventSeconds: SEED.npcEventSeconds, tickSeconds: SEED.tickSeconds,
@@ -1162,6 +1178,7 @@ admin.on('connection', socket => {
     const st = pres(roomId); if (!st) return;
     const q = clean(question, 140), opts = (Array.isArray(options) ? options : []).map(o => clean(o, 60)).filter(Boolean).slice(0, 6);
     if (!q || opts.length < 2) return;
+    (st.presentation.pollHistory ||= []).push(...(st.presentation.poll ? [st.presentation.poll] : [])); st.presentation.pollHistory.splice(0, Math.max(0, st.presentation.pollHistory.length - 20));
     st.presentation.poll = { id: crypto.randomUUID(), question: q, open: true, options: opts.map(text => ({ text, votes: 0 })), voters: {} };
     audit('createPoll', `${st.id}: ${q}`); syncRoom(st); push();
   });

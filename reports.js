@@ -138,4 +138,47 @@ function toCSV(report) {
   return '\uFEFF' + lines.join('\n');
 }
 
-module.exports = { calendar, ensureFin, track, closeDay, aggregate, analyze, fullReport, toCSV, EXIT_CASH };
+// ---------- Session report (B2B: institution / incubator handout). Pure: server passes in pre-computed readiness. ----------
+const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const tl = n => Math.round(n).toLocaleString('tr-TR');
+
+// rows: [{ company, founders, employees, cash, sales, status, score, canvas, pitchWords, readiness, funded }]
+function sessionData(st, rows) {
+  const players = [...Object.values(st.players), ...Object.values(st.pastPlayers || {})];
+  const polls = [...(st.presentation?.pollHistory || []), ...(st.presentation?.poll ? [st.presentation.poll] : [])].map(p => ({
+    question: p.question, total: p.options.reduce((s, o) => s + o.votes, 0), options: p.options.map(o => ({ text: o.text, votes: o.votes })) }));
+  const ranked = [...rows].sort((a, b) => b.readiness - a.readiness);
+  return { generatedAt: new Date().toISOString(), room: st.id, mode: st.mode, day: st.day || 0, players: players.length,
+    teams: Object.keys(st.teams || {}).length, companies: ranked, polls,
+    kpi: { canvasComplete: rows.filter(r => r.canvas >= 9).length, pitchReady: rows.filter(r => r.pitchWords >= 40).length,
+      funded: rows.filter(r => r.funded).length, avgReadiness: rows.length ? Math.round(rows.reduce((s, r) => s + r.readiness, 0) / rows.length) : 0 } };
+}
+
+function sessionHTML(d) {
+  const pct = (n, t) => t ? Math.round(n / t * 100) + '%' : '-';
+  const n = d.companies.length;
+  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Finbuu Oturum Raporu ${esc(d.room)}</title>
+<style>body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:24px auto;padding:0 16px;color:#111}h1{margin:0}h2{border-bottom:2px solid #111;padding-bottom:4px;margin-top:28px}
+table{width:100%;border-collapse:collapse;margin:8px 0}th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}th{background:#f2f2f2}td.n{text-align:right}
+.kpi{display:flex;gap:12px;flex-wrap:wrap}.kpi div{flex:1;min-width:130px;border:1px solid #ccc;border-radius:8px;padding:10px}.kpi b{display:block;font-size:22px}
+.bar{background:#eee;height:10px;border-radius:5px}.bar i{display:block;height:10px;border-radius:5px;background:#2a7}@media print{button{display:none}}</style></head><body>
+<button onclick="print()">🖨 Yazdır / PDF</button>
+<h1>🏙 Finbuu · Oturum Raporu</h1>
+<p>Oda <b>${esc(d.room)}</b> (${esc(d.mode)}) · Oyun günü ${d.day} · ${esc(new Date(d.generatedAt).toLocaleString('tr-TR'))}</p>
+<div class="kpi"><div><b>${d.players}</b>Katılımcı</div><div><b>${n}</b>Şirket</div><div><b>${d.teams}</b>Takım</div>
+<div><b>${pct(d.kpi.canvasComplete, n)}</b>Kanvas 9/9</div><div><b>${pct(d.kpi.pitchReady, n)}</b>Pitch yazıldı</div><div><b>${d.kpi.funded}</b>Teklif alan</div><div><b>${d.kpi.avgReadiness}</b>Ort. hazırlık</div></div>
+<h2>Yatırıma hazırlık sıralaması</h2>
+<table><tr><th>#</th><th>Şirket</th><th>Kurucu</th><th>Kanvas</th><th>Pitch (kelime)</th><th>Kasa (c)</th><th>Satış</th><th>Durum</th><th>Hazırlık</th></tr>
+${d.companies.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.company)}</td><td>${esc(r.founders)}</td><td class="n">${r.canvas}/9</td><td class="n">${r.pitchWords}</td><td class="n">${tl(r.cash)}</td><td class="n">${tl(r.sales)}</td><td>${esc(r.status)}</td><td><div class="bar"><i style="width:${r.readiness}%"></i></div>${r.readiness}</td></tr>`).join('') || '<tr><td colspan="9">Şirket yok.</td></tr>'}</table>
+<h2>Anketler</h2>${d.polls.map(p => `<h3>${esc(p.question)} <small>(${p.total} oy)</small></h3><table>${p.options.map(o => `<tr><td>${esc(o.text)}</td><td class="n">${o.votes}</td><td class="n">${pct(o.votes, p.total)}</td></tr>`).join('')}</table>`).join('') || '<p>Anket yapılmadı.</p>'}
+</body></html>`;
+}
+
+function sessionCSV(d) {
+  const lines = [['room', 'company', 'founders', 'canvas', 'pitchWords', 'cash', 'sales', 'status', 'readiness', 'funded'].join(',')];
+  for (const r of d.companies) lines.push([d.room, r.company, r.founders, r.canvas, r.pitchWords, r.cash, r.sales, r.status, r.readiness, r.funded ? 1 : 0].map(csvCell).join(','));
+  for (const p of d.polls) for (const o of p.options) lines.push(['poll', p.question, o.text, o.votes].map(csvCell).join(','));
+  return '﻿' + lines.join('\n');
+}
+
+module.exports = { sessionData, sessionHTML, sessionCSV, calendar, ensureFin, track, closeDay, aggregate, analyze, fullReport, toCSV, EXIT_CASH };
