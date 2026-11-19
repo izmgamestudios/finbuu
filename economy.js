@@ -1,0 +1,73 @@
+// economy.js
+// Real-world reference economy (Türkiye, 2026) and the conversion into the game's coin economy.
+// The game balance runs in coins; 1 coin is calibrated so that SEED.salary (blue-collar daily cost) equals the real
+// employer cost of the 2026 minimum wage per day. Every cost derived from real data (rent, SGK, salaries, fuel, cars)
+// is converted with the same rate, so the ₺ figures shown to Turkish players are consistent with real numbers.
+// Values flagged `est: true` are estimates (no single official source) and are admin-editable.
+
+const TR2026 = {
+  asOf: '2026-11',
+  minWage: { gross: 33030, net: 28075.5 },                     // 1 Ocak 2026
+  sgk: { employer: 0.2175, unemploymentEmployer: 0.02, employee: 0.14, unemploymentEmployee: 0.01 },
+  collars: {
+    blue: { gross: 33030 },                                     // mavi yaka = asgari ücret
+    grey: { gross: 50000, est: true },                          // gri yaka (teknik / kalifiye)
+    white: { gross: 67410, est: true }                          // beyaz yaka (ortalama brüt ücret haberi)
+  },
+  fuel: { gasoline: 80.45, diesel: 100.5, asOf: '2026-10-28', where: 'İstanbul (Avrupa)' },
+  car: { consumptionL100: 7, buyPrice: 1250000, upkeepMonthly: 7500, rentDaily: 1800, est: true },
+  courierPerKm: 18,                                             // kurye / taksi ile teslimat (est)
+  busFare: 40,                                                  // toplu taşıma tek biniş (est)
+  priceToRentMonths: 220,                                       // satış fiyatı ≈ 220 aylık kira (~%5,5 brüt getiri, est)
+  cities: {
+    istanbul: { name: 'İstanbul', rentM2: 850 },                // müstakil işyeri kira ₺/m²/ay (Haz 2026)
+    ankara: { name: 'Ankara', rentM2: 380 },                    // dükkan kira ₺/m²/ay
+    izmir: { name: 'İzmir', rentM2: 455 },                      // dükkan kira ₺/m²/ay
+    bursa: { name: 'Bursa', rentM2: 320, est: true },
+    antalya: { name: 'Antalya', rentM2: 400, est: true }
+  },
+  sources: [
+    { label: 'Asgari ücret 2026 (QNB Yatırım)', url: 'https://www.qnbinvest.com.tr/investodak/qnbarastirma/2026-asgari-ucret-aciklandi-net-28075-tl' },
+    { label: 'Asgari ücret işveren maliyeti (PwC)', url: 'https://www.pwc.com.tr/tr/medya/kose-yazilari/celal-ozcan/2026-yili-asgari-ucreti-ve-sektorlere-gore-isveren-maliyeti.html' },
+    { label: 'SGK prim oranları 2026 (Alomaliye)', url: 'https://www.alomaliye.com/2025/12/21/2025-2026-isveren-tesvik-ve-sgk-prim-oranlari-karsilastirma-tablosu/' },
+    { label: 'Kiralık dükkan m² (Emlakjet / Endeksa)', url: 'https://www.emlakjet.com/emlak-piyasasi/kiralik-dukkan' },
+    { label: 'Kiralık müstakil işyeri m² (Emlakjet)', url: 'https://www.emlakjet.com/emlak-piyasasi/kiralik-ofis-mustakil' },
+    { label: 'Akaryakıt fiyatları 28 Ekim 2026', url: 'https://www.24saatgazetesi.com/akaryakit-fiyatlari-28-ekim-2026-akaryakita-zam-gelecek' },
+    { label: 'Mavi / beyaz yaka maaş aralıkları (eleman.net)', url: 'https://www.eleman.net/is-rehberi/maaslar-ve-ucretler/en-populer-sayisal-ve-mavi-yaka-meslekler-maaslari-h21024' }
+  ]
+};
+
+const employerCost = gross => gross * (1 + TR2026.sgk.employer + TR2026.sgk.unemploymentEmployer);
+const netOf = gross => gross * (1 - TR2026.sgk.employee - TR2026.sgk.unemploymentEmployee); // income tax ignored (asgari ücret istisnası)
+
+// Productivity factor per collar: daily sales "units" an NPC employee produces (white collar sells higher value work)
+const COLLAR_FACTOR = { blue: 4, grey: 6.5, white: 10 };
+// Delivery distance per sale by sector (km), drives fuel / courier cost
+const DELIVERY_KM = { 'sector.food': 2, 'sector.retail': 3, 'sector.service': 5, 'sector.health': 2, 'sector.education': 0,
+  'sector.creative': 1, 'sector.tech': 0, 'sector.auto': 8, 'sector.transport': 0 };
+
+function build(blueSalaryCoins) {
+  const rate = employerCost(TR2026.minWage.gross) / 30 / blueSalaryCoins; // ₺ per coin
+  const c = tl => tl / rate;                                              // ₺ -> coins (float)
+  const collars = Object.fromEntries(Object.entries(TR2026.collars).map(([k, v]) => [k, {
+    gross: v.gross, net: Math.round(netOf(v.gross)), employerCost: Math.round(employerCost(v.gross)), est: !!v.est,
+    salary: Math.round(c(employerCost(v.gross) / 30)), factor: COLLAR_FACTOR[k]
+  }]));
+  const car = TR2026.car;
+  return {
+    rate, data: TR2026, collars,
+    vehicle: {
+      fuelPerKm: c((car.consumptionL100 / 100) * TR2026.fuel.gasoline),  // own / rented car
+      courierPerKm: c(TR2026.courierPerKm),                              // no company car
+      rentPerDay: Math.round(c(car.rentDaily)), buyPrice: Math.round(c(car.buyPrice)), upkeepPerDay: Math.round(c(car.upkeepMonthly / 30) * 10) / 10,
+      resale: 0.6
+    },
+    busFare: Math.max(1, Math.round(c(TR2026.busFare))), busTopups: [10, 20, 50],
+    deliveryKm: DELIVERY_KM,
+    cities: Object.fromEntries(Object.entries(TR2026.cities).map(([k, v]) => [k, { ...v }])),
+    lotRent: (cityKey, size) => Math.max(1, Math.ceil(c((size * (TR2026.cities[cityKey] || TR2026.cities.istanbul).rentM2) / 30))),
+    lotPrice: (cityKey, size) => Math.ceil(c(size * (TR2026.cities[cityKey] || TR2026.cities.istanbul).rentM2 * TR2026.priceToRentMonths))
+  };
+}
+
+module.exports = { build, TR2026 };

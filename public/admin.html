@@ -1,0 +1,526 @@
+<!-- public/admin.html -->
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Finbuu — Admin</title>
+<style>
+  :root{--bg:#12131c;--panel:#1e2130;--line:#2c3045;--accent:#4caf50;--warn:#e67e22;--bad:#e74c3c;--text:#e8e8ef}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--text)}
+  button,input,select,textarea{font:inherit;color:#e8e8ef;background:#2a2f45;border:1px solid #3a4060;border-radius:8px;padding:8px 10px;min-height:38px}
+  input,textarea{pointer-events:auto;user-select:text;-webkit-user-select:text}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  button{cursor:pointer;border:0} button:hover{background:#3a4060} button.primary{background:var(--accent);color:#08140a;font-weight:600} button.danger{background:var(--bad)}
+  header{display:flex;gap:10px;align-items:center;padding:10px 16px;background:#0c0d14;position:sticky;top:0;z-index:5;flex-wrap:wrap}
+  header h1{font-size:1.1rem;margin:0;flex:1}
+  .tabs{display:flex;gap:4px;padding:8px 16px;overflow-x:auto;background:#0f1018}
+  .tabs button{white-space:nowrap} .tabs button.active{background:var(--accent);color:#08140a}
+  main{padding:16px;display:none} main.active{display:block}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+  .grid2{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr))}
+  .card{background:var(--panel);border-radius:12px;padding:14px;overflow:auto}
+  .card h3{margin:0 0 10px;font-size:1rem}
+  .kpi b{display:block;font-size:1.6rem;margin-top:4px} .kpi span{opacity:.7;font-size:.85rem}
+  table{width:100%;border-collapse:collapse;font-size:.85rem} th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{position:sticky;top:0;background:var(--panel);cursor:pointer}
+  .pill{padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600}
+  .s-exitReady{background:#8e44ad}.s-investable{background:#27ae60}.s-growing{background:#2980b9}.s-stable{background:#7f8c8d}.s-atRisk{background:var(--warn)}.s-inCrisis{background:#d35400}.s-bankrupt,.s-closedByAdmin{background:var(--bad)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  label.f{display:flex;flex-direction:column;font-size:.8rem;gap:4px} label.f input{width:110px}
+  canvas{max-height:320px}
+  #login{max-width:360px;margin:15vh auto;display:flex;flex-direction:column;gap:10px;position:relative;z-index:20}
+  #login input{width:100%}
+  .pwWrap{display:flex;gap:6px;align-items:center}
+  .pwWrap input{flex:1}
+  .pwWrap button{flex:0 0 auto;padding:8px 11px}
+  #app{display:none}
+  .muted{opacity:.6;font-size:.8rem}
+</style>
+</head>
+<body>
+<div id="login" class="card">
+  <form id="loginForm" onsubmit="return false" style="display:flex;flex-direction:column;gap:10px" novalidate>
+    <h3>🔐 Admin Girişi</h3>
+    <input id="email" type="email" placeholder="E-posta" autocomplete="username">
+    <div class="pwWrap">
+      <input id="password" type="password" placeholder="Şifre" autocomplete="current-password">
+      <button id="togglePw" type="button" title="Şifreyi göster/gizle">👁</button>
+    </div>
+    <button id="loginBtn" type="submit" class="primary">Giriş</button>
+    <span class="muted">İlk girişte şifre olarak sunucudaki ADMIN_TOKEN kullanılır; ardından yeni şifre belirlemen istenir.</span>
+  </form>
+  <form id="pwForm" onsubmit="return false" style="display:none;flex-direction:column;gap:10px" novalidate>
+    <h3>🔑 Yeni Şifre Belirle</h3>
+    <p class="muted">Güvenliğin için ilk girişten sonra şifreni değiştirmen gerekiyor (en az 10 karakter).</p>
+    <div class="pwWrap">
+      <input id="newPw" type="password" placeholder="Yeni şifre" autocomplete="new-password">
+      <button id="toggleNewPw" type="button" title="Şifreyi göster/gizle">👁</button>
+    </div>
+    <input id="newPw2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
+    <button id="pwBtn" type="submit" class="primary">Şifreyi Kaydet</button>
+  </form>
+  <span id="loginErr" class="muted"></span>
+</div>
+
+<div id="app">
+  <header>
+    <h1>📊 Finbuu — Admin</h1>
+    <span id="sys" class="muted"></span>
+    <button id="logout">Çıkış</button>
+  </header>
+  <div class="tabs" id="tabs">
+    <button data-tab="dash" class="active">Genel Bakış</button>
+    <button data-tab="present">🎤 Sunum Kontrol</button>
+    <button data-tab="rooms">Odalar & Oyuncular</button>
+    <button data-tab="companies">Şirketler</button>
+    <button data-tab="economy">Ekonomi Ayarları</button>
+    <button data-tab="reports">Finans Raporları</button>
+    <button data-tab="ideas">Fikirler</button>
+    <button data-tab="audit">Denetim Kaydı</button>
+  </div>
+
+  <main id="dash" class="active">
+    <div class="grid" id="kpis"></div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><h3>Oda Bazında Kasa & Coin</h3><canvas id="chRooms"></canvas></div>
+      <div class="card"><h3>Çalışma Alanı Dağılımı</h3><canvas id="chWs"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>Hızlı İşlemler</h3>
+      <div class="row">
+        <input id="newRoomPin" placeholder="Şifre (4-6 rakam, boş = rastgele)" maxlength="6" inputmode="numeric" style="width:230px">
+        <button id="newRoom" class="primary">➕ Multiplayer Oda Kur</button>
+        <button id="newPresentation" class="primary">🎤 Sunum Odası Kur</button>
+        <input id="tickDays" type="number" value="1" min="1" max="3650" style="width:90px">
+        <button id="runTick">⏩ Gün İlerlet</button>
+        <input id="annText" placeholder="Tüm oyunculara duyuru" maxlength="200" style="flex:1;min-width:200px">
+        <button id="annAll">📢 Gönder</button>
+      </div>
+      <p class="muted">"Gün ilerlet" test içindir: 360 gün = 1 oyun yılı, 3600 gün = 10 yıl.</p>
+    </div>
+  </main>
+
+  <main id="present">
+    <div class="card"><h3>🎤 Sunum / İzleme Modu</h3>
+      <p class="muted">Katılımcılar yürüyemez; sadece öneri çubuğu, sohbet, komutlar (/sat, /kur…) ve anketlerle oynar. Kamera ve akışı buradan yönetirsin.</p>
+      <div class="row">
+        <select id="prRoom" style="min-width:220px"></select>
+        <select id="prSpot"></select>
+        <button id="prChat">💬 Sohbeti kilitle / aç</button>
+        <button id="prActions">⏸ İşlemleri durdur / başlat</button>
+      </div>
+      <p id="prState" class="muted"></p>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><h3>📊 Anket</h3>
+        <input id="pollQ" placeholder="Soru (ör. Hangi sektörde şirket kuralım?)" maxlength="140" style="width:100%;margin-bottom:6px">
+        <textarea id="pollOpts" rows="4" placeholder="Her satıra bir seçenek (2-6)" style="width:100%"></textarea>
+        <div class="row" style="margin-top:6px"><button id="pollCreate" class="primary">Anketi başlat</button><button id="pollClose">Anketi kapat</button></div>
+        <div id="pollView" style="margin-top:8px"></div>
+      </div>
+      <div class="card"><h3>💬 Sohbet Moderasyonu</h3><div id="prChatList" style="max-height:360px;overflow:auto"></div></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>👥 Katılımcılar</h3><div id="prPlayers"></div></div>
+  </main>
+  <main id="rooms"><div id="roomList"></div></main>
+
+  <main id="companies">
+    <div class="card"><div class="row" style="margin-bottom:8px"><select id="coRoom"></select><select id="evType"></select></div>
+      <table><thead><tr><th>Şirket</th><th>Alan</th><th>Kasa</th><th>Satış</th><th>Founder</th><th>Çalışan</th><th>Yan Hak</th><th>Perf</th><th>İşlem</th></tr></thead><tbody id="coBody"></tbody></table>
+    </div>
+  </main>
+
+  <main id="economy">
+    <div class="card"><h3>Ekonomi Parametreleri (anında uygulanır)</h3>
+      <div id="cfgForm" class="grid"></div>
+      <div class="row" style="margin-top:12px"><button id="saveCfg" class="primary">💾 Kaydet</button></div>
+    </div>
+  </main>
+
+  <main id="reports">
+    <div class="card">
+      <div class="row">
+        <select id="repRoom"></select>
+        <select id="repPeriod"><option value="month">Aylık</option><option value="quarter">Çeyreklik (Q1–Q4)</option><option value="year">Yıllık</option></select>
+        <button id="repLoad" class="primary">🔄 Raporu Oluştur</button>
+        <button id="expCsv">⬇ CSV</button>
+        <button id="expJson">⬇ Rapor JSON</button>
+        <button id="expState">⬇ Tüm Oyun Yedeği</button>
+        <label class="row" style="gap:4px"><span>⬆ Yedek Yükle</span><input id="impFile" type="file" accept="application/json"></label>
+      </div>
+      <p class="muted" id="repMeta"></p>
+    </div>
+    <div class="grid" id="repKpis" style="margin-top:12px"></div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><h3>Pazar: Gelir / Gider / Kâr / Yatırım</h3><canvas id="chMarket"></canvas></div>
+      <div class="card"><h3>Şirket Durumları (battı mı, büyüyor mu, yatırım alabilir mi)</h3><canvas id="chStatus"></canvas></div>
+      <div class="card"><h3>Top 10 Şirket Skoru</h3><canvas id="chTop"></canvas></div>
+      <div class="card"><h3>Büyüme % vs. Runway (ay)</h3><canvas id="chScatter"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>🏁 Şirket Kıyaslama Tablosu</h3>
+      <table><thead><tr><th>#</th><th>Şirket</th><th>Oda</th><th>Durum</th><th>Skor</th><th>Yüzdelik</th><th>Büyüme %</th><th>Kasa</th><th>Runway (ay)</th></tr></thead><tbody id="cmpBody"></tbody></table>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><h3>🏢 Şirket Detayı</h3><select id="coPick" style="width:100%"></select><div id="coDetail" class="muted" style="margin:8px 0"></div><canvas id="chCompany"></canvas></div>
+      <div class="card"><h3>👤 Çalışan / Oyuncu Detayı</h3><select id="emPick" style="width:100%"></select><div id="emDetail" class="muted" style="margin:8px 0"></div><canvas id="chEmployee"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>👥 Çalışan Tablosu</h3>
+      <table><thead><tr><th>İsim</th><th>Oda</th><th>Durum</th><th>Rol</th><th>İşveren</th><th>Coin</th><th>Seviye</th><th>XP</th><th>Bilgi</th><th>Başarı</th><th>Perf</th><th>Coin Büyümesi</th></tr></thead><tbody id="emBody"></tbody></table>
+    </div>
+  </main>
+
+  <main id="ideas"><div class="card"><table><thead><tr><th>Oda</th><th>Kim</th><th>Fikir</th><th>Tarih</th><th></th></tr></thead><tbody id="ideaBody"></tbody></table></div></main>
+  <main id="audit"><div class="card"><table><thead><tr><th>Zaman</th><th>İşlem</th><th>Detay</th></tr></thead><tbody id="auditBody"></tbody></table></div></main>
+</div>
+
+<script src="/vendor/chart.js/chart.umd.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const el = (tag, text) => { const e = document.createElement(tag); if (text != null) e.textContent = text; return e; };
+const fmt = n => (n == null ? '—' : Number(n).toLocaleString('tr-TR'));
+const STATUS_TR = { exitReady: 'Exit Hazır', investable: 'Yatırım Alabilir', growing: 'Büyüyor', stable: 'Stabil', atRisk: 'Riskli', inCrisis: 'Krizde', bankrupt: 'Battı', closedByAdmin: 'Kapatıldı' };
+const STATUS_COLOR = { exitReady: '#8e44ad', investable: '#27ae60', growing: '#2980b9', stable: '#7f8c8d', atRisk: '#e67e22', inCrisis: '#d35400', bankrupt: '#e74c3c', closedByAdmin: '#c0392b' };
+const NAMES = { 'npc.simit': 'Simitçi Ahmet (NPC)', 'npc.grocery': 'Mahalle Bakkalı (NPC)', 'npc.freelancer': 'Freelance Elif (NPC)',
+  'tpl.coffee': 'Kahve Dükkanı', 'tpl.phoneRepair': 'Telefon Tamircisi', 'tpl.softwareAgency': 'Yazılım Ajansı', 'tpl.bakery': 'Butik Fırın', 'tpl.stationery': 'Kırtasiye' };
+const cname = c => c.name || NAMES[c.nameKey] || c.nameKey;
+const pill = s => { const p = el('span', STATUS_TR[s] || s); p.className = 'pill s-' + s; return p; };
+if (window.Chart) {
+  Chart.defaults.color = '#cfd2e0';
+  Chart.defaults.borderColor = '#2c3045';
+}
+
+let socket = null, ov = null, report = null, token = sessionStorage.getItem('adminSession') || '';
+const charts = {};
+function chart(id, config) { if (!window.Chart) return; charts[id]?.destroy(); charts[id] = new Chart($(id), config); }
+
+// ---------- Prefill email if passed in URL ----------
+const urlEmail = new URLSearchParams(location.search).get('email');
+if (urlEmail && !$('email').value) $('email').value = urlEmail;
+
+// ---------- Password visibility toggles ----------
+function bindPwToggle(inputId, btnId) {
+  $(btnId).onclick = () => {
+    const inp = $(inputId);
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    $(btnId).textContent = show ? '🙈' : '👁';
+    inp.focus();
+  };
+}
+bindPwToggle('password', 'togglePw');
+bindPwToggle('newPw', 'toggleNewPw');
+
+// ---------- Auth ----------
+function showLogin(msg) {
+  sessionStorage.removeItem('adminSession'); token = '';
+  $('login').style.display = 'flex'; $('app').style.display = 'none';
+  $('loginForm').style.display = 'flex'; $('pwForm').style.display = 'none';
+  $('loginErr').textContent = msg || '';
+}
+function connect() {
+  if (!window.io) { $('loginErr').textContent = 'Socket.IO yüklenemedi, sayfayı yenile.'; return; }
+  socket = io('/admin', { auth: { token } });
+  socket.on('connect_error', err => {
+    socket.close();
+    if (err.message === 'mustChange') { $('loginForm').style.display = 'none'; $('pwForm').style.display = 'flex'; return; }
+    showLogin(err.message === 'locked' ? 'Çok fazla hatalı deneme, 15 dk bekle.' : 'Oturum geçersiz, tekrar giriş yap.');
+  });
+  socket.on('connect', () => { sessionStorage.setItem('adminSession', token); $('login').style.display = 'none'; $('app').style.display = 'block'; });
+  socket.on('overview', data => { ov = data; renderAll(); });
+}
+async function post(path, body) {
+  const r = await fetch('/admin/auth' + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) });
+  return { status: r.status, data: await r.json().catch(() => ({})) };
+}
+async function handleLogin() {
+  const { status, data } = await post('/login', { email: $('email').value.trim(), password: $('password').value });
+  if (status !== 200) return ($('loginErr').textContent = status === 429 ? 'Çok fazla hatalı deneme, 15 dk bekle.' : 'E-posta veya şifre hatalı.');
+  token = data.token; $('password').value = ''; $('loginErr').textContent = '';
+  if (data.mustChange) { $('loginForm').style.display = 'none'; $('pwForm').style.display = 'flex'; $('newPw').focus(); }
+  else connect();
+}
+async function handlePwChange() {
+  if ($('newPw').value !== $('newPw2').value) return ($('loginErr').textContent = 'Şifreler eşleşmiyor.');
+  const { status, data } = await post('/password', { newPassword: $('newPw').value });
+  if (status !== 200) return ($('loginErr').textContent = data.error === 'tooShort' ? `En az ${data.min} karakter olmalı.` : data.error === 'sameAsBootstrap' ? 'Yeni şifre ADMIN_TOKEN ile aynı olamaz.' : 'Oturum süresi doldu, tekrar giriş yap.');
+  $('newPw').value = $('newPw2').value = ''; $('loginErr').textContent = '';
+  connect();
+}
+$('loginForm').addEventListener('submit', e => { e.preventDefault(); handleLogin(); });
+$('pwForm').addEventListener('submit', e => { e.preventDefault(); handlePwChange(); });
+$('logout').onclick = async () => { await post('/logout', {}); showLogin(); location.reload(); };
+if (token) connect();
+
+// ---------- Tabs ----------
+$('tabs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('active', x === b));
+  document.querySelectorAll('main').forEach(m => m.classList.toggle('active', m.id === b.dataset.tab));
+  if (b.dataset.tab === 'reports' && !report) loadReport();
+};
+
+// ---------- Live render ----------
+let cfgRendered = false;
+function renderAll() {
+  const R = ov.rooms;
+  $('sys').textContent = `⏱ ${Math.round(ov.uptime / 60)} dk · 💾 ${ov.memoryMB} MB`;
+  const sum = k => R.reduce((s, r) => s + r.totals[k], 0);
+  const kpi = (label, v) => { const d = el('div'); d.className = 'card kpi'; d.append(el('span', label), el('b', fmt(v))); return d; };
+  $('kpis').replaceChildren(kpi('Odalar', R.length), kpi('Çevrimiçi Oyuncu', sum('players')), kpi('Aktif Şirket', sum('companies')),
+    kpi('Toplam Şirket Kasası', sum('cash')), kpi('Oyuncu Coinleri', sum('coins')), kpi('Toplam Satış', sum('sales')),
+    kpi('Kapanan Şirket', R.reduce((s, r) => s + r.archived, 0)), kpi('En İleri Oyun Günü', Math.max(0, ...R.map(r => r.day))));
+
+  if (document.querySelector('main#dash.active')) {
+    chart('chRooms', { type: 'bar', data: { labels: R.map(r => `${r.id} (${r.mode})`),
+      datasets: [{ label: 'Şirket Kasası', data: R.map(r => r.totals.cash), backgroundColor: '#4caf50' }, { label: 'Oyuncu Coin', data: R.map(r => r.totals.coins), backgroundColor: '#2d9cdb' }] },
+      options: { animation: false } });
+    const ws = {}; R.forEach(r => r.companies.forEach(c => (ws[c.workspace] = (ws[c.workspace] || 0) + 1)));
+    chart('chWs', { type: 'doughnut', data: { labels: Object.keys(ws), datasets: [{ data: Object.values(ws), backgroundColor: ['#4caf50', '#1abc9c', '#2d9cdb', '#9b59b6', '#f1c40f'] }] }, options: { animation: false } });
+  }
+  renderPresentation(); renderRooms(); renderCompanies(); renderIdeas(); renderAudit(); fillRoomSelects();
+  if (!cfgRendered) { renderConfig(); cfgRendered = true; }
+}
+
+function fillRoomSelects() {
+  for (const id of ['coRoom', 'repRoom']) {
+    const sel = $(id), cur = sel.value;
+    sel.replaceChildren(new Option(id === 'repRoom' ? 'Tüm Odalar' : '— Oda seç —', ''), ...ov.rooms.map(r => new Option(`${r.id} (${r.mode})`, r.id)));
+    sel.value = [...sel.options].some(o => o.value === cur) ? cur : (id === 'coRoom' && ov.rooms[0] ? ov.rooms[0].id : '');
+  }
+  if (!$('evType').options.length) $('evType').append(new Option('NPC olayı seç', ''), ...ov.eventTypes.map(t => new Option(t, t)));
+}
+
+function renderRooms() {
+  const wrap = $('roomList'); wrap.replaceChildren();
+  if (!ov.rooms.length) return wrap.append(el('p', 'Henüz oda yok.'));
+  for (const r of ov.rooms) {
+    const card = el('div'); card.className = 'card'; card.style.marginBottom = '12px';
+    card.append(el('h3', `🏙 ${r.id} · ${r.mode}${r.pin ? ' · 🔑 ' + r.pin : ''} · Gün ${r.day}`));
+    const actions = el('div'); actions.className = 'row';
+    const btn = (label, fn, cls) => { const b = el('button', label); if (cls) b.className = cls; b.onclick = fn; actions.append(b); };
+    if (r.mode === 'multiplayer' || r.mode === 'presentation') {
+      btn('🔗 Link Kopyala', () => navigator.clipboard.writeText(`${location.origin}/?room=${r.id}`));
+      btn('🔑 Yeni Şifre', () => socket.emit('newPin', { roomId: r.id }));
+    }
+    const ann = el('input'); ann.placeholder = 'Odaya duyuru'; ann.maxLength = 200; actions.append(ann);
+    btn('📢', () => { socket.emit('announce', { roomId: r.id, text: ann.value }); ann.value = ''; });
+    btn('♻ Sıfırla', () => confirm(`${r.id} sıfırlansın mı?`) && socket.emit('resetRoom', { roomId: r.id }));
+    btn('🗑 Sil', () => confirm(`${r.id} silinsin mi?`) && socket.emit('deleteRoom', { roomId: r.id }), 'danger');
+    card.append(actions);
+    const tbl = el('table'); tbl.innerHTML = '<thead><tr><th>Oyuncu</th><th>Rol</th><th>Coin</th><th>Seviye</th><th>XP</th><th>Bilgi</th><th>Başarı</th><th>Perf</th><th>İşlem</th></tr></thead>';
+    const tb = el('tbody');
+    for (const p of r.players) {
+      const tr = el('tr');
+      [p.name, p.role.replace('role.', ''), fmt(p.coins), p.stats.level, Math.round(p.stats.xp), p.stats.knowledge, p.stats.success, 'x' + p.stats.performance].forEach(v => tr.append(el('td', String(v))));
+      const td = el('td'); const amt = el('input'); amt.type = 'number'; amt.value = 100; amt.style.width = '80px';
+      const give = el('button', '💰'); give.title = 'Coin ver/al'; give.onclick = () => socket.emit('giveCoins', { roomId: r.id, playerId: p.id, amount: amt.value });
+      const kick = el('button', '⛔'); kick.title = 'At'; kick.onclick = () => confirm(`${p.name} atılsın mı?`) && socket.emit('kickPlayer', { roomId: r.id, playerId: p.id });
+      td.append(amt, give, kick); tr.append(td); tb.append(tr);
+    }
+    tbl.append(tb); card.append(tbl);
+    wrap.append(card);
+  }
+}
+
+function renderCompanies() {
+  const r = ov.rooms.find(x => x.id === $('coRoom').value) || ov.rooms[0];
+  const tb = $('coBody'); tb.replaceChildren();
+  if (!r) return;
+  for (const c of r.companies) {
+    const tr = el('tr');
+    const perks = Object.entries(c.benefits || {}).filter(([, on]) => on).map(([k]) => k).join(', ') || '—';
+    [(c.crisis ? '⚠️ ' : '') + cname(c), c.workspace, fmt(c.cash), c.sales, c.founders, c.employees, perks, 'x' + c.performance].forEach(v => tr.append(el('td', String(v))));
+    const td = el('td');
+    const cash = el('input'); cash.type = 'number'; cash.value = c.cash; cash.style.width = '90px';
+    const setC = el('button', '✏'); setC.title = 'Kasayı ayarla'; setC.onclick = () => socket.emit('setCompanyCash', { roomId: r.id, companyId: c.id, cash: cash.value });
+    const ev = el('button', '🤖'); ev.title = 'Seçili NPC olayını tetikle'; ev.onclick = () => socket.emit('triggerEvent', { roomId: r.id, companyId: c.id, type: $('evType').value });
+    const del = el('button', '🗑'); del.className = 'danger'; del.onclick = () => confirm(`${cname(c)} kapatılsın mı?`) && socket.emit('deleteCompany', { roomId: r.id, companyId: c.id });
+    td.append(cash, setC, ev, del); tr.append(td); tb.append(tr);
+  }
+}
+$('coRoom').onchange = renderCompanies;
+
+function renderConfig() {
+  const c = ov.config, form = $('cfgForm'); form.replaceChildren();
+  const field = (label, path, value, step = 1) => {
+    const l = el('label'); l.className = 'f'; l.append(el('span', label));
+    const i = el('input'); i.type = 'number'; i.step = step; i.value = value; i.dataset.path = path; l.append(i); form.append(l);
+  };
+  field('Başlangıç coin', 'startCoins', c.startCoins); field('Maaş / gün', 'salary', c.salary);
+  field('Oyun günü (sn)', 'tickSeconds', c.tickSeconds); field('NPC olayı (sn)', 'npcEventSeconds', c.npcEventSeconds);
+  for (const [s, v] of Object.entries(c.lotSizes)) field(`Dükkan ${s}m² kira`, `lotSizes.${s}.rent`, v.rent);
+  for (const ws of ['home', 'virtual', 'eoffice', 'coworking']) { field(`${ws} kira`, `workspaces.${ws}.rent`, c.workspaces[ws].rent); field(`${ws} depozito`, `workspaces.${ws}.deposit`, c.workspaces[ws].deposit); }
+  for (const [b, v] of Object.entries(c.benefits)) { field(`${b} maliyet`, `benefits.${b}.cost`, v.cost); field(`${b} perf bonus`, `benefits.${b}.perf`, v.perf, 0.01); }
+  for (const [k, v] of Object.entries(c.progression)) field(k, `progression.${k}`, v, 0.1);
+}
+$('saveCfg').onclick = () => {
+  const patch = {};
+  document.querySelectorAll('#cfgForm input').forEach(i => {
+    const parts = i.dataset.path.split('.'); let o = patch;
+    parts.slice(0, -1).forEach(p => (o = o[p] ||= {}));
+    o[parts.at(-1)] = Number(i.value);
+  });
+  socket.emit('setConfig', patch);
+  cfgRendered = false;
+};
+
+function renderIdeas() {
+  const tb = $('ideaBody'); tb.replaceChildren();
+  for (const r of ov.rooms) for (const i of r.ideas) {
+    const tr = el('tr');
+    [r.id, i.by, i.text, new Date(i.at).toLocaleString('tr-TR')].forEach(v => { const td = el('td', v); td.style.whiteSpace = 'normal'; tr.append(td); });
+    const td = el('td'); const del = el('button', '🗑'); del.onclick = () => socket.emit('deleteIdea', { roomId: r.id, ideaId: i.id }); td.append(del); tr.append(td);
+    tb.append(tr);
+  }
+}
+function renderAudit() {
+  $('auditBody').replaceChildren(...ov.audit.map(a => { const tr = el('tr'); [new Date(a.at).toLocaleString('tr-TR'), a.action, a.detail].forEach(v => tr.append(el('td', v))); return tr; }));
+}
+
+// ---------- Quick actions ----------
+$('newRoom').onclick = () => socket.emit('createRoom', { mode: 'multiplayer', pin: $('newRoomPin').value.trim() });
+$('newPresentation').onclick = () => socket.emit('createRoom', { mode: 'presentation', pin: $('newRoomPin').value.trim() });
+
+// ---------- Presentation control (static inputs; only lists re-render) ----------
+const prRoom = () => ov?.rooms.find(r => r.id === $('prRoom').value && r.presentation);
+function renderPresentation() {
+  const sel = $('prRoom'), cur = sel.value, pres = (ov?.rooms || []).filter(r => r.presentation);
+  const sig = pres.map(r => r.id).join();
+  if (sel.dataset.sig !== sig) {
+    sel.replaceChildren(...(pres.length ? pres.map(r => new Option(`🎤 ${r.id} · 🔑 ${r.pin} · 👥 ${r.players.length}`, r.id)) : [new Option('— Sunum odası yok —', '')]));
+    sel.dataset.sig = sig; sel.value = pres.some(r => r.id === cur) ? cur : pres[0]?.id || '';
+  }
+  const r = prRoom();
+  const spot = $('prSpot'), spotCur = r ? String(r.presentation.spotlight) : '';
+  const spotOpts = [['auto', '🎥 Otomatik tur'], ['plaza', '🌐 Dijital Plaza'], ['null', '✋ Serbest']]
+    .concat((r?.companies || []).filter(c => c.lotId != null).map(c => [String(c.lotId), `🏢 ${cname(c)} (Lot ${c.lotId})`]));
+  const spotSig = spotOpts.map(o => o[0]).join();
+  if (spot.dataset.sig !== spotSig) { spot.replaceChildren(...spotOpts.map(([v, l]) => new Option(l, v))); spot.dataset.sig = spotSig; }
+  if (document.activeElement !== spot) spot.value = spotCur === 'null' ? 'null' : spotCur;
+  $('prState').textContent = r ? `Sohbet: ${r.presentation.chatLocked ? '🔒 kilitli' : '🔓 açık'} · İşlemler: ${r.presentation.actionsLocked ? '⏸ durduruldu' : '▶ açık'} · Susturulan: ${r.presentation.muted.length}` : '';
+  const pv = $('pollView'); pv.replaceChildren();
+  const poll = r?.presentation.poll;
+  if (poll) {
+    pv.append(el('b', `${poll.open ? '🟢' : '⚪'} ${poll.question} · ${poll.total} oy`));
+    poll.options.forEach(o => { const pct = poll.total ? Math.round(o.votes / poll.total * 100) : 0; const d = el('div', `${o.text}: ${o.votes} (%${pct})`); d.style.cssText = `background:linear-gradient(90deg,#2d9cdb55 ${pct}%,transparent ${pct}%);padding:4px 6px;border-radius:6px;margin-top:4px`; pv.append(d); });
+  }
+  const cl = $('prChatList'); cl.replaceChildren();
+  (r?.chat || []).slice().reverse().forEach(m => {
+    const row = el('div'); row.style.cssText = 'display:flex;gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid #ffffff12';
+    const del = el('button', '🗑'); del.onclick = () => socket.emit('deleteChat', { roomId: r.id, msgId: m.id });
+    row.append(del, el('span', `${new Date(m.at).toLocaleTimeString('tr', { hour: '2-digit', minute: '2-digit' })} ${m.by}: ${m.text}`)); cl.append(row);
+  });
+  const pl = $('prPlayers'); pl.replaceChildren();
+  (r?.players || []).forEach(p => {
+    const muted = r.presentation.muted.includes(p.id);
+    const b = el('button', `${muted ? '🔇' : '🔊'} ${p.name} · 💰${fmt(p.coins)}`); b.style.margin = '3px';
+    b.onclick = () => socket.emit('mutePlayer', { roomId: r.id, playerId: p.id, muted: !muted }); pl.append(b);
+  });
+}
+$('prSpot').onchange = e => { const r = prRoom(); if (r) socket.emit('setSpotlight', { roomId: r.id, target: e.target.value === 'null' ? null : e.target.value }); };
+$('prChat').onclick = () => { const r = prRoom(); if (r) socket.emit('lockChat', { roomId: r.id, locked: !r.presentation.chatLocked }); };
+$('prActions').onclick = () => { const r = prRoom(); if (r) socket.emit('lockActions', { roomId: r.id, locked: !r.presentation.actionsLocked }); };
+$('pollCreate').onclick = () => {
+  const r = prRoom(); if (!r) return;
+  const options = $('pollOpts').value.split('\n').map(x => x.trim()).filter(Boolean);
+  if (!$('pollQ').value.trim() || options.length < 2) return alert('Soru ve en az 2 seçenek gir.');
+  socket.emit('createPoll', { roomId: r.id, question: $('pollQ').value, options });
+};
+$('pollClose').onclick = () => { const r = prRoom(); if (r) socket.emit('closePoll', { roomId: r.id }); };
+$('runTick').onclick = () => socket.emit('runTick', { days: $('tickDays').value });
+$('annAll').onclick = () => { socket.emit('announce', { text: $('annText').value }); $('annText').value = ''; };
+
+// ---------- Reports (HTTP API) ----------
+const api = (path, opts = {}) => fetch('/admin/api' + path, { ...opts, headers: { Authorization: 'Bearer ' + token, ...(opts.headers || {}) } });
+const qs = () => `period=${$('repPeriod').value}${$('repRoom').value ? '&room=' + encodeURIComponent($('repRoom').value) : ''}`;
+async function download(path, filename) {
+  const res = await api(path); if (!res.ok) return alert('Hata: ' + res.status);
+  const blob = await res.blob(); const a = el('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+}
+$('expCsv').onclick = () => download(`/report?${qs()}&format=csv`, `rapor-${$('repPeriod').value}.csv`);
+$('expJson').onclick = () => download(`/report?${qs()}`, `rapor-${$('repPeriod').value}.json`);
+$('expState').onclick = () => download('/export', `finbuu-yedek-${Date.now()}.json`);
+$('impFile').onchange = async e => {
+  const file = e.target.files[0]; if (!file) return;
+  if (!confirm('Yedek yüklensin mi? Aynı isimli odalar değiştirilecek.')) return;
+  const res = await api('/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: await file.text() });
+  const data = await res.json(); alert(res.ok ? `${data.imported} oda yüklendi.` : 'Hata: ' + data.error);
+  e.target.value = '';
+};
+$('repLoad').onclick = loadReport;
+$('repPeriod').onchange = loadReport;
+
+async function loadReport() {
+  const res = await api(`/report?${qs()}`);
+  if (!res.ok) return alert('Rapor alınamadı: ' + res.status);
+  report = await res.json();
+  renderReport();
+}
+
+function renderReport() {
+  const r = report, s = r.summary;
+  $('repMeta').textContent = `Oluşturuldu: ${new Date(r.generatedAt).toLocaleString('tr-TR')} · ${r.calendar ? `Oyun takvimi: Yıl ${r.calendar.year}, Q${r.calendar.quarter}, Ay ${r.calendar.month}, Gün ${r.calendar.day}` : 'Henüz oyun günü geçmedi'}`;
+  const kpi = (label, v) => { const d = el('div'); d.className = 'card kpi'; d.append(el('span', label), el('b', fmt(v))); return d; };
+  const sc = s.statusCounts;
+  $('repKpis').replaceChildren(kpi('Şirket (aktif + kapanan)', s.companies), kpi('Çalışan / Oyuncu', s.employees), kpi('Toplam Kasa', s.totalCash), kpi('Toplam Satış Adedi', s.totalSales),
+    kpi('Yatırım Alabilir', (sc.investable || 0) + (sc.exitReady || 0)), kpi('Büyüyen', sc.growing || 0), kpi('Riskli', sc.atRisk || 0), kpi('Batan', sc.bankrupt || 0));
+
+  chart('chMarket', { type: 'line', data: { labels: r.market.map(m => m.period), datasets: [
+    { label: 'Gelir', data: r.market.map(m => m.revenue), borderColor: '#4caf50', tension: .3 },
+    { label: 'Gider', data: r.market.map(m => m.expenses), borderColor: '#e74c3c', tension: .3 },
+    { label: 'Kâr', data: r.market.map(m => m.profit), borderColor: '#f1c40f', tension: .3 },
+    { label: 'Yatırım', data: r.market.map(m => m.investment), borderColor: '#2d9cdb', tension: .3 }] } });
+  chart('chStatus', { type: 'doughnut', data: { labels: Object.keys(sc).map(k => STATUS_TR[k] || k), datasets: [{ data: Object.values(sc), backgroundColor: Object.keys(sc).map(k => STATUS_COLOR[k] || '#888') }] } });
+  const top = r.comparison.slice(0, 10);
+  chart('chTop', { type: 'bar', data: { labels: top.map(c => cname(c)), datasets: [{ label: 'Skor', data: top.map(c => c.score), backgroundColor: top.map(c => STATUS_COLOR[c.status] || '#888') }] },
+    options: { indexAxis: 'y', scales: { x: { min: 0, max: 100 } } } });
+  chart('chScatter', { type: 'scatter', data: { datasets: [{ label: 'Şirketler', data: r.comparison.map(c => ({ x: c.growthPct, y: c.runwayMonths ?? 24, n: cname(c) })),
+    backgroundColor: r.comparison.map(c => STATUS_COLOR[c.status] || '#888') }] },
+    options: { plugins: { tooltip: { callbacks: { label: ctx => `${ctx.raw.n}: büyüme ${ctx.raw.x}%, runway ${ctx.raw.y} ay` } } },
+      scales: { x: { title: { display: true, text: 'Büyüme %' } }, y: { title: { display: true, text: 'Runway (ay, sonsuz=24)' } } } } });
+
+  $('cmpBody').replaceChildren(...r.comparison.map(c => {
+    const tr = el('tr');
+    [c.rank, cname(c), c.room].forEach(v => tr.append(el('td', String(v))));
+    const td = el('td'); td.append(pill(c.status)); tr.append(td);
+    [c.score, c.percentile + '%', c.growthPct + '%', fmt(c.cash), c.runwayMonths ?? '∞'].forEach(v => tr.append(el('td', String(v))));
+    return tr;
+  }));
+
+  $('coPick').replaceChildren(...r.companies.map((c, i) => new Option(`#${c.rank} ${cname(c)} · ${c.room}`, i)));
+  $('emPick').replaceChildren(...r.employees.map((e, i) => new Option(`${e.name} · ${e.room}${e.online ? ' 🟢' : ''}`, i)));
+  renderCompanyDetail(); renderEmployeeDetail();
+
+  $('emBody').replaceChildren(...r.employees.map(e => {
+    const tr = el('tr');
+    [e.name, e.room, e.online ? '🟢 Çevrimiçi' : '⚪ Ayrıldı', e.role.replace('role.', ''), e.employer || (e.founderOf.length ? 'Founder: ' + e.founderOf.join(', ') : '—'),
+      fmt(e.coins), e.stats.level, Math.round(e.stats.xp), e.stats.knowledge, e.stats.success, 'x' + e.stats.performance, fmt(e.coinGrowth)].forEach(v => tr.append(el('td', String(v))));
+    return tr;
+  }));
+}
+
+function renderCompanyDetail() {
+  const c = report?.companies[$('coPick').value]; if (!c) return;
+  const a = c.analysis;
+  $('coDetail').replaceChildren(pill(a.status), el('span', ` Skor ${a.score} · Büyüme ${a.growthPct}% · Son 3 ay kâr ${fmt(a.profitLast3M)} · Aylık yakım ${fmt(a.burnPerMonth)} · Runway ${a.runwayMonths ?? '∞'} ay · Yaş ${a.ageDays} gün · ${a.investable ? '✅ Yatırım alabilir' : '❌ Yatırıma hazır değil'}`));
+  chart('chCompany', { type: 'bar', data: { labels: c.series.map(x => x.period), datasets: [
+    { type: 'bar', label: 'Gelir', data: c.series.map(x => x.revenue), backgroundColor: '#4caf50' },
+    { type: 'bar', label: 'Gider', data: c.series.map(x => -x.expenses - x.losses), backgroundColor: '#e74c3c' },
+    { type: 'line', label: 'Dönem Sonu Kasa', data: c.series.map(x => x.closingCash), borderColor: '#f1c40f', yAxisID: 'y1' }] },
+    options: { scales: { y1: { position: 'right', grid: { drawOnChartArea: false } } } } });
+}
+function renderEmployeeDetail() {
+  const e = report?.employees[$('emPick').value]; if (!e) return;
+  $('emDetail').textContent = `Rol: ${e.role.replace('role.', '')} · İşveren: ${e.employer || '—'} · Seviye ${e.stats.level} · XP büyümesi ${fmt(e.xpGrowth)} · Coin büyümesi ${fmt(e.coinGrowth)}`;
+  chart('chEmployee', { type: 'line', data: { labels: e.series.map(x => x.period), datasets: [
+    { label: 'Coin', data: e.series.map(x => x.coins), borderColor: '#2d9cdb', tension: .3 },
+    { label: 'XP', data: e.series.map(x => x.xp), borderColor: '#9b59b6', tension: .3, yAxisID: 'y1' },
+    { label: 'Bilgi', data: e.series.map(x => x.knowledge), borderColor: '#1abc9c', tension: .3, yAxisID: 'y1' }] },
+    options: { scales: { y1: { position: 'right', grid: { drawOnChartArea: false } } } } });
+}
+$('coPick').onchange = renderCompanyDetail;
+$('emPick').onchange = renderEmployeeDetail;
+</script>
+</body>
+</html>
