@@ -27,6 +27,9 @@ app.use((req, res, next) => {
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 1e6 });
 app.use(express.static(path.join(__dirname, 'public')));
+// Vendor libs served from node_modules (pinned via package-lock, no CDN dependency)
+app.use('/vendor/i18next', express.static(path.join(__dirname, 'node_modules/i18next/dist/umd')));
+app.use('/vendor/chart.js', express.static(path.join(__dirname, 'node_modules/chart.js/dist')));
 
 // ---------- SEED / CONFIG (numbers are admin-editable) ----------
 const SEED = {
@@ -100,12 +103,14 @@ const MODES = { solo: { enabled: true }, multiplayer: { enabled: true }, online:
 // ---------- HELPERS ----------
 const rooms = {};
 const LOTS_PER_STREET = 12;
+const WORLD_MAX_X = 4000; // client street width is ~3800 world units
+const SPAWN_X = 120;     // in front of the guide building
 const clean = (s, max = 40) => String(s ?? '').replace(/[<>]/g, '').trim().slice(0, max);
 const cParams = c => (c.name ? { company: c.name } : { companyKey: c.nameKey });
 const addLog = (st, key, params = {}) => { st.log.unshift({ at: Date.now(), key, params }); st.log.length = Math.min(st.log.length, 30); };
 const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: st.day ? R.calendar(st.day) : null,
   players: st.players, companies: st.companies, lots: st.lots, log: st.log, ideas: st.ideas });
-const publicSeed = () => ({ tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
+const publicSeed = () => ({ salary: SEED.salary, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
   lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES });
 const maxTenants = lot => (lot.type === 'coworking' ? WS.coworking.maxTenants : SEED.lotSizes[lot.size].maxTenants);
 const newStats = () => ({ xp: 0, knowledge: 0, success: 0, level: 1, performance: 1 });
@@ -182,7 +187,7 @@ const syncRoom = st => st && io.to(st.id).emit('state', snapshot(st));
 
 // ---------- GAME SOCKETS ----------
 io.on('connection', socket => {
-  let street = null, me = null, lastAction = 0, pinFails = 0;
+  let street = null, me = null, lastAction = 0, lastMove = 0, pinFails = 0;
   const limited = () => { const now = Date.now(); if (now - lastAction < 100) return true; lastAction = now; return false; };
   const sync = () => syncRoom(street);
 
@@ -191,7 +196,8 @@ io.on('connection', socket => {
   function enter(st, name) {
     street = st;
     me = { id: socket.id, name: clean(name, 20) || 'Anon-' + crypto.randomBytes(2).toString('hex'),
-      coins: SEED.startCoins, role: 'role.candidate', stats: newStats() };
+      coins: SEED.startCoins, role: 'role.candidate', stats: newStats(),
+      x: SPAWN_X, dir: 1, avatar: crypto.randomInt(0, 1000) };
     st.players[socket.id] = me;
     socket.join(st.id);
     addLog(st, 'log.joined', { player: me.name });
@@ -223,6 +229,19 @@ io.on('connection', socket => {
     if (!safeEqual(clean(pin, 4), st.pin)) { pinFails++; return socket.emit('toast', 'toast.wrongPin'); }
     if (Object.keys(st.players).length >= SEED.maxPlayersPerRoom) return socket.emit('toast', 'toast.roomFull');
     enter(st, name);
+  });
+
+  // Character position: lightweight, volatile broadcast (no full state sync)
+  socket.on('move', ({ x, dir } = {}) => {
+    if (!street || !me) return;
+    const now = Date.now();
+    if (now - lastMove < 50) return;
+    lastMove = now;
+    const nx = Number(x);
+    if (!Number.isFinite(nx)) return;
+    me.x = Math.max(0, Math.min(WORLD_MAX_X, Math.round(nx)));
+    me.dir = dir < 0 ? -1 : 1;
+    socket.to(street.id).volatile.emit('pos', { id: me.id, x: me.x, dir: me.dir });
   });
 
   socket.on('startOnline', () => socket.emit('toast', 'toast.onlineLocked'));

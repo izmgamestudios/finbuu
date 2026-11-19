@@ -18,6 +18,13 @@ A web-based, side-scrolling **multiplayer idle entrepreneurship game**. Found co
 - **i18n:** Türkçe + İngilizce (i18next), responsive (mobil alt menü + hamburger, masaüstü yan panel)
 - **Admin dashboard:** Canlı KPI'lar, oda/oyuncu/şirket yönetimi, ekonomi ayarları, duyuru, NPC olayı tetikleme
 - **Finans raporları:** Oyun takvimi (1 tur = 1 gün, 30 gün = 1 ay, 360 gün = 1 yıl), aylık / çeyreklik / yıllık; şirket, çalışan ve karşılaştırmalı raporlar; durum analizi (battı / riskli / stabil / büyüyor / yatırım alabilir / exit hazır), CSV & JSON export, tam oyun yedeği export/import
+### Sprint 2
+- **Karakter & hareket:** Her oyuncunun avatarı var. Masaüstü: A/D veya ←/→ ile yürü, tıkla-git, W/↑ ile binaya gir. Mobil: sol altta joystick, sağ altta "Gir" butonu, binaya dokun.
+- **Yandan görünüm cadde:** Paralaks silüet, bulutlar, ağaç ve lambalar. Binaların zemin katı kesit (iç mekan, tezgah, raf, masa, çalışanlar); camda, balkonda ve terasta NPC'ler; caddede dolaşan NPC'ler; olaylarda (müşteri, yatırımcı, hırsız…) binaya yürüyen NPC.
+- **Finansa göre bina yüksekliği:** Kasa büyüdükçe bina kat kazanır (250c → 1 kat, her ikiye katlanmada +1, en fazla 6), zarar edince küçülür. Çatıda 💰 kasa ve ▲▼ trend.
+- **Sistem önerisi:** Her panelde ⭐ varsayılan seçenek. Üstte "✓ Tamam / ⏭ Sonraki / ▶▶ Otomatik" çubuğu; Enter = onayla, N = sonraki. Otomatik modda karakter hedef binaya yürür ve öneriyi uygular.
+- **HUD & finans paneli:** Üstte para, kasa (sonraki kata ilerleme), müşteri, çalışan, bugün ve bu ay gelir/gider, seviye barları. Yan panelde anlık + aylık KPI'lar, kasa çizgisi, günlük ve aylık gelir/gider grafikleri, tablo görünümü. Bina panelinde mini finans şeridi ve kasa sparkline.
+
 - **🔒 Premium / sonraki sprintler (bulanık gösterilir):** Ideathon, Hackathon, Game Jam, Bootcamp, hızlandırıcılar, KOSGEB, TÜBİTAK, melek yatırımcı, Seed, Seri A/B, kitlesel fonlama, halka arz, apartman, gökdelen, pazar araştırması, rakip analizi
 
 ## 🚀 Kurulum / Setup
@@ -37,7 +44,11 @@ npm start                       # .env otomatik yüklenir (Node >= 20.12)
 ```
 server.js              # Game server, economy tick, NPC events, admin socket + HTTP API
 reports.js             # Game calendar, finance ledger, analysis, CSV export
-public/index.html      # Game client (canvas + i18next, responsive)
+public/index.html      # Game client shell (HUD, advisor bar, finance panel)
+public/js/world.js     # Street renderer: buildings, interiors, people, ambient NPCs
+public/js/advisor.js   # Suggestion engine (OK / Next / Auto)
+public/js/app.js       # Input (keys, click, joystick), camera, socket, charts
+public/css/game.css    # Calm light/dark theme
 public/admin.html      # Admin dashboard (Chart.js)
 public/locales/*.json  # tr / en translations
 ```
