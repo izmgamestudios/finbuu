@@ -22,6 +22,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Guard deploy target
+        run: |
+          # Never rsync --delete into a path outside the Finbuu app directory
+          case "$DEPLOY_PATH" in
+            /home/ortakofis-finbuu/finbuu|/home/ortakofis-finbuu/finbuu/) ;;
+            *) echo "::error::DEPLOY_PATH must be /home/ortakofis-finbuu/finbuu (got: $DEPLOY_PATH)"; exit 1 ;;
+          esac
+          if [ "$SSH_USER" != "ortakofis-finbuu" ]; then
+            echo "::error::SSH_USER must be ortakofis-finbuu"; exit 1
+          fi
+
       - name: Check required secrets
         run: |
           for v in SSH_HOST SSH_USER DEPLOY_PATH; do
