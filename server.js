@@ -25,7 +25,8 @@ app.use((req, res, next) => {
   next();
 });
 const server = http.createServer(app);
-const io = new Server(server, { maxHttpBufferSize: 1e6 });
+// perMessageDeflate: snapshots are repetitive JSON, compression cuts bandwidth ~5-10x for 30-50 player rooms
+const io = new Server(server, { maxHttpBufferSize: 1e6, perMessageDeflate: { threshold: 1024 } });
 app.use(express.static(path.join(__dirname, 'public')));
 // Vendor libs served from node_modules (pinned via package-lock, no CDN dependency)
 app.use('/vendor/i18next', express.static(path.join(__dirname, 'node_modules/i18next/dist/umd')));
@@ -37,7 +38,7 @@ const SEED = {
   salary: 25,
   npcEventSeconds: 30,
   tickSeconds: 60, // 1 tick = 1 game day
-  maxPlayersPerRoom: 30,
+  maxPlayersPerRoom: 60,
   lotSizes: {
     10: { rent: 20, capacity: 2, maxTenants: 1 },
     50: { rent: 80, capacity: 6, maxTenants: 2 },
@@ -66,8 +67,36 @@ const SEED = {
     { key: 'tpl.phoneRepair', price: 15, sector: 'sector.service' },
     { key: 'tpl.softwareAgency', price: 40, sector: 'sector.tech' },
     { key: 'tpl.bakery', price: 8, sector: 'sector.food' },
-    { key: 'tpl.stationery', price: 6, sector: 'sector.retail' }
+    { key: 'tpl.stationery', price: 6, sector: 'sector.retail' },
+    { key: 'tpl.barber', price: 12, sector: 'sector.service' },
+    { key: 'tpl.florist', price: 9, sector: 'sector.retail' },
+    { key: 'tpl.restaurant', price: 18, sector: 'sector.food' },
+    { key: 'tpl.bookstore', price: 10, sector: 'sector.retail' },
+    { key: 'tpl.gym', price: 22, sector: 'sector.health' },
+    { key: 'tpl.pharmacy', price: 14, sector: 'sector.health' },
+    { key: 'tpl.tutoring', price: 20, sector: 'sector.education' },
+    { key: 'tpl.languageSchool', price: 25, sector: 'sector.education' },
+    { key: 'tpl.designStudio', price: 30, sector: 'sector.creative' },
+    { key: 'tpl.photoStudio', price: 16, sector: 'sector.creative' },
+    { key: 'tpl.gameStudio', price: 45, sector: 'sector.tech' },
+    { key: 'tpl.ecommerce', price: 28, sector: 'sector.tech' },
+    { key: 'tpl.consulting', price: 35, sector: 'sector.service' },
+    { key: 'tpl.bikeRepair', price: 11, sector: 'sector.service' },
+    { key: 'tpl.petShop', price: 13, sector: 'sector.retail' }
   ],
+  // "Other": players can define their own product/service within these bounds
+  custom: { minPrice: 1, maxPrice: 60, sectors: ['sector.food', 'sector.service', 'sector.tech', 'sector.retail', 'sector.health', 'sector.education', 'sector.creative'] },
+  // Departments inside a company building. A floor unlocks when the building is tall enough (floor index < floors).
+  departments: [
+    { key: 'sales', floor: 0 }, { key: 'finance', floor: 0 },
+    { key: 'accounting', floor: 1 }, { key: 'marketing', floor: 1 },
+    { key: 'hr', floor: 2 }, { key: 'it', floor: 2 },
+    { key: 'rnd', floor: 3, locked: true }, { key: 'board', floor: 3, locked: true }
+  ],
+  marketing: { cost: 100, days: 7, mult: 1.3 },
+  itUpgrade: { cost: 150, maxLevel: 3, cyberShield: 0.25 },
+  npcStaff: { incomeFactor: 4 },
+  npcTalk: { ids: 64, serviceCost: 30, meetXp: 2, serviceXp: 5, serviceKnowledge: 2, dealMult: 2 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3 },
     { key: 'npc.grocery', lotType: 'shop', size: 50, price: 7 },
@@ -98,7 +127,8 @@ const CRISES = {
 };
 const CRISIS_CHANCE = 0.15; // share of NPC event rolls that become a crisis
 const WS = SEED.workspaces;
-const MODES = { solo: { enabled: true }, multiplayer: { enabled: true }, online: { enabled: false } };
+const MODES = { solo: { enabled: true }, multiplayer: { enabled: true }, presentation: { enabled: true }, online: { enabled: false } };
+const SHARED_MODES = ['multiplayer', 'presentation'];
 
 // ---------- HELPERS ----------
 const rooms = {};
@@ -108,15 +138,39 @@ const SPAWN_X = 120;     // in front of the guide building
 const clean = (s, max = 40) => String(s ?? '').replace(/[<>]/g, '').trim().slice(0, max);
 const cParams = c => (c.name ? { company: c.name } : { companyKey: c.nameKey });
 const addLog = (st, key, params = {}) => { st.log.unshift({ at: Date.now(), key, params }); st.log.length = Math.min(st.log.length, 30); };
+// Compact company view for clients: last 30 days + last 12 months (full history stays on the server for reports)
+// Lite company view in every snapshot: only today / last day / this month. History is fetched on demand ('finHistory').
+const publicCompany = (c, monthKey) => {
+  const f = c.fin || {}, d = f.daily || [];
+  const recent = d.slice(-30);
+  return { ...c, fin: { today: f.today, foundedDay: f.foundedDay, lastDay: d.at(-1) || null, prevCash: d.at(-2)?.cash ?? null,
+    month: f.monthly?.[monthKey] || null, bestUnits: recent.reduce((m, x) => Math.max(m, x.units || 0), 0) } };
+};
+const finHistory = c => {
+  const f = c.fin || {};
+  return { daily: (f.daily || []).slice(-30), monthly: Object.values(f.monthly || {}).sort((a, b) => a.key.localeCompare(b.key)).slice(-12) };
+};
+const publicPresentation = st => st.presentation && {
+  spotlight: st.presentation.spotlight, chatLocked: st.presentation.chatLocked, actionsLocked: st.presentation.actionsLocked,
+  muted: Object.keys(st.presentation.muted || {}),
+  poll: st.presentation.poll && { id: st.presentation.poll.id, question: st.presentation.poll.question, open: st.presentation.poll.open,
+    options: st.presentation.poll.options.map(o => ({ text: o.text, votes: o.votes })), total: Object.keys(st.presentation.poll.voters).length }
+};
+const publicPlayer = p => ({ id: p.id, name: p.name, coins: p.coins, role: p.role, stats: p.stats, x: p.x, dir: p.dir, avatar: p.avatar });
 const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: st.day ? R.calendar(st.day) : null,
-  players: st.players, companies: st.companies, lots: st.lots, log: st.log, ideas: st.ideas });
-const publicSeed = () => ({ salary: SEED.salary, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
+  players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
+  companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, publicCompany(c, R.calendar((st.day || 0) + 1).monthKey)])),
+  presentation: publicPresentation(st) || null, lots: st.lots, log: st.log, ideas: st.ideas });
+const publicSeed = () => ({ salary: SEED.salary, custom: SEED.custom, departments: SEED.departments, marketing: SEED.marketing, itUpgrade: SEED.itUpgrade, npcTalk: { serviceCost: SEED.npcTalk.serviceCost, ids: SEED.npcTalk.ids }, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
   lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES });
 const maxTenants = lot => (lot.type === 'coworking' ? WS.coworking.maxTenants : SEED.lotSizes[lot.size].maxTenants);
 const newStats = () => ({ xp: 0, knowledge: 0, success: 0, level: 1, performance: 1 });
 const levelOf = xp => Math.floor(Math.sqrt(xp / 10)) + 1;
 const emptyBenefits = () => ({ transport: false, insurance: false, meal: false });
-const newRoomId = () => crypto.randomBytes(4).toString('hex');
+// Room codes: 6-digit numbers, unique among live rooms
+const newRoomId = () => { let id; do id = String(crypto.randomInt(100000, 1000000)); while (rooms[id] || rooms['solo-' + id]); return id; };
+// Room PIN: host may choose 4-6 digits; otherwise a random 4-digit PIN
+const pinOrRandom = pin => (/^\d{4,6}$/.test(String(pin ?? '').trim()) ? String(pin).trim() : newPin());
 const newPin = () => String(crypto.randomInt(1000, 10000)); // 4 digits
 const safeEqual = (a, b) => {
   const x = Buffer.from(String(a ?? '')), y = Buffer.from(String(b ?? ''));
@@ -173,22 +227,50 @@ function createStreet(id, mode, pin) {
   return st;
 }
 const crisisActive = (st, c) => c.crisis && c.crisis.until > (st.day || 0);
-const incomeMult = (st, c) => (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1);
+const marketingActive = (st, c) => c.marketing && c.marketing.until > (st.day || 0);
+const incomeMult = (st, c) => (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? SEED.marketing.mult : 1);
+// Mirrors the client: building height (floors) follows the lot's total cash. Virtual companies use their own cash.
+const floorsFor = cash => Math.max(1, Math.min(6, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
+function floorsOf(st, c) {
+  if (c.lotId == null) return floorsFor(c.cash);
+  return floorsFor(st.lots[c.lotId].companyIds.reduce((sum, id) => sum + (st.companies[id]?.cash || 0), 0));
+}
+const deptUnlocked = (st, c, key) => { const d = SEED.departments.find(x => x.key === key); return d && !d.locked && d.floor < floorsOf(st, c); };
+const staffCount = c => c.employees.length + (c.npcStaff || 0);
 function applyCrisis(st, c, type) {
   const cr = CRISES[type];
-  const loss = Math.floor(Math.max(0, c.cash) * cr.hit) + cr.fixed;
+  const shield = type === 'cyberAttack' ? 1 - (c.security || 0) * SEED.itUpgrade.cyberShield : 1;
+  const loss = Math.round((Math.floor(Math.max(0, c.cash) * cr.hit) + cr.fixed) * shield);
   c.cash -= loss;
   R.track(c, 'losses', loss);
   c.crisis = { type, until: (st.day || 0) + cr.days };
   c.crisisCount = (c.crisisCount || 0) + 1;
   addLog(st, 'log.crisis', { crisisKey: cr.key, days: cr.days, ...cParams(c) });
 }
-const syncRoom = st => st && io.to(st.id).emit('state', snapshot(st));
+// Coalesce state broadcasts: at most one full snapshot per room every SYNC_MS (clicks no longer flood clients)
+// Interval grows with room size so 30-50 players do not multiply bandwidth: 5/s small rooms, ~1.25/s crowded rooms.
+const syncInterval = st => { const n = Object.keys(st.players).length; return n <= 5 ? 200 : n <= 20 ? 400 : 800; };
+const syncTimers = new Map();
+const syncRoom = st => {
+  if (!st || syncTimers.has(st.id)) return;
+  syncTimers.set(st.id, setTimeout(() => { syncTimers.delete(st.id); if (rooms[st.id] === st) io.to(st.id).emit('state', snapshot(st)); }, syncInterval(st)));
+};
+// Character positions are batched per room (one message per 100 ms instead of one per move per player)
+const posDirty = new Map(); // roomId -> Map(playerId -> {x, dir})
+setInterval(() => {
+  for (const [rid, m] of posDirty) {
+    if (rooms[rid] && m.size) io.to(rid).volatile.emit('posBatch', [...m].map(([id, p]) => [id, p.x, p.dir]));
+  }
+  posDirty.clear();
+}, 100);
 
 // ---------- GAME SOCKETS ----------
 io.on('connection', socket => {
   let street = null, me = null, lastAction = 0, lastMove = 0, pinFails = 0;
-  const limited = () => { const now = Date.now(); if (now - lastAction < 100) return true; lastAction = now; return false; };
+  const limited = () => {
+    if (street?.presentation?.actionsLocked) { socket.emit('toast', 'toast.actionsLocked'); return true; }
+    const now = Date.now(); if (now - lastAction < 100) return true; lastAction = now; return false;
+  };
   const sync = () => syncRoom(street);
 
   socket.emit('seed', publicSeed());
@@ -201,7 +283,8 @@ io.on('connection', socket => {
     st.players[socket.id] = me;
     socket.join(st.id);
     addLog(st, 'log.joined', { player: me.name });
-    socket.emit('joined', { roomId: st.id, mode: st.mode, pin: st.mode === 'multiplayer' ? st.pin : null });
+    socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null });
+    socket.emit('chatHistory', st.chat || []);
     sync();
   }
 
@@ -214,10 +297,10 @@ io.on('connection', socket => {
   });
 
   // Multiplayer: create a private room → share link + 4-digit PIN
-  socket.on('createRoom', ({ name } = {}) => {
+  socket.on('createRoom', ({ name, pin } = {}) => {
     if (street) return;
     const id = newRoomId();
-    rooms[id] = createStreet(id, 'multiplayer', newPin());
+    rooms[id] = createStreet(id, 'multiplayer', pinOrRandom(pin));
     enter(rooms[id], name);
   });
 
@@ -225,15 +308,15 @@ io.on('connection', socket => {
     if (street) return;
     if (pinFails >= 5) return socket.emit('toast', 'toast.tooManyTries');
     const st = rooms[clean(roomId, 20)];
-    if (!st || st.mode !== 'multiplayer') return socket.emit('toast', 'toast.roomNotFound');
-    if (!safeEqual(clean(pin, 4), st.pin)) { pinFails++; return socket.emit('toast', 'toast.wrongPin'); }
+    if (!st || !SHARED_MODES.includes(st.mode)) return socket.emit('toast', 'toast.roomNotFound');
+    if (!safeEqual(clean(pin, 6), st.pin)) { pinFails++; return socket.emit('toast', 'toast.wrongPin'); }
     if (Object.keys(st.players).length >= SEED.maxPlayersPerRoom) return socket.emit('toast', 'toast.roomFull');
     enter(st, name);
   });
 
   // Character position: lightweight, volatile broadcast (no full state sync)
   socket.on('move', ({ x, dir } = {}) => {
-    if (!street || !me) return;
+    if (!street || !me || street.mode === 'presentation') return;
     const now = Date.now();
     if (now - lastMove < 50) return;
     lastMove = now;
@@ -241,27 +324,149 @@ io.on('connection', socket => {
     if (!Number.isFinite(nx)) return;
     me.x = Math.max(0, Math.min(WORLD_MAX_X, Math.round(nx)));
     me.dir = dir < 0 ? -1 : 1;
-    socket.to(street.id).volatile.emit('pos', { id: me.id, x: me.x, dir: me.dir });
+    if (!posDirty.has(street.id)) posDirty.set(street.id, new Map());
+    posDirty.get(street.id).set(me.id, { x: me.x, dir: me.dir });
   });
+
+  // ---------- Departments (inside the building) ----------
+  const founderOf = cid => { const c = street?.companies[cid]; return c && c.founders.includes(me.id) ? c : null; };
+  const needDept = (c, key) => { if (deptUnlocked(street, c, key)) return true; socket.emit('toast', 'toast.deptLocked'); return false; };
+
+  socket.on('marketing', ({ cid } = {}) => {
+    const c = founderOf(cid); if (!c || limited() || !needDept(c, 'marketing')) return;
+    if (marketingActive(street, c)) return socket.emit('toast', 'toast.campaignActive');
+    if (c.cash < SEED.marketing.cost) return socket.emit('toast', 'toast.noCash');
+    c.cash -= SEED.marketing.cost; R.track(c, 'expenses', SEED.marketing.cost);
+    c.marketing = { until: (street.day || 0) + SEED.marketing.days };
+    addLog(street, 'log.campaign', { player: me.name, days: SEED.marketing.days, ...cParams(c) });
+    sync();
+  });
+
+  socket.on('itUpgrade', ({ cid } = {}) => {
+    const c = founderOf(cid); if (!c || limited() || !needDept(c, 'it')) return;
+    if ((c.security || 0) >= SEED.itUpgrade.maxLevel) return socket.emit('toast', 'toast.maxLevel');
+    if (c.cash < SEED.itUpgrade.cost) return socket.emit('toast', 'toast.noCash');
+    c.cash -= SEED.itUpgrade.cost; R.track(c, 'expenses', SEED.itUpgrade.cost);
+    c.security = (c.security || 0) + 1;
+    addLog(street, 'log.itUpgrade', { player: me.name, level: c.security, ...cParams(c) });
+    sync();
+  });
+
+  function hireNpc(c) {
+    if (staffCount(c) >= employeeCap(street, c)) { socket.emit('toast', 'toast.noDesk'); return false; }
+    c.npcStaff = (c.npcStaff || 0) + 1;
+    addLog(street, 'log.hiredNpc', { player: me.name, ...cParams(c) });
+    return true;
+  }
+  socket.on('hireNpc', ({ cid } = {}) => {
+    const c = founderOf(cid); if (!c || limited() || !needDept(c, 'hr')) return;
+    if (hireNpc(c)) sync();
+  });
+  socket.on('fireNpc', ({ cid } = {}) => {
+    const c = founderOf(cid); if (!c || limited() || !(c.npcStaff > 0)) return;
+    c.npcStaff -= 1; sync();
+  });
+
+  // ---------- Street NPC dialogs (NPCs are cosmetic on the client; the server caps what they can grant) ----------
+  socket.on('npcTalk', ({ npcId, kind, cid } = {}) => {
+    if (!street || !me || limited()) return;
+    const id = Number(npcId), cfg = SEED.npcTalk;
+    if (!Number.isInteger(id) || id < 0 || id >= cfg.ids) return;
+    const day = street.day || 0;
+    me.npcLog ||= {};
+    const once = (k, perDay = true) => { const key = `${id}:${k}`; if (me.npcLog[key] != null && (!perDay || me.npcLog[key] === day)) return false; me.npcLog[key] = day; return true; };
+    const gain = (xp, knowledge = 0) => { me.stats.xp += xp; me.stats.knowledge = +(me.stats.knowledge + knowledge).toFixed(1); me.stats.level = levelOf(me.stats.xp); };
+    if (kind === 'meet') {
+      if (!once('meet', false)) return socket.emit('npcResult', { npcId: id, kind, ok: false, key: 'toast.alreadyMet' });
+      gain(cfg.meetXp, 0.5);
+      socket.emit('npcResult', { npcId: id, kind, ok: true, key: 'npcres.met' });
+    } else if (kind === 'sell') {
+      const c = street.companies[cid];
+      if (!c || !(c.founders.includes(me.id) || c.employees.includes(me.id))) return;
+      if (!once('sell')) return socket.emit('npcResult', { npcId: id, kind, ok: false, key: 'toast.npcBoughtToday' });
+      const value = Math.max(1, Math.round(c.price * WS[c.workspace].salesMult * cfg.dealMult * incomeMult(street, c)));
+      c.cash += value; c.sales++; R.track(c, 'revenue', value); R.track(c, 'units', 1);
+      gain(SEED.progression.xpPerClick * 2);
+      socket.emit('npcResult', { npcId: id, kind, ok: true, key: 'npcres.sold', amount: value });
+    } else if (kind === 'service') {
+      if (me.coins < cfg.serviceCost) return socket.emit('toast', 'toast.noCoins');
+      if (!once('service')) return socket.emit('npcResult', { npcId: id, kind, ok: false, key: 'toast.npcBusy' });
+      me.coins -= cfg.serviceCost; gain(cfg.serviceXp, cfg.serviceKnowledge);
+      socket.emit('npcResult', { npcId: id, kind, ok: true, key: 'npcres.service', amount: cfg.serviceCost });
+    } else if (kind === 'hire') {
+      const c = founderOf(cid); if (!c) return;
+      if (!once('hire', false)) return socket.emit('npcResult', { npcId: id, kind, ok: false, key: 'toast.npcTaken' });
+      if (!hireNpc(c)) { delete me.npcLog[`${id}:hire`]; return; }
+      socket.emit('npcResult', { npcId: id, kind, ok: true, key: 'npcres.hired' });
+    } else return;
+    sync();
+  });
+
+  // ---------- Chat (multiplayer & presentation rooms), moderated by admin ----------
+  let lastChat = 0;
+  socket.on('chat', ({ text } = {}) => {
+    if (!street || !me || street.mode === 'solo') return;
+    const now = Date.now();
+    if (now - lastChat < 1500) return socket.emit('toast', 'toast.slowDown');
+    const pr = street.presentation;
+    if (pr?.chatLocked) return socket.emit('toast', 'toast.chatLocked');
+    if (pr?.muted?.[me.id]) return socket.emit('toast', 'toast.muted');
+    const body = clean(text, 200);
+    if (!body) return;
+    lastChat = now;
+    const msg = { id: crypto.randomUUID(), pid: me.id, by: me.name, text: body, at: now };
+    street.chat ||= [];
+    street.chat.push(msg); if (street.chat.length > 50) street.chat.shift();
+    io.to(street.id).emit('chat', msg);
+  });
+  socket.on('vote', ({ pollId, option } = {}) => {
+    const poll = street?.presentation?.poll;
+    if (!poll || !poll.open || poll.id !== pollId || poll.voters[me.id] != null) return;
+    const i = Number(option);
+    if (!Number.isInteger(i) || !poll.options[i]) return;
+    poll.voters[me.id] = i; poll.options[i].votes++;
+    sync();
+  });
+  let lastHist = 0;
+  socket.on('finHistory', ({ cid } = {}, cb) => {
+    if (typeof cb !== 'function') return;
+    const c = street?.companies[cid], now = Date.now();
+    if (!c || now - lastHist < 250) return cb(null);
+    lastHist = now;
+    cb(finHistory(c));
+  });
+
+  // Latency probe for the in-game status panel
+  socket.on('latency', (cb) => typeof cb === 'function' && cb(Date.now()));
 
   socket.on('startOnline', () => socket.emit('toast', 'toast.onlineLocked'));
 
-  socket.on('found', ({ lotId, workspace, name, templateIdx } = {}) => {
+  socket.on('found', ({ lotId, workspace, name, templateIdx, custom } = {}) => {
     if (!street || limited()) return;
     const ws = Object.hasOwn(WS, workspace) ? workspace : null;
     if (!ws) return;
-    const tpl = SEED.templates[templateIdx] || SEED.templates[0];
+    let tpl = SEED.templates[templateIdx] || SEED.templates[0], customLabel = null;
+    if (custom && typeof custom === 'object') {
+      customLabel = clean(custom.label, 30);
+      const price = Math.floor(Number(custom.price));
+      const sector = SEED.custom.sectors.includes(custom.sector) ? custom.sector : null;
+      if (!customLabel || !sector || !(price >= SEED.custom.minPrice && price <= SEED.custom.maxPrice)) return socket.emit('toast', 'toast.badCustom');
+      tpl = { key: 'tpl.custom', price, sector };
+    }
     let lot = null;
     if (WS[ws].physical) {
-      lot = street.lots[lotId];
+      // 'auto' (wizard / presentation mode): first free lot of that type
+      lot = lotId === 'auto' ? street.lots.find(l => l.type === ws && l.companyIds.length < maxTenants(l)) : street.lots[lotId];
       if (!lot || lot.type !== ws || lot.companyIds.length >= maxTenants(lot)) return socket.emit('toast', 'toast.full');
     }
     const deposit = depositFor(ws, lot);
     if (me.coins < deposit) return socket.emit('toast', 'toast.noCoins');
     const cid = crypto.randomUUID();
     me.coins -= deposit;
-    street.companies[cid] = makeCompany({ id: cid, name: clean(name) || null, nameKey: tpl.key, workspace: ws,
+    street.companies[cid] = makeCompany({ id: cid, name: clean(name) || customLabel || null, nameKey: tpl.key, workspace: ws,
       lotId: lot ? lot.id : null, founders: [me.id], cash: deposit, price: tpl.price, isNpc: false });
+    street.companies[cid].sector = tpl.sector;
+    if (customLabel) street.companies[cid].product = customLabel;
     if (lot) lot.companyIds.push(cid);
     me.role = 'role.founder';
     addLog(street, 'log.foundedWs', { player: me.name, wsKey: 'ws.' + ws, ...cParams(street.companies[cid]) });
@@ -289,7 +494,7 @@ io.on('connection', socket => {
   socket.on('work', ({ cid } = {}) => {
     const c = street?.companies[cid];
     if (!c || c.employees.includes(me.id)) return;
-    if (c.employees.length >= employeeCap(street, c)) return socket.emit('toast', 'toast.noDesk');
+    if (staffCount(c) >= employeeCap(street, c)) return socket.emit('toast', 'toast.noDesk');
     for (const other of Object.values(street.companies)) other.employees = other.employees.filter(id => id !== me.id);
     c.employees.push(me.id); me.role = 'role.employee';
     addLog(street, 'log.hired', { player: me.name, ...cParams(c) });
@@ -367,7 +572,7 @@ function economyTick() {
     for (const c of Object.values(st.companies)) {
       c.performance = performanceOf(c);
       c.benefitCost = benefitCostPerEmployee(c);
-      const cost = costPerTick(st, c) + c.employees.length * (SEED.salary + c.benefitCost);
+      const cost = costPerTick(st, c) + c.employees.length * (SEED.salary + c.benefitCost) + (c.npcStaff || 0) * SEED.salary;
       c.cash -= cost;
       R.track(c, 'expenses', cost);
       c.employees.forEach(pid => {
@@ -380,6 +585,11 @@ function economyTick() {
       });
       if (c.cash >= SEED.progression.successCashThreshold) c.founders.forEach(pid => st.players[pid] && (st.players[pid].stats.success += 1));
       if (c.isNpc) { const income = Math.round(c.price * 15 * incomeMult(st, c)); c.cash += income; R.track(c, 'revenue', income); }
+      if (c.npcStaff > 0) {
+        const income = Math.round(c.npcStaff * c.price * WS[c.workspace].salesMult * SEED.npcStaff.incomeFactor * c.performance * incomeMult(st, c));
+        c.cash += income; R.track(c, 'revenue', income); R.track(c, 'units', c.npcStaff);
+      }
+      if (c.marketing && !marketingActive(st, c)) c.marketing = null;
     }
     R.closeDay(st);
     for (const c of Object.values(st.companies)) {
@@ -505,7 +715,8 @@ function overview() {
       const companies = Object.values(st.companies);
       return {
         id: st.id, mode: st.mode, pin: st.pin, day: st.day || 0, calendar: st.day ? R.calendar(st.day) : null, createdAt: st.createdAt,
-        players: Object.values(st.players),
+        players: Object.values(st.players).map(publicPlayer),
+        presentation: publicPresentation(st) || null, chat: (st.chat || []).slice(-30),
         companies: companies.map(c => ({ id: c.id, name: c.name, nameKey: c.nameKey, workspace: c.workspace, lotId: c.lotId,
           cash: c.cash, sales: c.sales, price: c.price, founders: c.founders.length, employees: c.employees.length,
           benefits: c.benefits, performance: c.performance, isNpc: c.isNpc, crisis: crisisActive(st, c) ? c.crisis : null })),
@@ -602,11 +813,39 @@ admin.on('connection', socket => {
     audit('runTick', `${n} day(s)`); push();
   });
 
-  socket.on('createRoom', () => {
-    const id = newRoomId();
-    rooms[id] = createStreet(id, 'multiplayer', newPin());
-    audit('createRoom', id); push();
+  socket.on('createRoom', ({ mode, pin } = {}) => {
+    const id = newRoomId(), m = mode === 'presentation' ? 'presentation' : 'multiplayer';
+    rooms[id] = createStreet(id, m, pinOrRandom(pin));
+    if (m === 'presentation') rooms[id].presentation = { spotlight: 'auto', chatLocked: false, actionsLocked: false, muted: {}, poll: null };
+    audit('createRoom', `${id} (${m})`); push();
   });
+  const pres = id => { const st = room(id); return st?.presentation ? st : null; };
+  socket.on('setSpotlight', ({ roomId, target } = {}) => {
+    const st = pres(roomId); if (!st) return;
+    const n = Number(target);
+    st.presentation.spotlight = target === 'auto' || target === 'plaza' || target == null ? (target ?? null) : Number.isInteger(n) && st.lots[n] ? n : 'auto';
+    audit('setSpotlight', `${st.id}: ${st.presentation.spotlight}`); syncRoom(st); push();
+  });
+  socket.on('lockChat', ({ roomId, locked } = {}) => { const st = pres(roomId); if (!st) return; st.presentation.chatLocked = !!locked; audit('lockChat', `${st.id}: ${!!locked}`); syncRoom(st); push(); });
+  socket.on('lockActions', ({ roomId, locked } = {}) => { const st = pres(roomId); if (!st) return; st.presentation.actionsLocked = !!locked; audit('lockActions', `${st.id}: ${!!locked}`); syncRoom(st); push(); });
+  socket.on('mutePlayer', ({ roomId, playerId, muted } = {}) => {
+    const st = pres(roomId); if (!st || !st.players[playerId]) return;
+    if (muted) st.presentation.muted[playerId] = true; else delete st.presentation.muted[playerId];
+    audit('mutePlayer', `${st.players[playerId].name}: ${!!muted}`); syncRoom(st); push();
+  });
+  socket.on('deleteChat', ({ roomId, msgId } = {}) => {
+    const st = room(roomId); if (!st?.chat) return;
+    st.chat = st.chat.filter(m => m.id !== msgId);
+    io.to(st.id).emit('chatDeleted', msgId); audit('deleteChat', msgId); push();
+  });
+  socket.on('createPoll', ({ roomId, question, options } = {}) => {
+    const st = pres(roomId); if (!st) return;
+    const q = clean(question, 140), opts = (Array.isArray(options) ? options : []).map(o => clean(o, 60)).filter(Boolean).slice(0, 6);
+    if (!q || opts.length < 2) return;
+    st.presentation.poll = { id: crypto.randomUUID(), question: q, open: true, options: opts.map(text => ({ text, votes: 0 })), voters: {} };
+    audit('createPoll', `${st.id}: ${q}`); syncRoom(st); push();
+  });
+  socket.on('closePoll', ({ roomId } = {}) => { const st = pres(roomId); if (!st?.presentation.poll) return; st.presentation.poll.open = false; audit('closePoll', st.id); syncRoom(st); push(); });
 
   socket.on('newPin', ({ roomId } = {}) => {
     const st = room(roomId);
@@ -619,6 +858,7 @@ admin.on('connection', socket => {
     const st = room(roomId);
     if (!st) return;
     const fresh = createStreet(st.id, st.mode, st.pin);
+    if (st.presentation) fresh.presentation = { ...st.presentation, poll: null };
     for (const p of Object.values(st.players)) { p.coins = SEED.startCoins; p.role = 'role.candidate'; p.stats = newStats(); p.history = {}; fresh.players[p.id] = p; }
     rooms[st.id] = fresh;
     syncRoom(fresh);

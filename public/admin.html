@@ -48,6 +48,7 @@
   </header>
   <div class="tabs" id="tabs">
     <button data-tab="dash" class="active">Genel Bakış</button>
+    <button data-tab="present">🎤 Sunum Kontrol</button>
     <button data-tab="rooms">Odalar & Oyuncular</button>
     <button data-tab="companies">Şirketler</button>
     <button data-tab="economy">Ekonomi Ayarları</button>
@@ -64,7 +65,9 @@
     </div>
     <div class="card" style="margin-top:12px"><h3>Hızlı İşlemler</h3>
       <div class="row">
+        <input id="newRoomPin" placeholder="Şifre (4-6 rakam, boş = rastgele)" maxlength="6" inputmode="numeric" style="width:230px">
         <button id="newRoom" class="primary">➕ Multiplayer Oda Kur</button>
+        <button id="newPresentation" class="primary">🎤 Sunum Odası Kur</button>
         <input id="tickDays" type="number" value="1" min="1" max="3650" style="width:90px">
         <button id="runTick">⏩ Gün İlerlet</button>
         <input id="annText" placeholder="Tüm oyunculara duyuru" maxlength="200" style="flex:1;min-width:200px">
@@ -74,6 +77,28 @@
     </div>
   </main>
 
+  <main id="present">
+    <div class="card"><h3>🎤 Sunum / İzleme Modu</h3>
+      <p class="muted">Katılımcılar yürüyemez; sadece öneri çubuğu, sohbet, komutlar (/sat, /kur…) ve anketlerle oynar. Kamera ve akışı buradan yönetirsin.</p>
+      <div class="row">
+        <select id="prRoom" style="min-width:220px"></select>
+        <select id="prSpot"></select>
+        <button id="prChat">💬 Sohbeti kilitle / aç</button>
+        <button id="prActions">⏸ İşlemleri durdur / başlat</button>
+      </div>
+      <p id="prState" class="muted"></p>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><h3>📊 Anket</h3>
+        <input id="pollQ" placeholder="Soru (ör. Hangi sektörde şirket kuralım?)" maxlength="140" style="width:100%;margin-bottom:6px">
+        <textarea id="pollOpts" rows="4" placeholder="Her satıra bir seçenek (2-6)" style="width:100%"></textarea>
+        <div class="row" style="margin-top:6px"><button id="pollCreate" class="primary">Anketi başlat</button><button id="pollClose">Anketi kapat</button></div>
+        <div id="pollView" style="margin-top:8px"></div>
+      </div>
+      <div class="card"><h3>💬 Sohbet Moderasyonu</h3><div id="prChatList" style="max-height:360px;overflow:auto"></div></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>👥 Katılımcılar</h3><div id="prPlayers"></div></div>
+  </main>
   <main id="rooms"><div id="roomList"></div></main>
 
   <main id="companies">
@@ -185,7 +210,7 @@ function renderAll() {
     const ws = {}; R.forEach(r => r.companies.forEach(c => (ws[c.workspace] = (ws[c.workspace] || 0) + 1)));
     chart('chWs', { type: 'doughnut', data: { labels: Object.keys(ws), datasets: [{ data: Object.values(ws), backgroundColor: ['#4caf50', '#1abc9c', '#2d9cdb', '#9b59b6', '#f1c40f'] }] }, options: { animation: false } });
   }
-  renderRooms(); renderCompanies(); renderIdeas(); renderAudit(); fillRoomSelects();
+  renderPresentation(); renderRooms(); renderCompanies(); renderIdeas(); renderAudit(); fillRoomSelects();
   if (!cfgRendered) { renderConfig(); cfgRendered = true; }
 }
 
@@ -206,7 +231,7 @@ function renderRooms() {
     card.append(el('h3', `🏙 ${r.id} · ${r.mode}${r.pin ? ' · 🔑 ' + r.pin : ''} · Gün ${r.day}`));
     const actions = el('div'); actions.className = 'row';
     const btn = (label, fn, cls) => { const b = el('button', label); if (cls) b.className = cls; b.onclick = fn; actions.append(b); };
-    if (r.mode === 'multiplayer') {
+    if (r.mode === 'multiplayer' || r.mode === 'presentation') {
       btn('🔗 Link Kopyala', () => navigator.clipboard.writeText(`${location.origin}/?room=${r.id}`));
       btn('🔑 Yeni Şifre', () => socket.emit('newPin', { roomId: r.id }));
     }
@@ -286,7 +311,55 @@ function renderAudit() {
 }
 
 // ---------- Quick actions ----------
-$('newRoom').onclick = () => socket.emit('createRoom');
+$('newRoom').onclick = () => socket.emit('createRoom', { mode: 'multiplayer', pin: $('newRoomPin').value.trim() });
+$('newPresentation').onclick = () => socket.emit('createRoom', { mode: 'presentation', pin: $('newRoomPin').value.trim() });
+
+// ---------- Presentation control (static inputs; only lists re-render) ----------
+const prRoom = () => ov?.rooms.find(r => r.id === $('prRoom').value && r.presentation);
+function renderPresentation() {
+  const sel = $('prRoom'), cur = sel.value, pres = (ov?.rooms || []).filter(r => r.presentation);
+  const sig = pres.map(r => r.id).join();
+  if (sel.dataset.sig !== sig) {
+    sel.replaceChildren(...(pres.length ? pres.map(r => new Option(`🎤 ${r.id} · 🔑 ${r.pin} · 👥 ${r.players.length}`, r.id)) : [new Option('— Sunum odası yok —', '')]));
+    sel.dataset.sig = sig; sel.value = pres.some(r => r.id === cur) ? cur : pres[0]?.id || '';
+  }
+  const r = prRoom();
+  const spot = $('prSpot'), spotCur = r ? String(r.presentation.spotlight) : '';
+  const spotOpts = [['auto', '🎥 Otomatik tur'], ['plaza', '🌐 Dijital Plaza'], ['null', '✋ Serbest']]
+    .concat((r?.companies || []).filter(c => c.lotId != null).map(c => [String(c.lotId), `🏢 ${cname(c)} (Lot ${c.lotId})`]));
+  const spotSig = spotOpts.map(o => o[0]).join();
+  if (spot.dataset.sig !== spotSig) { spot.replaceChildren(...spotOpts.map(([v, l]) => new Option(l, v))); spot.dataset.sig = spotSig; }
+  if (document.activeElement !== spot) spot.value = spotCur === 'null' ? 'null' : spotCur;
+  $('prState').textContent = r ? `Sohbet: ${r.presentation.chatLocked ? '🔒 kilitli' : '🔓 açık'} · İşlemler: ${r.presentation.actionsLocked ? '⏸ durduruldu' : '▶ açık'} · Susturulan: ${r.presentation.muted.length}` : '';
+  const pv = $('pollView'); pv.replaceChildren();
+  const poll = r?.presentation.poll;
+  if (poll) {
+    pv.append(el('b', `${poll.open ? '🟢' : '⚪'} ${poll.question} · ${poll.total} oy`));
+    poll.options.forEach(o => { const pct = poll.total ? Math.round(o.votes / poll.total * 100) : 0; const d = el('div', `${o.text}: ${o.votes} (%${pct})`); d.style.cssText = `background:linear-gradient(90deg,#2d9cdb55 ${pct}%,transparent ${pct}%);padding:4px 6px;border-radius:6px;margin-top:4px`; pv.append(d); });
+  }
+  const cl = $('prChatList'); cl.replaceChildren();
+  (r?.chat || []).slice().reverse().forEach(m => {
+    const row = el('div'); row.style.cssText = 'display:flex;gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid #ffffff12';
+    const del = el('button', '🗑'); del.onclick = () => socket.emit('deleteChat', { roomId: r.id, msgId: m.id });
+    row.append(del, el('span', `${new Date(m.at).toLocaleTimeString('tr', { hour: '2-digit', minute: '2-digit' })} ${m.by}: ${m.text}`)); cl.append(row);
+  });
+  const pl = $('prPlayers'); pl.replaceChildren();
+  (r?.players || []).forEach(p => {
+    const muted = r.presentation.muted.includes(p.id);
+    const b = el('button', `${muted ? '🔇' : '🔊'} ${p.name} · 💰${fmt(p.coins)}`); b.style.margin = '3px';
+    b.onclick = () => socket.emit('mutePlayer', { roomId: r.id, playerId: p.id, muted: !muted }); pl.append(b);
+  });
+}
+$('prSpot').onchange = e => { const r = prRoom(); if (r) socket.emit('setSpotlight', { roomId: r.id, target: e.target.value === 'null' ? null : e.target.value }); };
+$('prChat').onclick = () => { const r = prRoom(); if (r) socket.emit('lockChat', { roomId: r.id, locked: !r.presentation.chatLocked }); };
+$('prActions').onclick = () => { const r = prRoom(); if (r) socket.emit('lockActions', { roomId: r.id, locked: !r.presentation.actionsLocked }); };
+$('pollCreate').onclick = () => {
+  const r = prRoom(); if (!r) return;
+  const options = $('pollOpts').value.split('\n').map(x => x.trim()).filter(Boolean);
+  if (!$('pollQ').value.trim() || options.length < 2) return alert('Soru ve en az 2 seçenek gir.');
+  socket.emit('createPoll', { roomId: r.id, question: $('pollQ').value, options });
+};
+$('pollClose').onclick = () => { const r = prRoom(); if (r) socket.emit('closePoll', { roomId: r.id }); };
 $('runTick').onclick = () => socket.emit('runTick', { days: $('tickDays').value });
 $('annAll').onclick = () => { socket.emit('announce', { text: $('annText').value }); $('annText').value = ''; };
 

@@ -25,6 +25,17 @@ A web-based, side-scrolling **multiplayer idle entrepreneurship game**. Found co
 - **Sistem önerisi:** Her panelde ⭐ varsayılan seçenek. Üstte "✓ Tamam / ⏭ Sonraki / ▶▶ Otomatik" çubuğu; Enter = onayla, N = sonraki. Otomatik modda karakter hedef binaya yürür ve öneriyi uygular.
 - **HUD & finans paneli:** Üstte para, kasa (sonraki kata ilerleme), müşteri, çalışan, bugün ve bu ay gelir/gider, seviye barları. Yan panelde anlık + aylık KPI'lar, kasa çizgisi, günlük ve aylık gelir/gider grafikleri, tablo görünümü. Bina panelinde mini finans şeridi ve kasa sparkline.
 
+### Sprint 3
+- **Performans (30-50+ oyuncu):** State yayını birleştirildi (oda büyüdükçe 5/sn → 1.25/sn), snapshot küçültüldü (finans geçmişi istek üzerine `finHistory`), konumlar 100 ms'lik toplu paketlerle (`posBatch`), WebSocket sıkıştırması (`perMessageDeflate`). Yük testi: 100 eşzamanlı istemci, ~%15 CPU, p95 ping 1 ms.
+- **Durum paneli (F3):** FPS, kare süresi, ping, oyuncu, NPC, sync/sn, state boyutu, kalite. Otomatik kalite: FPS < 40 olunca NPC sayısı ve dekoratif figürler azalır.
+- **Şirket içi sahne:** Binaya girince zoom-in geçişi; aynı yandan 2D dilde bina kesiti. Katlar: Satış + Finans → Muhasebe + Pazarlama (500c) → İK + IT (1000c) → Ar-Ge + Yönetim (Premium). W/↑ kat çık, S/↓ kat in / dışarı çık, E departmanı aç.
+- **Departman aksiyonları:** Pazarlama kampanyası (+%30 satış, 7 gün), IT güvenlik (siber hasar −%25/seviye), İK NPC çalışan (pasif gelir), muhasebe gelir-gider tablosu.
+- **Cadde sıralaması (Space / Ctrl / 🏆):** Kasa, aylık kâr, satış, çalışana göre; binalarda #sıra rozeti.
+- **NPC diyalogları + kimlik kartı:** Tanış, ürün sat, işe al, iş başvurusu (İK uzmanı NPC), danışmanlık al. Sunucu NPC başına günlük limit uygular.
+- **20 şablon + "Diğer":** Kendi ürün/hizmetini, sektörünü ve fiyatını tanımla; 4 adımlı kurma sihirbazı.
+- **Sunum (izleme) modu:** Admin "🎤 Sunum Odası" açar. Katılımcılar yürümez; öneri çubuğu, sohbet komutları (`/sat`, `/kur`, `/yatir 100`…), anketler ve sihirbazla oynar. Admin: kamera (otomatik tur / şirket / serbest), sohbet kilidi, işlem durdurma, susturma, mesaj silme, anket.
+- **Odalar:** 6 haneli rakam oda kodu; oda kurarken 4-6 haneli şifre belirlenebilir.
+
 - **🔒 Premium / sonraki sprintler (bulanık gösterilir):** Ideathon, Hackathon, Game Jam, Bootcamp, hızlandırıcılar, KOSGEB, TÜBİTAK, melek yatırımcı, Seed, Seri A/B, kitlesel fonlama, halka arz, apartman, gökdelen, pazar araştırması, rakip analizi
 
 ## 🚀 Kurulum / Setup

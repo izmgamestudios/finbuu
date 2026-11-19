@@ -55,7 +55,10 @@ const SECTOR_GOODS = {
   'sector.food': ['#f2b84b', '#e57d5c', '#c9824a'],
   'sector.tech': ['#5aa9e6', '#8aa1b8', '#4f8ff7'],
   'sector.service': ['#9b7be0', '#8aa1b8', '#5cc08a'],
-  'sector.retail': ['#ef6f6c', '#f2b84b', '#4cc3c9']
+  'sector.retail': ['#ef6f6c', '#f2b84b', '#4cc3c9'],
+  'sector.health': ['#5cc08a', '#ffffff', '#4cc3c9'],
+  'sector.education': ['#4f8ff7', '#f2b84b', '#ef6f6c'],
+  'sector.creative': ['#f28fb1', '#9b7be0', '#f2b84b']
 };
 
 // ---------- primitives ----------
@@ -145,14 +148,14 @@ function drawUpperFloors(ctx, b, floors, time) {
       const wx = b.x + margin + i * (40 + margin);
       if (balcony && i === 1) continue;
       const slot = Math.floor(time / 9000 + hash(b.seed, f, i) * 7);
-      const occ = hash(b.seed, f, i, slot) < 0.3 ? lookFor(b.seed * 31 + f * 7 + i + slot) : null;
+      const occ = !LOW && hash(b.seed, f, i, slot) < 0.3 ? lookFor(b.seed * 31 + f * 7 + i + slot) : null;
       windowAt(ctx, wx, fy + 9, 40, 30, occ);
     }
     if (balcony) {
       const wx = b.x + margin + (40 + margin), base = fy + 46;
       glassDoor(ctx, wx + 6, fy + 6, 28, 40);
       const slot = Math.floor(time / 12000 + hash(b.seed, f) * 5);
-      if (hash(b.seed, f, slot, 3) < 0.55) drawPerson(ctx, wx + 18, base, lookFor(b.seed * 13 + f + slot), { scale: 0.78, dir: hash(b.seed, slot) < 0.5 ? -1 : 1 });
+      if (!LOW && hash(b.seed, f, slot, 3) < 0.55) drawPerson(ctx, wx + 18, base, lookFor(b.seed * 13 + f + slot), { scale: 0.78, dir: hash(b.seed, slot) < 0.5 ? -1 : 1 });
       ctx.fillStyle = '#cfc6b8'; ctx.fillRect(wx - 12, base, 64, 4);
       ctx.fillStyle = '#7d828f';
       for (let px = wx - 11; px <= wx + 50; px += 7) ctx.fillRect(px, base - 13, 1.5, 13);
@@ -167,7 +170,7 @@ function drawTerrace(ctx, b, time, accent) {
   const slot = Math.floor(time / 15000 + hash(b.seed, 5) * 4);
   ctx.fillStyle = '#7d828f'; ctx.fillRect(b.x + b.w - 70, y - 34, 2, 34);
   ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(b.x + b.w - 69, y - 32, 22, Math.PI, 0); ctx.fill();
-  if (hash(b.seed, slot, 9) < 0.6) drawPerson(ctx, b.x + b.w - 100, y, lookFor(b.seed * 17 + slot), { scale: 0.78, dir: 1 });
+  if (!LOW && hash(b.seed, slot, 9) < 0.6) drawPerson(ctx, b.x + b.w - 100, y, lookFor(b.seed * 17 + slot), { scale: 0.78, dir: 1 });
   ctx.fillStyle = '#7d828f';
   for (let px = b.x; px <= b.x + b.w; px += 9) ctx.fillRect(px, y - 12, 1.5, 12);
   ctx.fillRect(b.x, y - 13, b.w, 2);
@@ -255,12 +258,16 @@ function drawLot(ctx, b, env) {
   const label = lot.type === 'coworking' && !tenants.length ? env.t('ui.coworkingSign')
     : tenants.length ? env.name(tenants[0]) + (tenants.length > 1 ? ` +${tenants.length - 1}` : '') : `${lot.size} m²`;
   signBoard(ctx, b, label, color, mine ? '#3a2a05' : '#fff');
+  const rank = env.ranks?.get(lot.id);
+  if (rank) pill(ctx, b.x + 24, GROUND - GROUND_H + 2, `#${rank}`, rank === 1 ? '#c98500' : '#2f6fe4', '#fff', 11);
+  if (tenants.some(c => c.marketing && c.marketing.until > (env.state.day || 0))) { ctx.font = '12px system-ui'; ctx.fillText('📣', b.x + b.w - 52, GROUND - GROUND_H + 20); }
   if (lot.type === 'shop') awning(ctx, b, color);
   const staff = [];
   tenants.forEach(c => {
     const ids = [...c.founders, ...c.employees];
     ids.forEach(id => staff.push(lookFor(env.state.players[id]?.avatar ?? hash(id.length, 5) * 1000)));
     if (c.isNpc) staff.push(lookFor(b.seed * 7 + 3));
+    for (let k = 0; k < Math.min(3, c.npcStaff || 0); k++) staff.push(lookFor(b.seed * 11 + k * 5));
   });
   interior(ctx, b, { empty: !tenants.length, forRent: env.t('ui.forRent'), desks: lot.type === 'coworking' || tenants[0]?.workspace === 'coworking',
     staff, goods: SECTOR_GOODS[env.sector(tenants[0])] });
@@ -293,7 +300,7 @@ function drawPlaza(ctx, b, env) {
       const slot = Math.floor(env.time / 10000 + hash(b.seed, f, i) * 6);
       ctx.fillStyle = (i + f) % 3 ? '#b6dcf5' : '#a3d0ee';
       ctx.fillRect(b.x + i * cw + 2, fy + 4, cw - 4, FLOOR_H - 8);
-      if (hash(b.seed, f, i, slot) < 0.18) { ctx.save(); ctx.beginPath(); ctx.rect(b.x + i * cw + 2, fy + 4, cw - 4, FLOOR_H - 8); ctx.clip(); silhouette(ctx, b.x + i * cw + cw / 2, fy + FLOOR_H - 4, lookFor(f * 11 + i + slot)); ctx.restore(); }
+      if (!LOW && hash(b.seed, f, i, slot) < 0.18) { ctx.save(); ctx.beginPath(); ctx.rect(b.x + i * cw + 2, fy + 4, cw - 4, FLOOR_H - 8); ctx.clip(); silhouette(ctx, b.x + i * cw + cw / 2, fy + FLOOR_H - 4, lookFor(f * 11 + i + slot)); ctx.restore(); }
     }
     ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(b.x, fy + FLOOR_H - 3, b.w, 2);
   }
@@ -306,7 +313,6 @@ function drawPlaza(ctx, b, env) {
 function drawLocked(ctx, b, env) {
   ctx.save();
   ctx.globalAlpha = 0.45;
-  if ('filter' in ctx) ctx.filter = 'blur(1.5px)';
   [[0, 120, 300], [140, 110, 240], [260, 110, 320]].forEach(([dx, w, h]) => {
     ctx.fillStyle = '#8aa1b8'; ctx.fillRect(b.x + dx, GROUND - h, w, h);
     ctx.fillStyle = '#c9dcef';
@@ -323,7 +329,7 @@ function drawSky(ctx, w, h) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
 }
 function drawBackdrop(ctx, camX, viewW, wWidth) {
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < (LOW ? 0 : 14); i++) {
     const p = 0.2, cx = i * 420 + 120 + camX * (1 - p), cy = 40 + hash(i, 1) * 90;
     if (cx < camX - 120 || cx > camX + viewW + 120) continue;
     ctx.fillStyle = 'rgba(255,255,255,.85)';
@@ -337,8 +343,6 @@ function drawBackdrop(ctx, camX, viewW, wWidth) {
     if (bx + w < camX || bx > camX + viewW) continue;
     ctx.fillStyle = i % 3 ? '#b5d3ee' : '#a8c9e8';
     ctx.fillRect(bx, GROUND - h, w, h);
-    ctx.fillStyle = 'rgba(255,255,255,.35)';
-    for (let y = GROUND - h + 10; y < GROUND - 30; y += 18) for (let wx = bx + 8; wx < bx + w - 10; wx += 14) ctx.fillRect(wx, y, 6, 8);
   }
 }
 function drawStreet(ctx, camX, viewW) {
@@ -363,21 +367,41 @@ function drawLamp(ctx, x) {
 }
 
 // ---------- ambient NPCs ----------
-export function createNpcs(count = 16) {
+// Each street NPC has a stable identity (ID card) derived from its id.
+const FIRST = ['Ayşe', 'Mehmet', 'Elif', 'Can', 'Zeynep', 'Burak', 'Deniz', 'Ece', 'Emre', 'Selin', 'Kerem', 'Derya', 'Mert', 'Naz', 'Ozan', 'Pelin'];
+const LAST = ['Yılmaz', 'Kaya', 'Demir', 'Şahin', 'Çelik', 'Aydın', 'Arslan', 'Doğan', 'Koç', 'Kurt', 'Özdemir', 'Polat'];
+const JOBS = ['engineer', 'teacher', 'designer', 'student', 'retired', 'developer', 'chef', 'accountant', 'nurse', 'marketer', 'recruiter', 'freelancer'];
+const TRAITS = ['friendly', 'curious', 'thrifty', 'ambitious', 'calm', 'picky'];
+const INTERESTS = ['sector.food', 'sector.tech', 'sector.service', 'sector.retail', 'sector.health', 'sector.education', 'sector.creative'];
+export function npcProfile(id) {
+  const r = k => hash(id, k);
+  return {
+    id, look: lookFor(100 + id * 13),
+    name: `${FIRST[Math.floor(r(1) * FIRST.length)]} ${LAST[Math.floor(r(2) * LAST.length)]}`,
+    age: 19 + Math.floor(r(3) * 50), job: JOBS[Math.floor(r(4) * JOBS.length)], trait: TRAITS[Math.floor(r(5) * TRAITS.length)],
+    interest: INTERESTS[Math.floor(r(6) * INTERESTS.length)], budget: 10 + Math.floor(r(7) * 19) * 10,
+    idNo: String(100000 + Math.floor(r(8) * 899999))
+  };
+}
+
+export function createNpcs(count = 7) {
   const walkers = [], visitors = [];
   let width = 3400;
-  for (let i = 0; i < count; i++) walkers.push({ x: Math.random() * width, dir: Math.random() < 0.5 ? -1 : 1,
-    speed: 18 + Math.random() * 24, look: lookFor(100 + i * 13), phase: Math.random() * 6, pause: 0, lane: FEET - 6 + Math.random() * 10 });
+  for (let i = 0; i < count; i++) walkers.push({ id: i, profile: npcProfile(i), x: 200 + Math.random() * (width - 400), dir: Math.random() < 0.5 ? -1 : 1,
+    speed: 18 + Math.random() * 22, look: lookFor(100 + i * 13), phase: Math.random() * 6, pause: 0, talking: false, lane: FEET - 6 + Math.random() * 10 });
   return {
     walkers, visitors,
     setWidth(w) { width = w; },
     spawnVisitor(tx, emoji) {
-      if (visitors.length > 6) visitors.shift();
+      if (visitors.length >= 3) visitors.shift();
       const side = Math.random() < 0.5 ? -1 : 1;
-      visitors.push({ x: tx + side * 280, tx, dir: -side, speed: 75, look: lookFor(Math.floor(Math.random() * 900)), phase: 0, emoji, stay: 4, lane: FEET - 2 });
+      visitors.push({ x: tx + side * 260, tx, dir: -side, speed: 80, look: lookFor(Math.floor(Math.random() * 900)), phase: 0, emoji, stay: 3, lane: FEET - 2 });
     },
-    update(dt) {
-      for (const w of walkers) {
+    at(x, y) { return walkers.find(w => Math.abs(w.x - x) < 13 && y > w.lane - 42 && y < w.lane + 6) || null; },
+    nearest(x, max = 26) { let best = null, d = max; for (const w of walkers) { const dd = Math.abs(w.x - x); if (dd < d) { d = dd; best = w; } } return best; },
+    update(dt, limit = 99) {
+      for (const w of walkers.slice(0, limit)) {
+        if (w.talking) continue;
         if (w.pause > 0) { w.pause -= dt; continue; }
         w.x += w.dir * w.speed * dt; w.phase += dt * w.speed * 0.32;
         if (w.x < 20) w.dir = 1; else if (w.x > width - 20) w.dir = -1;
@@ -395,9 +419,11 @@ export function createNpcs(count = 16) {
 
 // ---------- main draw ----------
 const heightAnim = new Map(); // building id -> animated height (grow / shrink smoothly)
+let LOW = false;             // low-quality mode (set per frame by the adaptive quality controller)
 // env: { state, view:{w,h,s,ty,camX,dpr}, time, myId, player, others, npcs, buildings, near, targetId, t, name, sector, maxTenants, tenants, keyHint }
 export function draw(ctx, env) {
   const { view } = env, { w, h, s, ty, camX, dpr } = view, viewWorldW = w / s;
+  LOW = !!env.low;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawSky(ctx, w, h);
   ctx.setTransform(dpr * s, 0, 0, dpr * s, -camX * dpr * s, ty * dpr);
@@ -428,18 +454,19 @@ export function draw(ctx, env) {
   }
   // people, sorted by depth
   const people = [];
-  for (const n of env.npcs.walkers) people.push({ x: n.x, y: n.lane, look: n.look, o: { dir: n.dir, moving: n.pause <= 0, phase: n.phase, scale: 0.92 } });
+  for (const n of env.npcs.walkers.slice(0, env.npcLimit ?? 99)) people.push({ x: n.x, y: n.lane, look: n.look, o: { dir: n.dir, moving: n.pause <= 0 && !n.talking, phase: n.phase, scale: 0.92,
+    bubble: env.nearNpc === n ? '💬' : null, label: env.met?.has(n.id) ? n.profile.name.split(' ')[0] : null } });
   for (const v of env.npcs.visitors) people.push({ x: v.x, y: v.lane, look: v.look, o: { dir: v.dir, moving: Math.abs(v.tx - v.x) > 3, phase: v.phase, bubble: v.emoji, scale: 0.92 } });
   for (const [id, o] of env.others) {
     const p = env.state?.players[id]; if (!p) continue;
     people.push({ x: o.x, y: FEET + 2, look: lookFor(p.avatar ?? 0), o: { dir: o.dir, moving: o.moving, phase: o.phase, label: p.name } });
   }
   const meP = env.state?.players[env.myId];
-  if (meP) people.push({ x: env.player.x, y: FEET + 4, look: lookFor(meP.avatar ?? 0), o: { dir: env.player.dir, moving: env.player.moving, phase: env.player.phase, label: meP.name, mine: true } });
+  if (meP && !env.hideMe) people.push({ x: env.player.x, y: FEET + 4, look: lookFor(meP.avatar ?? 0), o: { dir: env.player.dir, moving: env.player.moving, phase: env.player.phase, label: meP.name, mine: true } });
   people.sort((a, b) => a.y - b.y);
   for (const p of people) {
     if (p.x < camX - 40 || p.x > camX + viewWorldW + 40) continue;
     drawPerson(ctx, p.x, p.y, p.look, p.o);
   }
-  if (env.near && meP && env.keyHint) pill(ctx, env.player.x, FEET - 70, env.keyHint, '#2f6fe4', '#fff', 11);
+  if (meP && env.keyHint && (env.near || env.nearNpc)) pill(ctx, env.player.x, FEET - 70, env.keyHint, '#2f6fe4', '#fff', 11);
 }

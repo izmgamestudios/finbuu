@@ -12,6 +12,7 @@
 <header>
   <h1 data-i18n="ui.title"></h1>
   <span id="day"></span>
+  <button id="boardBtn" aria-label="Leaderboard">🏆</button>
   <button id="menuBtn" aria-label="Menu">☰</button>
 </header>
 <div id="roomBar"><b id="roomInfo"></b><button id="copyLink" data-i18n="ui.copyLink"></button></div>
@@ -28,11 +29,42 @@
         <button id="advAuto" data-i18n="ui.auto"></button>
       </div>
     </div>
+    <div id="board" hidden>
+      <div class="boardHead">
+        <h3 data-i18n="board.title"></h3>
+        <select id="boardSort" aria-label="Sort">
+          <option value="cash" data-i18n="board.byCash"></option>
+          <option value="month" data-i18n="board.byMonth"></option>
+          <option value="sales" data-i18n="board.bySales"></option>
+          <option value="staff" data-i18n="board.byStaff"></option>
+        </select>
+        <button id="boardClose" aria-label="Close">✕</button>
+      </div>
+      <div class="boardScroll"><table id="boardTable"></table></div>
+      <small class="muted" data-i18n="board.hint"></small>
+    </div>
+    <div id="innerBar" hidden>
+      <b id="innerTitle"></b>
+      <button id="floorUp" aria-label="Floor up">▲</button>
+      <button id="floorDown" aria-label="Floor down">▼</button>
+      <button id="exitBtn" data-i18n="ui.exit"></button>
+    </div>
     <div id="joy" hidden><div id="knob"></div></div>
     <button id="actBtn" hidden></button>
     <span id="hint"></span>
+    <div id="status" aria-live="off"></div>
   </section>
   <aside id="side">
+    <div class="card" data-panel="chat" id="chatCard" hidden>
+      <h3 data-i18n="ui.chat"></h3>
+      <div id="pollBox"></div>
+      <ul id="chatList"></ul>
+      <div class="row chatRow">
+        <input id="chatInput" maxlength="200" data-i18n-ph="ui.chatPh" autocomplete="off">
+        <button id="chatSend" class="primary" data-i18n="ui.sendText"></button>
+      </div>
+      <div class="row"><button id="wizardBtn" data-i18n="wiz.open"></button></div>
+    </div>
     <div class="card" data-panel="finance">
       <h3 data-i18n="ui.finance"></h3>
       <select id="finCompany" aria-label="Company"></select>
@@ -47,6 +79,7 @@
       </div>
     </div>
     <div class="card" data-panel="profile"><h3 data-i18n="ui.profile"></h3><div id="profile"></div></div>
+    <div class="card" data-panel="events"><h3 data-i18n="ui.events"></h3><ul id="log"></ul></div>
     <div class="card" data-panel="guide"><h3 data-i18n="ui.guide"></h3><ol id="tut"></ol>
       <h3 style="margin-top:12px" data-i18n="ui.premium"></h3><div id="locked"></div></div>
     <div class="card" data-panel="ideas"><h3 data-i18n="ui.ideaBox"></h3>
@@ -57,15 +90,14 @@
         <button id="recVideo" class="lockedBtn"></button>
       </div>
       <ul id="ideas"></ul></div>
-    <div class="card" data-panel="events"><h3 data-i18n="ui.events"></h3><ul id="log"></ul></div>
   </aside>
 </main>
 
 <nav>
   <button data-tab="street" class="active"><span>🏙</span><b data-i18n="ui.tabStreet"></b></button>
   <button data-tab="finance"><span>📊</span><b data-i18n="ui.tabFinance"></b></button>
+  <button data-tab="chat"><span>💬</span><b data-i18n="ui.tabChat"></b></button>
   <button data-tab="profile"><span>👤</span><b data-i18n="ui.tabProfile"></b></button>
-  <button data-tab="guide"><span>📘</span><b data-i18n="ui.tabGuide"></b></button>
   <button data-tab="events"><span>📰</span><b data-i18n="ui.tabEvents"></b></button>
   <button data-tab="menu"><span>☰</span><b data-i18n="ui.menu"></b></button>
 </nav>
@@ -75,6 +107,14 @@
   <h3 data-i18n="ui.settings"></h3>
   <label data-i18n="ui.language"></label>
   <select id="lang"><option value="tr">Türkçe</option><option value="en">English</option></select>
+  <label data-i18n="ui.quality"></label>
+  <select id="quality">
+    <option value="auto" data-i18n="ui.qAuto"></option>
+    <option value="high" data-i18n="ui.qHigh"></option>
+    <option value="low" data-i18n="ui.qLow"></option>
+  </select>
+  <button id="toggleStatus" data-i18n="ui.toggleStatus"></button>
+  <button id="openGuide" data-i18n="ui.guide"></button>
   <button id="openIdeas" data-i18n="ui.ideaBox"></button>
   <button id="openModes" class="primary" data-i18n="ui.modeTitle"></button>
   <button id="closeDrawer" data-i18n="ui.close"></button>

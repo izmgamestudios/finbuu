@@ -3,6 +3,12 @@
 // Pure functions over the public state snapshot; the server still validates every action.
 
 const RESCUE_AMOUNT = 100;
+export const staffOf = c => c.employees.length + (c.npcStaff || 0);
+// Must mirror server floorsFor(): building floors follow the lot's total cash (own cash for virtual companies)
+export const floorsFor = cash => Math.max(1, Math.min(6, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
+export const floorsOfCompany = (state, c) => floorsFor(c.lotId == null ? c.cash
+  : state.lots[c.lotId].companyIds.reduce((sum, id) => sum + (state.companies[id]?.cash || 0), 0));
+export const deptOpen = (seed, state, c, key) => { const d = seed.departments?.find(x => x.key === key); return !!d && !d.locked && d.floor < floorsOfCompany(state, c); };
 const WITHDRAW_AT = 400;
 const SHOP_UPGRADE_COINS = 400;
 
@@ -41,6 +47,16 @@ export function suggestions({ state, seed, myId, name }) {
       add({ id: 'withdraw:' + c.id, score: 85, labelKey: 'adv.withdraw', reasonKey: 'adv.withdrawWhy', params: p, cid: c.id,
         target: targetOf(c), action: { ev: 'withdraw', payload: { cid: c.id } } });
     }
+    const active = c.marketing && c.marketing.until > (state.day || 0);
+    if (seed.marketing && deptOpen(seed, state, c, 'marketing') && !active && c.cash >= seed.marketing.cost + 200) {
+      add({ id: 'marketing:' + c.id, score: 82, labelKey: 'adv.marketing', reasonKey: 'adv.marketingWhy', params: { ...p, days: seed.marketing.days }, cid: c.id,
+        target: targetOf(c), action: { ev: 'marketing', payload: { cid: c.id } } });
+    }
+    const npcProfit = c.price * (seed.workspaces[c.workspace]?.salesMult || 1) * 4 - (seed.salary ?? 25);
+    if (deptOpen(seed, state, c, 'hr') && staffOf(c) < employeeCap(seed, state, c) && npcProfit > 0 && c.cash > 200) {
+      add({ id: 'hire:' + c.id, score: 79, labelKey: 'adv.hire', reasonKey: 'adv.hireWhy', params: { ...p, profit: Math.round(npcProfit) }, cid: c.id,
+        target: targetOf(c), action: { ev: 'hireNpc', payload: { cid: c.id } } });
+    }
     add({ id: 'sell:' + c.id, score: c.cash < 50 ? 100 : 80 - Math.min(20, c.cash / 50), labelKey: 'adv.sell',
       reasonKey: c.cash < 50 ? 'adv.sellLowWhy' : 'adv.sellWhy', params: p, cid: c.id,
       target: targetOf(c), action: { ev: 'click', payload: { cid: c.id } } });
@@ -60,7 +76,7 @@ export function suggestions({ state, seed, myId, name }) {
   }
 
   if (!job) {
-    const open = companies.filter(c => !c.founders.includes(myId) && c.employees.length < employeeCap(seed, state, c))
+    const open = companies.filter(c => !c.founders.includes(myId) && staffOf(c) < employeeCap(seed, state, c))
       .sort((a, b) => (b.performance || 1) - (a.performance || 1) || b.cash - a.cash)[0];
     if (open) add({ id: 'work:' + open.id, score: mine.length ? 40 : 70, labelKey: 'adv.work', reasonKey: 'adv.workWhy',
       params: { company: name(open), salary: seed.salary ?? 25 }, cid: open.id, target: targetOf(open), action: { ev: 'work', payload: { cid: open.id } } });
@@ -85,7 +101,7 @@ export function companyActions({ state, seed, myId }, c, ranked) {
   if (founder || employee) list.push({ ev: 'click', key: 'ui.clickSell' });
   if (!founder && me.coins >= c.price) list.push({ ev: 'buy', key: 'ui.buy' });
   if (!c.isNpc && !founder && c.founders.length < 3) list.push({ ev: 'cofound', key: 'ui.cofound' });
-  if (!employee && c.employees.length < employeeCap(seed, state, c)) list.push({ ev: 'work', key: 'ui.work' });
+  if (!employee && staffOf(c) < employeeCap(seed, state, c)) list.push({ ev: 'work', key: 'ui.work' });
   if (me.coins >= RESCUE_AMOUNT) list.push({ ev: 'invest', key: 'ui.invest', payload: { amount: RESCUE_AMOUNT } });
   if (founder && c.cash > 0) list.push({ ev: 'withdraw', key: 'ui.withdraw' });
   const rec = ranked.find(s => s.cid === c.id && list.some(a => a.ev === s.action.ev));
