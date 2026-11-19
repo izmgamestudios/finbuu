@@ -1,6 +1,10 @@
 {
   "ui": {
     "title": "Finbuu",
+    "slogan": "Idea Development & Value Proposition",
+    "themeSystem": "Theme: System",
+    "themeLight": "Theme: Light",
+    "themeDark": "Theme: Dark",
     "namePh": "Name (empty = anonymous)",
     "guide": "📘 Guide Building",
     "premium": "🔒 Premium (Upcoming Sprints)",
@@ -81,8 +85,8 @@
     "recommended": "Suggested",
     "otherOptions": "Other options",
     "enter": "Enter",
-    "moveHint": "Walk: A/D or ←/→ · Click: go there · W/↑: enter building · Enter: accept suggestion",
-    "moveHintTouch": "Walk with the joystick · Tap a building",
+    "moveHint": "Walk: A/D or ←/→ · Shift: run · Click: go there · W/↑: enter building · Enter: accept suggestion",
+    "moveHintTouch": "Joystick: walk · pull further: run · Tap a building",
     "forRent": "FOR RENT",
     "finance": "📊 Finances",
     "finNow": "Right now",

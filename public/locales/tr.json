@@ -1,6 +1,10 @@
 {
   "ui": {
     "title": "Finbuu",
+    "slogan": "Fikir Geliştirme ve Değer Önerisi",
+    "themeSystem": "Tema: Sistem",
+    "themeLight": "Tema: Açık",
+    "themeDark": "Tema: Koyu",
     "namePh": "İsim (boş = anonim)",
     "guide": "📘 Kılavuz Binası",
     "premium": "🔒 Premium (Sonraki Sprintler)",
@@ -81,8 +85,8 @@
     "recommended": "Sistem önerisi",
     "otherOptions": "Diğer seçenekler",
     "enter": "Gir",
-    "moveHint": "Yürü: A/D veya ←/→ · Tıkla: oraya git · W/↑: binaya gir · Enter: öneriyi onayla",
-    "moveHintTouch": "Joystick ile yürü · Binaya dokun",
+    "moveHint": "Yürü: A/D veya ←/→ · Shift: koş · Tıkla: oraya git · W/↑: binaya gir · Enter: öneriyi onayla",
+    "moveHintTouch": "Joystick: yürü · biraz daha çek: koş · Binaya dokun",
     "forRent": "KİRALIK",
     "finance": "📊 Finans Durumu",
     "finNow": "Anlık",

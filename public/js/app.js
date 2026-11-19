@@ -11,7 +11,7 @@ const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
 const cv = $('cv'), ctx = cv.getContext('2d'), stage = $('stage');
 const touch = matchMedia('(pointer: coarse)').matches;
-const SPEED = 170, MOVE_SEND_MS = 100, AUTO_MS = 1500, NPC_COUNT = 7, NPC_PRESENTATION = 4, NPC_LOW = 3;
+const SPEED = 170, RUN_MULT = 1.75, MOVE_SEND_MS = 100, AUTO_MS = 1500, NPC_COUNT = 7, NPC_PRESENTATION = 4, NPC_LOW = 3;
 const INNER_PAD_TOP = 70, INNER_PAD_BOTTOM = 80;
 const ZOOM_IN_MS = 520, ZOOM_OUT_MS = 420, FADE_MS = 260, TOUR_MS = 7000;
 
@@ -24,7 +24,7 @@ const npcs = createNpcs(NPC_COUNT);
 const traffic = createTraffic();
 let ride = null, nearStop = null, clockOffset = 0, lastDay = null;
 const keys = new Set();
-const joy = { axis: 0, id: null };
+const joy = { axis: 0, id: null, run: false };
 let near = null, nearNpc = null, plan = null, auto = false, advIdx = 0, ranked = [], modalOpen = false, modalOnClose = null;
 let lastSent = { x: -1, at: 0 };
 const met = new Set(loadJSON('met', []));
@@ -81,12 +81,12 @@ async function loadLang(lng) {
   await i18next.changeLanguage(lng);
   saveJSON('lang', lng);
   document.documentElement.lang = lng;
-  document.title = t('ui.title');
+  document.title = t('ui.title') + ' · ' + t('ui.slogan');
   document.querySelectorAll('[data-i18n]').forEach(e => (e.textContent = t(e.dataset.i18n)));
   document.querySelectorAll('[data-i18n-ph]').forEach(e => (e.placeholder = t(e.dataset.i18nPh)));
   $('recAudio').textContent = '☁🔒 ' + t('ui.recAudio');
   $('recVideo').textContent = '☁🔒 ' + t('ui.recVideo');
-  updateControls(); renderSeed(); renderRoomBar(); render(); updateAutoBtn();
+  updateControls(); renderSeed(); renderRoomBar(); render(); updateAutoBtn(); applyTheme();
 }
 function renderSeed() {
   if (!seed || !i18next.isInitialized) return;
@@ -98,6 +98,20 @@ function renderSeed() {
 // ---------- Navigation ----------
 const openDrawer = v => { $('drawer').classList.toggle('open', v); $('scrim').classList.toggle('show', v); };
 $('menuBtn').onclick = () => openDrawer(true);
+
+// ---------- Theme: system / light / dark ----------
+const THEMES = ['system', 'light', 'dark'], THEME_ICON = { system: '🌓', light: '☀️', dark: '🌙' };
+let themeMode = (() => { try { const v = localStorage.getItem('finbuu.theme'); return THEMES.includes(v) ? v : 'system'; } catch { return 'system'; } })();
+function applyTheme() {
+  const root = document.documentElement;
+  if (themeMode === 'system') root.removeAttribute('data-theme'); else root.dataset.theme = themeMode;
+  const dark = themeMode === 'dark' || (themeMode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#171a22' : '#f4f6fb');
+  const b = $('themeBtn'); b.textContent = THEME_ICON[themeMode];
+  b.title = b.ariaLabel = t('ui.theme' + themeMode[0].toUpperCase() + themeMode.slice(1));
+}
+$('themeBtn').onclick = () => { themeMode = THEMES[(THEMES.indexOf(themeMode) + 1) % 3]; try { localStorage.setItem('finbuu.theme', themeMode); } catch {} applyTheme(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => themeMode === 'system' && applyTheme());
 $('closeDrawer').onclick = $('scrim').onclick = () => openDrawer(false);
 $('openModes').onclick = () => { openDrawer(false); showModes(); };
 $('openIdeas').onclick = () => { openDrawer(false); showTab('ideas'); };
@@ -268,6 +282,7 @@ function updateControls() {
 }
 
 // ---------- Input: keyboard ----------
+const runKey = () => keys.has('shift');
 const KEYMAP = { a: 'left', arrowleft: 'left', d: 'right', arrowright: 'right' };
 const typing = e => ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
 addEventListener('keydown', e => {
@@ -280,6 +295,7 @@ addEventListener('keydown', e => {
     return;
   }
   if (typing(e)) return;
+  if (k === 'shift') { keys.add('shift'); return; }
   if (k === 'f3') { e.preventDefault(); $('toggleStatus').click(); return; }
   if ((k === ' ' || k === 'control') && state) { e.preventDefault(); toggleBoard(); return; }
   if (boardOpen) { if (k === 'escape') toggleBoard(false); return; }
@@ -295,7 +311,7 @@ addEventListener('keydown', e => {
     if (nearNpc) openNpc(nearNpc); else if (nearStop != null && (!near || k === 'e')) openStop(nearStop); else if (near) openBuilding(near);
   }
 });
-addEventListener('keyup', e => { const k = KEYMAP[e.key.toLowerCase()]; if (k) keys.delete(k); });
+addEventListener('keyup', e => { const kk = e.key.toLowerCase(); if (kk === 'shift') { keys.delete('shift'); return; } const k = KEYMAP[kk]; if (k) keys.delete(k); });
 addEventListener('blur', () => keys.clear());
 
 function innerKey(e, k) {
@@ -335,12 +351,15 @@ function walkTo(x, onArrive, targetId) {
 const joyEl = $('joy'), knob = $('knob');
 joyEl.addEventListener('pointerdown', e => { joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); moveJoy(e); manualInput(); });
 joyEl.addEventListener('pointermove', e => { if (e.pointerId === joy.id) moveJoy(e); });
-const endJoy = e => { if (e.pointerId !== joy.id) return; joy.id = null; joy.axis = 0; knob.style.transform = ''; };
+const endJoy = e => { if (e.pointerId !== joy.id) return; joy.id = null; joy.axis = 0; joy.run = false; knob.style.transform = ''; knob.classList.remove('run'); };
 joyEl.addEventListener('pointerup', endJoy); joyEl.addEventListener('pointercancel', endJoy);
 function moveJoy(e) {
-  const r = joyEl.getBoundingClientRect(), dx = clamp(e.clientX - (r.left + r.width / 2), -40, 40);
-  joy.axis = Math.abs(dx) < 6 ? 0 : dx / 40;
+  // notch 1 (|dx| up to 40): walk, speed follows the pull. notch 2 (|dx| > 56): run.
+  const r = joyEl.getBoundingClientRect(), dx = clamp(e.clientX - (r.left + r.width / 2), -66, 66), a = Math.abs(dx);
+  joy.run = a > 56;
+  joy.axis = a < 6 ? 0 : Math.sign(dx) * Math.min(a, 40) / 40;
   knob.style.transform = `translateX(${dx}px)`;
+  knob.classList.toggle('run', joy.run);
 }
 $('actBtn').onclick = () => {
   if (scene.name === 'interior') return openDeptHere();
@@ -572,7 +591,8 @@ function updatePlayer(dt, now) {
   if (keys.has('left')) axis -= 1;
   if (keys.has('right')) axis += 1;
   if (joy.axis) axis = joy.axis;
-  let vx = axis * SPEED;
+  const spd = SPEED * ((runKey() || joy.run) && axis ? RUN_MULT : 1);
+  let vx = axis * spd;
   if (axis) { player.target = null; player.onArrive = null; }
   else if (player.target != null) {
     const d = player.target - player.x;
@@ -581,7 +601,7 @@ function updatePlayer(dt, now) {
   }
   player.x = clamp(player.x + vx * dt, 10, wWidth() - 10);
   player.moving = vx !== 0;
-  if (vx) { player.dir = Math.sign(vx); player.phase += dt * 16; }
+  if (vx) { player.dir = Math.sign(vx); player.phase += dt * 16 * (Math.abs(vx) > SPEED * 1.2 ? 1.6 : 1); }
   near = state ? buildings.find(b => b.kind !== 'locked' && player.x >= b.x && player.x <= b.x + b.w) || null : null;
   nearNpc = state && !player.moving ? npcs.nearest(player.x) : null;
   const si = (seed?.busStops || []).findIndex(x => Math.abs(x - player.x) < 30);
@@ -597,7 +617,8 @@ function updateInner(dt) {
   if (keys.has('left')) axis -= 1;
   if (keys.has('right')) axis += 1;
   if (joy.axis) axis = joy.axis;
-  let vx = axis * SPEED;
+  const spd = SPEED * ((runKey() || joy.run) && axis ? RUN_MULT : 1);
+  let vx = axis * spd;
   if (axis) { inner.target = null; inner.onArrive = null; }
   else if (inner.target != null) {
     const d = inner.target - inner.x;
@@ -606,7 +627,7 @@ function updateInner(dt) {
   }
   inner.x = clamp(inner.x + vx * dt, 20, IW - 20);
   inner.moving = vx !== 0;
-  if (vx) { inner.dir = Math.sign(vx); inner.phase += dt * 16; }
+  if (vx) { inner.dir = Math.sign(vx); inner.phase += dt * 16 * (Math.abs(vx) > SPEED * 1.2 ? 1.6 : 1); }
   $('actBtn').hidden = !touch;
 }
 function renderInterior(now) {
