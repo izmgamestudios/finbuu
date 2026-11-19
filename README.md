@@ -24,7 +24,8 @@ A web-based, side-scrolling **multiplayer idle entrepreneurship game**. Found co
 ```bash
 npm install
 cp .env.example .env            # ADMIN_TOKEN değerini değiştir
-ADMIN_TOKEN=uzun-rastgele-bir-sifre npm start
+npm start                       # .env otomatik yüklenir (Node >= 20.12)
+# veya / or: ADMIN_TOKEN=uzun-rastgele-bir-sifre npm start
 ```
 - Oyun / Game: http://localhost:3000
 - Admin: http://localhost:3000/admin.html

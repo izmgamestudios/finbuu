@@ -6,6 +6,10 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
+const path = require('path');
+
+// Load .env if present (Node >= 20.12 built-in, no dotenv dependency)
+try { if (typeof process.loadEnvFile === 'function') process.loadEnvFile(path.join(__dirname, '.env')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
 const R = require('./reports');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -22,7 +26,7 @@ app.use((req, res, next) => {
 });
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 1e6 });
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- SEED / CONFIG (numbers are admin-editable) ----------
 const SEED = {
