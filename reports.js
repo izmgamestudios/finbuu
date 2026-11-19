@@ -1,7 +1,7 @@
 // reports.js
 const DAYS_PER_MONTH = 30, MONTHS_PER_YEAR = 12, DAYS_PER_YEAR = DAYS_PER_MONTH * MONTHS_PER_YEAR;
 const EXIT_CASH = 50000;
-const blankDay = () => ({ revenue: 0, investment: 0, expenses: 0, losses: 0, dividends: 0, units: 0 });
+const blankDay = () => ({ revenue: 0, investment: 0, expenses: 0, losses: 0, dividends: 0, units: 0, km: 0, fuel: 0 });
 
 function calendar(day) {
   const year = Math.floor((day - 1) / DAYS_PER_YEAR) + 1;

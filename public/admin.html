@@ -34,9 +34,20 @@
 </head>
 <body>
 <div id="login" class="card">
-  <h3>🔐 Admin Girişi</h3>
-  <input id="token" type="password" placeholder="ADMIN_TOKEN" autocomplete="current-password">
-  <button id="loginBtn" class="primary">Giriş</button>
+  <div id="loginForm" style="display:flex;flex-direction:column;gap:10px">
+    <h3>🔐 Admin Girişi</h3>
+    <input id="email" type="email" placeholder="E-posta" autocomplete="username">
+    <input id="password" type="password" placeholder="Şifre" autocomplete="current-password">
+    <button id="loginBtn" class="primary">Giriş</button>
+    <span class="muted">İlk girişte şifre olarak sunucudaki ADMIN_TOKEN kullanılır; ardından yeni şifre belirlemen istenir.</span>
+  </div>
+  <div id="pwForm" style="display:none;flex-direction:column;gap:10px">
+    <h3>🔑 Yeni Şifre Belirle</h3>
+    <p class="muted">Güvenliğin için ilk girişten sonra şifreni değiştirmen gerekiyor (en az 10 karakter).</p>
+    <input id="newPw" type="password" placeholder="Yeni şifre" autocomplete="new-password">
+    <input id="newPw2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
+    <button id="pwBtn" class="primary">Şifreyi Kaydet</button>
+  </div>
   <span id="loginErr" class="muted"></span>
 </div>
 
@@ -164,24 +175,48 @@ const cname = c => c.name || NAMES[c.nameKey] || c.nameKey;
 const pill = s => { const p = el('span', STATUS_TR[s] || s); p.className = 'pill s-' + s; return p; };
 Chart.defaults.color = '#cfd2e0'; Chart.defaults.borderColor = '#2c3045';
 
-let socket = null, ov = null, report = null, token = sessionStorage.getItem('adminToken') || '';
+let socket = null, ov = null, report = null, token = sessionStorage.getItem('adminSession') || '';
 const charts = {};
 function chart(id, config) { charts[id]?.destroy(); charts[id] = new Chart($(id), config); }
 
 // ---------- Auth ----------
+function showLogin(msg) {
+  sessionStorage.removeItem('adminSession'); token = '';
+  $('login').style.display = 'flex'; $('app').style.display = 'none';
+  $('loginForm').style.display = 'flex'; $('pwForm').style.display = 'none';
+  $('loginErr').textContent = msg || '';
+}
 function connect() {
   socket = io('/admin', { auth: { token } });
   socket.on('connect_error', err => {
-    $('loginErr').textContent = err.message === 'locked' ? 'Çok fazla hatalı deneme, 15 dk bekle.' : 'Token hatalı.';
-    sessionStorage.removeItem('adminToken'); socket.close();
-    $('login').style.display = 'flex'; $('app').style.display = 'none';
+    socket.close();
+    if (err.message === 'mustChange') { $('loginForm').style.display = 'none'; $('pwForm').style.display = 'flex'; return; }
+    showLogin(err.message === 'locked' ? 'Çok fazla hatalı deneme, 15 dk bekle.' : 'Oturum geçersiz, tekrar giriş yap.');
   });
-  socket.on('connect', () => { sessionStorage.setItem('adminToken', token); $('login').style.display = 'none'; $('app').style.display = 'block'; });
+  socket.on('connect', () => { sessionStorage.setItem('adminSession', token); $('login').style.display = 'none'; $('app').style.display = 'block'; });
   socket.on('overview', data => { ov = data; renderAll(); });
 }
-$('loginBtn').onclick = () => { token = $('token').value.trim(); if (token) connect(); };
-$('token').onkeydown = e => e.key === 'Enter' && $('loginBtn').click();
-$('logout').onclick = () => { sessionStorage.removeItem('adminToken'); location.reload(); };
+async function post(path, body) {
+  const r = await fetch('/admin/auth' + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) });
+  return { status: r.status, data: await r.json().catch(() => ({})) };
+}
+$('loginBtn').onclick = async () => {
+  const { status, data } = await post('/login', { email: $('email').value.trim(), password: $('password').value });
+  if (status !== 200) return ($('loginErr').textContent = status === 429 ? 'Çok fazla hatalı deneme, 15 dk bekle.' : 'E-posta veya şifre hatalı.');
+  token = data.token; $('password').value = ''; $('loginErr').textContent = '';
+  if (data.mustChange) { $('loginForm').style.display = 'none'; $('pwForm').style.display = 'flex'; $('newPw').focus(); }
+  else connect();
+};
+$('pwBtn').onclick = async () => {
+  if ($('newPw').value !== $('newPw2').value) return ($('loginErr').textContent = 'Şifreler eşleşmiyor.');
+  const { status, data } = await post('/password', { newPassword: $('newPw').value });
+  if (status !== 200) return ($('loginErr').textContent = data.error === 'tooShort' ? `En az ${data.min} karakter olmalı.` : data.error === 'sameAsBootstrap' ? 'Yeni şifre ADMIN_TOKEN ile aynı olamaz.' : 'Oturum süresi doldu, tekrar giriş yap.');
+  $('newPw').value = $('newPw2').value = ''; $('loginErr').textContent = '';
+  connect();
+};
+$('password').onkeydown = e => e.key === 'Enter' && $('loginBtn').click();
+$('newPw2').onkeydown = e => e.key === 'Enter' && $('pwBtn').click();
+$('logout').onclick = async () => { await post('/logout', {}); showLogin(); location.reload(); };
 if (token) connect();
 
 // ---------- Tabs ----------

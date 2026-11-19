@@ -1,7 +1,7 @@
 // public/js/interior.js
 // Company HQ interior: same side-view 2D language as the street. A cross-section of the building:
 // each floor = two departments + an elevator. Floors unlock as the building grows (cash -> floors).
-import { drawPerson, lookFor, hash } from './world.js';
+import { drawPerson, lookFor, npcLook, teamLook, hash } from './world.js';
 
 export const IW = 960, FH = 150, FLOORS = 4, ROOF = 34;
 export const IH = FLOORS * FH + ROOF;
@@ -149,8 +149,8 @@ export function drawInterior(ctx, env) {
 }
 
 export function staffLooks(state, c) {
-  const looks = [...c.founders, ...c.employees].map(id => lookFor(state.players[id]?.avatar ?? 3));
-  for (let k = 0; k < (c.npcStaff || 0); k++) looks.push(lookFor(500 + k * 17));
-  if (c.isNpc) looks.push(lookFor(42), lookFor(77));
+  const looks = [...c.founders, ...c.employees].map(id => { const p = state.players[id]; return teamLook(lookFor(p?.avatar ?? 3), state.teams?.[p?.team]?.color); });
+  for (let k = 0; k < (c.npcStaff || 0); k++) looks.push(npcLook(500 + k * 17));
+  if (c.isNpc) looks.push(npcLook(42), npcLook(77));
   return looks;
 }

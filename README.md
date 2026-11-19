@@ -36,12 +36,23 @@ A web-based, side-scrolling **multiplayer idle entrepreneurship game**. Found co
 - **Sunum (izleme) modu:** Admin "🎤 Sunum Odası" açar. Katılımcılar yürümez; öneri çubuğu, sohbet komutları (`/sat`, `/kur`, `/yatir 100`…), anketler ve sihirbazla oynar. Admin: kamera (otomatik tur / şirket / serbest), sohbet kilidi, işlem durdurma, susturma, mesaj silme, anket.
 - **Odalar:** 6 haneli rakam oda kodu; oda kurarken 4-6 haneli şifre belirlenebilir.
 
+### Sprint 4
+- **Gerçek ekonomi (TR 2026):** Türkçede tüm tutarlar ₺. 1 coin, 2026 asgari ücretin günlük işveren maliyetine kalibre (brüt 33.030 ₺, SGK işveren %21,75 + işsizlik %2). Mavi/gri/beyaz yaka maaşları, şehir bazlı dükkân kirası (₺/m²), benzin fiyatı, araç fiyatı/kirası `economy.js` içinde, kaynaklarıyla. Tahmini değerler `*` ile işaretli.
+- **Şehir & gayrimenkul:** İstanbul, Ankara, İzmir, Bursa, Antalya. Dükkân kirala ya da satın al (geri dönüş süresi hesabı); sahibi olunan dükkânda diğer kiracılar sahibine kira öder.
+- **Ulaşım:** Caddede araba/taksi/otobüs; yeni günde servis ya da şirket aracıyla çalışan bırakma; 4 otobüs durağı, ulaşım kartı (kart dolum merkezi şirketinden yükleme), otobüsle duraklar arası yolculuk. Satış başına teslimat km'si, kurye ya da araç yakıtı, kiralık/satın alınan şirket aracı (bakım dahil). Galeri, rent a car ve kart dolum şablonları.
+- **Analog saat + gece/gündüz:** 1 oyun günü = 1 dk; 06:00'da yeni gün; gece pencereler ve lambalar yanar.
+- **Takım modu:** Multiplayer'da takım kur, katıl, ayrıl (sunumda takımları admin kurar). Takım üniforması; takım sıralaması. NPC'ler şapka, gözlük ve soluk renk kıyafetle ayırt edilir.
+- **Günlük görevler & 21 rozet:** Her gün (TSİ) 3 görev, ₺ + XP ödülü.
+- **Demo Day merkezi (caddenin sonu):** 9 bloklu Business Model Canvas (taslak önerisi), 60 sn asansör konuşması provası, canlı verilerden 10 slaytlık pitch deck (Markdown indirme), yatırıma hazırlık puanı, Demo Day jürisi, melek yatırımcı, hibe masası, teklif kabul/ret.
+- **Admin girişi:** E-posta + şifre (scrypt). İlk girişte şifre `ADMIN_TOKEN`; ardından yeni şifre zorunlu. Oturumlar 12 saat.
+- **Strateji:** [docs/TOY-oyunlastirma-stratejisi.md](docs/TOY-oyunlastirma-stratejisi.md), TOY modelinin 10 adımı Finbuu'ya uygulandı.
+
 - **🔒 Premium / sonraki sprintler (bulanık gösterilir):** Ideathon, Hackathon, Game Jam, Bootcamp, hızlandırıcılar, KOSGEB, TÜBİTAK, melek yatırımcı, Seed, Seri A/B, kitlesel fonlama, halka arz, apartman, gökdelen, pazar araştırması, rakip analizi
 
 ## 🚀 Kurulum / Setup
 ```bash
 npm install
-cp .env.example .env            # ADMIN_TOKEN değerini değiştir
+cp .env.example .env            # ADMIN_TOKEN ve ADMIN_EMAIL değerlerini yaz
 npm start                       # .env otomatik yüklenir (Node >= 20.12)
 # veya / or: ADMIN_TOKEN=uzun-rastgele-bir-sifre npm start
 ```
@@ -55,6 +66,8 @@ npm start                       # .env otomatik yüklenir (Node >= 20.12)
 ```
 server.js              # Game server, economy tick, NPC events, admin socket + HTTP API
 reports.js             # Game calendar, finance ledger, analysis, CSV export
+economy.js             # Real TR 2026 reference data -> coin economy (salaries, SGK, rent, fuel, cars)
+auth.js                # Admin email + password auth, forced first change, sessions
 public/index.html      # Game client shell (HUD, advisor bar, finance panel)
 public/js/world.js     # Street renderer: buildings, interiors, people, ambient NPCs
 public/js/advisor.js   # Suggestion engine (OK / Next / Auto)
@@ -67,7 +80,7 @@ public/locales/*.json  # tr / en translations
 ## 🧱 Mimari Notlar / Architecture Notes
 - State **bellekte** tutulur (veritabanı bilinçli olarak sonraki faza bırakıldı). Admin panelindeki "Tüm Oyun Yedeği" ile JSON yedek alınıp geri yüklenebilir.
 - Sunucu tüm metinleri **çeviri anahtarı** olarak gönderir; aynı odada farklı dillerde oynanabilir.
-- Admin yetkisi: `ADMIN_TOKEN` (timing-safe karşılaştırma, 5 hatalı denemede 15 dk kilit).
+- Admin girişi: `ADMIN_EMAIL` + şifre. İlk şifre `ADMIN_TOKEN`, ilk girişte değiştirilmesi zorunlu. Hash `data/admin.json` dosyasında (git dışı, 600 izin); 5 hatalı denemede 15 dk kilit.
 
 ## 🗺 Yol Haritası / Roadmap
 - [ ] Kalıcı veritabanı (PocketBase veya Supabase)

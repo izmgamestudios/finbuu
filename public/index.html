@@ -12,6 +12,7 @@
 <header>
   <h1 data-i18n="ui.title"></h1>
   <span id="day"></span>
+  <span id="clockBox" title=""><canvas id="clock" width="80" height="80" aria-label="clock"></canvas><b id="clockTxt"></b></span>
   <button id="boardBtn" aria-label="Leaderboard">🏆</button>
   <button id="menuBtn" aria-label="Menu">☰</button>
 </header>
@@ -37,6 +38,7 @@
           <option value="month" data-i18n="board.byMonth"></option>
           <option value="sales" data-i18n="board.bySales"></option>
           <option value="staff" data-i18n="board.byStaff"></option>
+          <option value="teams" data-i18n="board.byTeams"></option>
         </select>
         <button id="boardClose" aria-label="Close">✕</button>
       </div>
@@ -78,9 +80,13 @@
         <details><summary data-i18n="ui.tableView"></summary><table id="finTable"></table></details>
       </div>
     </div>
-    <div class="card" data-panel="profile"><h3 data-i18n="ui.profile"></h3><div id="profile"></div></div>
+    <div class="card" data-panel="profile"><h3 data-i18n="ui.profile"></h3><div id="profile"></div>
+      <h3 style="margin-top:12px" data-i18n="quest.title"></h3><div id="quests"></div>
+      <h3 style="margin-top:12px" data-i18n="team.title"></h3><div id="teams"></div>
+      <h3 style="margin-top:12px" data-i18n="badge.title"></h3><div id="badges" class="badges"></div></div>
     <div class="card" data-panel="events"><h3 data-i18n="ui.events"></h3><ul id="log"></ul></div>
     <div class="card" data-panel="guide"><h3 data-i18n="ui.guide"></h3><ol id="tut"></ol>
+      <h3 style="margin-top:12px" data-i18n="real.title"></h3><div id="realData"></div>
       <h3 style="margin-top:12px" data-i18n="ui.premium"></h3><div id="locked"></div></div>
     <div class="card" data-panel="ideas"><h3 data-i18n="ui.ideaBox"></h3>
       <textarea id="ideaText" maxlength="500" data-i18n-ph="ui.ideaPh"></textarea>

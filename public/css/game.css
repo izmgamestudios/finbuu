@@ -219,3 +219,39 @@ header #boardBtn { font-size: 1.1rem; padding: 6px 12px }
   #roomBar b { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
   #roomBar button { min-height: 30px; padding: 4px 8px; font-size: .78rem }
 }
+
+/* ---------- Sprint 4 ---------- */
+#clockBox { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; font-size: .85rem }
+#clock { width: 40px; height: 40px }
+.quest { padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .85rem }
+.quest .row1 { display: flex; justify-content: space-between; gap: 8px }
+.quest.done { color: var(--good) }
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px }
+.badge2 { text-align: center; font-size: .66rem; padding: 6px 2px; border-radius: 10px; background: var(--panel-2); line-height: 1.2 }
+.badge2 span { display: block; font-size: 1.4rem }
+.badge2.locked { filter: grayscale(1); opacity: .45 }
+.teamRow { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: .88rem }
+.teamRow .dot, .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: 0 0 auto }
+.teamRow b { flex: 1 }
+.teamRow button { min-height: 34px; padding: 4px 10px }
+.real table { width: 100%; border-collapse: collapse; font-size: .8rem; font-variant-numeric: tabular-nums }
+.real td { padding: 4px 2px; border-bottom: 1px solid var(--line) } .real td:last-child { text-align: right; font-weight: 600 }
+.real a { color: var(--accent) } .real small { color: var(--muted) }
+.est { color: var(--warn); font-size: .7rem; margin-left: 3px }
+@media (max-width: 820px) { #clockBox b { display: none } #clock { width: 34px; height: 34px } }
+/* Demo Day */
+.bmc { display: grid; grid-template-columns: 1fr 1fr; gap: 6px }
+.bmcCell { display: flex; flex-direction: column; gap: 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; font-size: .82rem }
+.bmcCell textarea { min-height: 64px; font-size: .82rem; padding: 6px 8px }
+.bmc-valueProps { grid-column: 1 / -1; border-color: var(--accent) }
+@media (min-width: 900px) {
+  #modalBody:has(.bmc) { width: min(980px, 96vw) }
+  .bmc { grid-template-columns: repeat(5, 1fr); grid-auto-flow: dense }
+  .bmc-keyPartners { grid-column: 1; grid-row: 1 / 3 } .bmc-keyActivities { grid-column: 2; grid-row: 1 } .bmc-keyResources { grid-column: 2; grid-row: 2 }
+  .bmc-valueProps { grid-column: 3; grid-row: 1 / 3 } .bmc-customerRelationships { grid-column: 4; grid-row: 1 } .bmc-channels { grid-column: 4; grid-row: 2 }
+  .bmc-customerSegments { grid-column: 5; grid-row: 1 / 3 } .bmc-costStructure { grid-column: 1 / 3; grid-row: 3 } .bmc-revenueStreams { grid-column: 3 / 6; grid-row: 3 }
+}
+.slide { aspect-ratio: 16 / 9; background: linear-gradient(135deg, #3b2f63, #2a78d6); color: #fff; border-radius: 14px; padding: 18px 22px; display: flex; flex-direction: column; gap: 6px; overflow: auto }
+.slide h2 { margin: 0; font-size: 1.4rem } .slide p { margin: 0; font-size: .95rem } .slide .lead { font-size: 1.05rem; opacity: .9 }
+.slide small { color: #d8d4ff !important } .slide .kpi { background: rgba(255,255,255,.14) } .slide .kpi span { color: #e9e4ff } .slide canvas.spark { background: rgba(255,255,255,.9); border-radius: 8px }
+.co .slide p, .slide p { color: #fff } .slide .lead { color: #e9e4ff }

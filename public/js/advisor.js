@@ -18,7 +18,8 @@ export const maxTenants = (seed, lot) =>
   lot.type === 'coworking' ? seed.workspaces.coworking.maxTenants : seed.lotSizes[lot.size].maxTenants;
 const shopDeposit = (seed, lot) => Math.ceil(seed.lotSizes[lot.size].rent / (lot.companyIds.length + 1)) * 5;
 const targetOf = c => (c.lotId == null ? { kind: 'plaza' } : { kind: 'lot', lotId: c.lotId });
-const bestTemplateIdx = seed => seed.templates.reduce((best, tp, i, all) => (tp.price > all[best].price ? i : best), 0);
+// highest-value template that has no special street role (dealer / rent-a-car / card center need a physical shop)
+const bestTemplateIdx = seed => seed.templates.reduce((best, tp, i, all) => (!tp.role && tp.price > all[best].price ? i : best), 0);
 
 // Returns candidates sorted by score (highest first). Each candidate:
 // { id, score, labelKey, reasonKey, params, cid?, target, action: { ev, payload } }
@@ -40,7 +41,7 @@ export function suggestions({ state, seed, myId, name }) {
     const p = { company: name(c) };
     const blocked = c.crisis && c.crisis.until > (state.day || 0) && c.crisis.type === 'trustee';
     if (c.cash < 0 && me.coins >= RESCUE_AMOUNT) {
-      add({ id: 'rescue:' + c.id, score: 110, labelKey: 'adv.rescue', reasonKey: 'adv.rescueWhy', params: p, cid: c.id,
+      add({ id: 'rescue:' + c.id, score: 110, labelKey: 'adv.rescue', reasonKey: 'adv.rescueWhy', params: { ...p, amount: RESCUE_AMOUNT }, cid: c.id,
         target: targetOf(c), action: { ev: 'invest', payload: { cid: c.id, amount: RESCUE_AMOUNT } } });
     }
     if (c.cash >= WITHDRAW_AT && !blocked) {
@@ -52,11 +53,20 @@ export function suggestions({ state, seed, myId, name }) {
       add({ id: 'marketing:' + c.id, score: 82, labelKey: 'adv.marketing', reasonKey: 'adv.marketingWhy', params: { ...p, days: seed.marketing.days }, cid: c.id,
         target: targetOf(c), action: { ev: 'marketing', payload: { cid: c.id } } });
     }
-    const npcProfit = c.price * (seed.workspaces[c.workspace]?.salesMult || 1) * 4 - (seed.salary ?? 25);
-    if (deptOpen(seed, state, c, 'hr') && staffOf(c) < employeeCap(seed, state, c) && npcProfit > 0 && c.cash > 200) {
-      add({ id: 'hire:' + c.id, score: 79, labelKey: 'adv.hire', reasonKey: 'adv.hireWhy', params: { ...p, profit: Math.round(npcProfit) }, cid: c.id,
-        target: targetOf(c), action: { ev: 'hireNpc', payload: { cid: c.id } } });
+    // best collar (blue / grey / white) = highest daily net contribution with real 2026 salary costs
+    const cols = seed.economy?.collars || { blue: { salary: seed.salary ?? 25, factor: 4 } };
+    const net = k => c.price * (seed.workspaces[c.workspace]?.salesMult || 1) * cols[k].factor - cols[k].salary;
+    const best = Object.keys(cols).sort((a, b) => net(b) - net(a))[0];
+    if (deptOpen(seed, state, c, 'hr') && staffOf(c) < employeeCap(seed, state, c) && net(best) > 0 && c.cash > 200) {
+      add({ id: 'hire:' + c.id, score: 79, labelKey: 'adv.hire', reasonKey: 'adv.hireWhy', params: { ...p, profit: Math.round(net(best)), collarKey: 'collar.' + best }, cid: c.id,
+        target: targetOf(c), action: { ev: 'hireNpc', payload: { cid: c.id, collar: best } } });
     }
+    // Demo Day prep: fill the business model canvas, then pitch to investors (local actions, skipped by Auto)
+    const age = (state.day || 0) - (c.fin?.foundedDay ?? state.day ?? 0);
+    if (age >= 15 && (c.canvasFilled ?? 0) < 9) add({ id: 'canvas:' + c.id, score: 46, labelKey: 'adv.canvas', reasonKey: 'adv.canvasWhy', params: { ...p, n: c.canvasFilled || 0 },
+      cid: c.id, target: { kind: 'demoday' }, action: { ev: '__demo', payload: { cid: c.id } } });
+    else if ((c.canvasFilled ?? 0) >= 9 && (c.pitchWords ?? 0) >= 40 && !c.offer) add({ id: 'demo:' + c.id, score: 60, labelKey: 'adv.demo', reasonKey: 'adv.demoWhy', params: p,
+      cid: c.id, target: { kind: 'demoday' }, action: { ev: '__demo', payload: { cid: c.id } } });
     add({ id: 'sell:' + c.id, score: c.cash < 50 ? 100 : 80 - Math.min(20, c.cash / 50), labelKey: 'adv.sell',
       reasonKey: c.cash < 50 ? 'adv.sellLowWhy' : 'adv.sellWhy', params: p, cid: c.id,
       target: targetOf(c), action: { ev: 'click', payload: { cid: c.id } } });

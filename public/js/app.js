@@ -2,7 +2,7 @@
 // Finbuu client: scenes (street <-> zoom <-> company interior), input (keys, click, joystick), advisor (OK / Next / Auto),
 // HUD, status overlay (FPS / ping / sync), leaderboard layer, NPC dialogs with ID cards, department panels,
 // founding wizard, chat + polls, presentation (watch-only) mode. The server stays authoritative for every action.
-import { layout, draw, createNpcs, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor } from './world.js';
+import { layout, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook } from './world.js';
 import { suggestions, companyActions, employeeCap, maxTenants, staffOf, floorsFor, floorsOfCompany, deptOpen } from './advisor.js';
 import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON } from './interior.js';
 
@@ -21,6 +21,8 @@ const view = { w: 0, h: 0, s: 1, ty: 0, camX: 0, dpr: 1 };
 const player = { x: 120, dir: 1, phase: 0, moving: false, target: null, onArrive: null, targetId: null };
 const others = new Map(); // id -> { x, tx, dir, phase, moving }
 const npcs = createNpcs(NPC_COUNT);
+const traffic = createTraffic();
+let ride = null, nearStop = null, clockOffset = 0, lastDay = null;
 const keys = new Set();
 const joy = { axis: 0, id: null };
 let near = null, nearNpc = null, plan = null, auto = false, advIdx = 0, ranked = [], modalOpen = false, modalOnClose = null;
@@ -36,12 +38,29 @@ const iview = { w: 0, h: 0, s: 1, camX: 0, camY: 0, dpr: 1 };
 const perf = { fps: 60, frameMs: 0, ping: null, syncTimes: [], stateKB: 0, stateCount: 0, quality: 'auto', low: false, lowSince: 0, highSince: 0 };
 let showStatus = loadJSON('status', true), boardOpen = false, focusOverride = null, tour = { idx: 0, at: 0 };
 
-const t = (k, o) => (i18next.isInitialized ? i18next.t(k, { interpolation: { escapeValue: false }, ...o }) : k);
+// Money: the game runs in coins; Turkish players see real ₺ (1 coin calibrated to the 2026 minimum-wage employer cost)
+// only these params are money (coins); counts like n / max / level stay numbers
+const MONEY_KEYS = new Set(['amount', 'price', 'cash', 'cost', 'salary', 'profit', 'dep', 'fare', 'balance', 'rent', 'buy', 'fuel', 'sale']);
+const RATE = () => seed?.economy?.rate || 1;
+const isTR = () => (i18next.language || '').startsWith('tr');
+function money(n, compact = false) {
+  if (n == null || !Number.isFinite(n)) return '—';
+  if (!isTR()) { const a = Math.abs(n); const v = compact && a >= 10000 ? (a / 1000).toFixed(1) + 'k' : Math.round(a).toLocaleString('en'); return (n < 0 ? '−' : '') + v + 'c'; }
+  const v = n * RATE();
+  return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0, notation: compact && Math.abs(v) >= 100000 ? 'compact' : 'standard' }).format(v);
+}
+const tl = v => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(v); // raw real ₺ (reference data)
+const t = (k, o) => {
+  if (!i18next.isInitialized) return k;
+  let p = o;
+  if (o) { p = { ...o }; for (const [key, v] of Object.entries(o)) if (MONEY_KEYS.has(key) && typeof v === 'number') p[key] = money(v); }
+  return i18next.t(k, { interpolation: { escapeValue: false }, ...p });
+};
 const resolve = p => { const out = { ...p }; for (const [k, v] of Object.entries(p || {})) if (k.endsWith('Key')) out[k.slice(0, -3)] = t(v); return out; };
 const companyName = c => c.name || t(c.nameKey);
 const myId = () => socket.id;
 const me = () => state?.players?.[myId()];
-const fmt = n => { const a = Math.abs(n); const s = a >= 10000 ? (a / 1000).toFixed(1) + 'k' : String(Math.round(a)); return (n < 0 ? '−' : '') + s; };
+const fmt = n => money(n, true); // every fmt() in this file is a money value
 const sectorOf = c => c?.sector || seed?.templates.find(tp => tp.key === c?.nameKey)?.sector;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const wWidth = () => worldWidth(state?.lots.length || 12);
@@ -71,6 +90,7 @@ async function loadLang(lng) {
 }
 function renderSeed() {
   if (!seed || !i18next.isInitialized) return;
+  realSig = ''; renderRealData();
   $('tut').replaceChildren(...seed.tutorial.map(k => el('li', t(k))));
   $('locked').replaceChildren(...seed.locked.map(k => { const s = el('span', '☁🔒 ' + t(k), 'locked'); s.onclick = () => toast(t('ui.premiumAlert', { feature: t(k) })); return s; }));
 }
@@ -98,11 +118,17 @@ $('boardBtn').onclick = () => toggleBoard();
 
 // ---------- Socket ----------
 const socket = io({ transports: ['websocket', 'polling'] });
-socket.on('seed', s => { seed = s; renderSeed(); });
+socket.on('seed', s => {
+  seed = s; renderSeed();
+  if (!joined && modalOpen && $('modalBody').dataset.modes) showModes(); // seed (cities) arrived after the mode screen opened
+});
 socket.on('state', s => {
   const now = performance.now();
   perf.syncTimes.push(now); if (perf.syncTimes.length > 10) perf.syncTimes.shift();
   if (perf.stateCount++ % 5 === 0) perf.stateKB = JSON.stringify(s).length / 1024;
+  clockOffset = (s.serverNow || Date.now()) - Date.now();
+  if (lastDay != null && s.day > lastDay) morningRush(s);
+  lastDay = s.day;
   state = s;
   buildings = layout(state);
   npcs.setWidth(wWidth());
@@ -139,6 +165,8 @@ socket.on('joined', info => {
   if (isPres()) { showTab(matchMedia('(max-width:820px)').matches ? 'street' : 'chat'); setAuto(false); }
   setTimeout(() => ($('hint').style.display = 'none'), 10000);
 });
+socket.on('badge', ({ id }) => { toast(`🏅 ${t('badge.unlocked')}: ${t('badge.' + id)}`); profSig = ''; });
+socket.on('questDone', q => { toast(`✅ ${t('quest.' + q.id, { goal: '' })} · +${money(q.coins)} · +${q.xp} XP`); profSig = ''; });
 socket.on('chatHistory', list => { $('chatList').replaceChildren(); list.forEach(addChat); });
 socket.on('chat', addChat);
 socket.on('chatDeleted', id => document.querySelector(`#chatList li[data-id="${CSS.escape(id)}"]`)?.remove());
@@ -164,12 +192,17 @@ function showModes() {
   const urlRoom = new URLSearchParams(location.search).get('room') || '';
   const digits = (input, max) => { input.inputMode = 'numeric'; input.maxLength = max; input.pattern = '[0-9]*'; input.oninput = () => (input.value = input.value.replace(/\D/g, '').slice(0, max)); };
   openModal(body => {
+    body.dataset.modes = '1';
     body.append(el('h3', t('ui.modeTitle')));
     const name = el('input'); name.placeholder = t('ui.namePh'); name.maxLength = 20; body.append(name);
+    const city = el('select'); city.setAttribute('aria-label', t('city.label'));
+    Object.entries(seed?.economy?.cities || {}).forEach(([k, c]) => city.append(new Option(`🏙 ${c.name} · ${t('city.rent', { m2: c.rentM2 })}${c.est ? ' *' : ''}`, k)));
+    city.value = loadJSON('city', 'istanbul'); city.onchange = () => saveJSON('city', city.value);
+    body.append(el('small', t('city.hint'), 'muted'), city);
     const solo = el('div', null, 'mode');
     solo.append(el('b', t('ui.solo')), el('p', t('ui.soloDesc')));
     const soloBtn = el('button', t('ui.startSolo'), 'primary');
-    soloBtn.onclick = () => socket.emit('startSolo', { name: name.value });
+    soloBtn.onclick = () => socket.emit('startSolo', { name: name.value, city: city.value });
     if (!urlRoom) soloBtn.dataset.default = '1';
     solo.append(soloBtn); body.append(solo);
 
@@ -180,7 +213,7 @@ function showModes() {
     create.onclick = () => {
       const pin = newPin.value.trim();
       if (pin && !/^\d{4,6}$/.test(pin)) return toast(t('toast.badPin'));
-      socket.emit('createRoom', { name: name.value, pin });
+      socket.emit('createRoom', { name: name.value, pin, city: city.value });
     };
     multi.append(newPin, create); body.append(multi);
 
@@ -222,7 +255,7 @@ const toInner = (clientX, clientY) => {
   return { x: (clientX - r.left) / iview.s + iview.camX, y: (clientY - r.top) / iview.s + iview.camY };
 };
 const buildingAt = (x, y) => buildings.find(b => x >= b.x && x <= b.x + b.w && y >= GROUND - b.h && y <= GROUND + 30);
-const buildingOf = target => buildings.find(b => (target.kind === 'plaza' ? b.kind === 'plaza' : b.kind === 'lot' && b.lot.id === target.lotId));
+const buildingOf = target => buildings.find(b => (target.kind === 'plaza' ? b.kind === 'plaza' : target.kind === 'demoday' ? b.kind === 'demoday' : b.kind === 'lot' && b.lot.id === target.lotId));
 const buildingOfCompany = c => buildingOf(c.lotId == null ? { kind: 'plaza' } : { kind: 'lot', lotId: c.lotId });
 
 function updateControls() {
@@ -255,11 +288,11 @@ addEventListener('keydown', e => {
   if (scene.name !== 'street') return;
   if (k === 'enter') { acceptSuggestion(); e.preventDefault(); return; }
   if (k === 'n') { nextSuggestion(); return; }
-  if (isPres()) return; // watch-only: no walking
+  if (isPres() || ride) return; // watch-only / riding: no walking
   if (KEYMAP[k]) { keys.add(KEYMAP[k]); manualInput(); e.preventDefault(); }
   if (['w', 'arrowup', 'e'].includes(k)) {
     e.preventDefault();
-    if (nearNpc) openNpc(nearNpc); else if (near) openBuilding(near);
+    if (nearNpc) openNpc(nearNpc); else if (nearStop != null && (!near || k === 'e')) openStop(nearStop); else if (near) openBuilding(near);
   }
 });
 addEventListener('keyup', e => { const k = KEYMAP[e.key.toLowerCase()]; if (k) keys.delete(k); });
@@ -311,7 +344,7 @@ function moveJoy(e) {
 }
 $('actBtn').onclick = () => {
   if (scene.name === 'interior') return openDeptHere();
-  if (nearNpc) openNpc(nearNpc); else if (near) openBuilding(near);
+  if (nearNpc) openNpc(nearNpc); else if (nearStop != null) openStop(nearStop); else if (near) openBuilding(near);
 };
 $('floorUp').onclick = () => changeFloor(1);
 $('floorDown').onclick = () => (inner.floor === 0 ? exitCompany() : changeFloor(-1));
@@ -324,11 +357,11 @@ function currentSuggestion() { return ranked.length ? ranked[advIdx % ranked.len
 function renderAdvisor() {
   ranked = suggestions({ state, seed, myId: myId(), name: companyName });
   const s = plan || currentSuggestion();
-  $('advLabel').textContent = s ? (plan ? '🚶 ' : '💡 ') + t(s.labelKey, s.params) : t('adv.none');
-  $('advReason').textContent = s ? t(s.reasonKey, s.params) : '';
+  $('advLabel').textContent = s ? (plan ? '🚶 ' : '💡 ') + t(s.labelKey, resolve(s.params)) : t('adv.none');
+  $('advReason').textContent = s ? t(s.reasonKey, resolve(s.params)) : '';
   $('advOk').disabled = !s; $('advNext').disabled = ranked.length < 2;
 }
-function acceptSuggestion() { const s = currentSuggestion(); if (s) startPlan(s); }
+function acceptSuggestion() { const s = auto ? ranked.find(x => !x.action.ev.startsWith('__')) : currentSuggestion(); if (s) startPlan(s); }
 function nextSuggestion() { advIdx = (advIdx + 1) % Math.max(1, ranked.length); renderAdvisor(); }
 function startPlan(s) {
   const b = buildingOf(s.target); if (!b) return;
@@ -339,8 +372,9 @@ function startPlan(s) {
 function executePlan() {
   const s = plan; plan = null; player.targetId = null;
   if (!s) return;
+  if (s.action.ev === '__demo') { advIdx = 0; renderAdvisor(); return openDemoDay(s.action.payload.cid, 'canvas'); }
   socket.emit(s.action.ev, s.action.payload);
-  if (s.action.ev !== 'click') toast('✓ ' + t(s.labelKey, s.params));
+  if (s.action.ev !== 'click') toast('✓ ' + t(s.labelKey, resolve(s.params)));
   advIdx = 0; renderAdvisor();
 }
 function cancelPlan() { if (plan) setTimeout(renderAdvisor); plan = null; player.target = null; player.onArrive = null; player.targetId = null; }
@@ -395,6 +429,77 @@ function openDeptHere() {
   if (d) openDept(c, d); else toast(t('ui.useElevator'));
 }
 
+// ---------- Game clock (analog), day / night, morning shuttles ----------
+// One game day = tickSeconds of real time; the clock runs 06:00 -> 06:00 so a new day starts in the morning.
+function gameMinutes() {
+  if (!state?.tickAt || !seed) return 9 * 60;
+  const p = clamp((Date.now() + clockOffset - state.tickAt) / (seed.tickSeconds * 1000), 0, 1);
+  return (360 + p * 1440) % 1440;
+}
+function nightFactor(min) { const h = min / 60; return h >= 20 || h < 5 ? 1 : h >= 18 ? (h - 18) / 2 : h < 7 ? 1 - (h - 5) / 2 : 0; }
+const clockCv = $('clock'), cctx = clockCv.getContext('2d');
+function drawClock() {
+  const min = gameMinutes(), h = Math.floor(min / 60), m = Math.floor(min % 60), W = clockCv.width, r = W / 2 - 4;
+  cctx.setTransform(1, 0, 0, 1, 0, 0); cctx.clearRect(0, 0, W, W); cctx.translate(W / 2, W / 2);
+  cctx.fillStyle = nightFactor(min) > 0.5 ? '#1f2a44' : '#ffffff'; cctx.beginPath(); cctx.arc(0, 0, r, 0, Math.PI * 2); cctx.fill();
+  cctx.strokeStyle = '#9aa3b5'; cctx.lineWidth = 3; cctx.stroke();
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; cctx.fillStyle = '#9aa3b5'; cctx.fillRect(Math.sin(a) * (r - 7) - 1.5, -Math.cos(a) * (r - 7) - 1.5, 3, 3); }
+  const hand = (angle, len, width, color) => { cctx.strokeStyle = color; cctx.lineWidth = width; cctx.lineCap = 'round'; cctx.beginPath(); cctx.moveTo(0, 0); cctx.lineTo(Math.sin(angle) * len, -Math.cos(angle) * len); cctx.stroke(); };
+  hand(((h % 12) + m / 60) / 12 * Math.PI * 2, r * 0.5, 5, nightFactor(min) > 0.5 ? '#ffe2a0' : '#2b2f3a');
+  hand((m / 60) * Math.PI * 2, r * 0.78, 3, '#2f6fe4');
+  cctx.fillStyle = '#e34948'; cctx.beginPath(); cctx.arc(0, 0, 3.5, 0, Math.PI * 2); cctx.fill();
+  const txt = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  $('clockTxt').textContent = state ? txt : '';
+  $('clockBox').title = t('clock.title', { time: txt });
+}
+setInterval(drawClock, 500);
+// New game day = morning rush: shuttles / company cars drop staff in front of visible companies
+function morningRush(s) {
+  const viewW = view.w / view.s;
+  for (const b of buildings) {
+    if (b.kind !== 'lot' || b.x + b.w < view.camX || b.x > view.camX + viewW) continue;
+    const list = b.lot.companyIds.map(id => s.companies[id]).filter(Boolean);
+    const looks = list.flatMap(c => [...c.employees.map(id => lookFor(s.players[id]?.avatar ?? 1)), ...Array.from({ length: Math.min(3, c.npcStaff || 0) }, (_, k) => lookFor(300 + k))]);
+    if (!looks.length) continue;
+    const car = list.some(c => c.vehicle);
+    traffic.dropoff(b.x + b.w / 2, looks, car ? 'car' : 'shuttle', '#3fa36b', view.camX);
+  }
+}
+// ---------- Bus: stops, card balance, rides ----------
+const stopName = i => t('bus.stop', { n: i + 1 });
+function openStop(i) {
+  const p = me(); if (!p) return;
+  const fare = seed.economy.busFare, center = Object.values(state.companies).find(c => roleOf(c) === 'busCard');
+  openModal(body => {
+    body.append(el('h3', `🚏 ${stopName(i)}`), el('p', t('bus.info', { balance: p.busCard || 0, fare }), 'muted'));
+    if ((p.busCard || 0) < fare) {
+      body.append(el('p', t('bus.noBalance')));
+      if (center) body.append(btn('💳 ' + t('bus.goTopup', { company: companyName(center) }), () => { closeModal(); const b = buildingOfCompany(center); if (b) walkTo(b.x + b.w / 2, () => openBuilding(b), b.id); }, { primary: true, isDefault: true }));
+      return;
+    }
+    const grid = el('div', null, 'choices'), next = (i + 1) % seed.busStops.length;
+    seed.busStops.forEach((x, k) => { if (k !== i) grid.append(btn(`🚌 ${stopName(k)}`, () => takeBus(i, k), { primary: k === next, isDefault: k === next })); });
+    body.append(grid);
+  });
+}
+function takeBus(from, to) {
+  closeModal();
+  socket.timeout(4000).emit('busRide', { to }, (err, r) => {
+    if (err || !r?.ok) return toast(t(r?.key || 'toast.notAtStop'));
+    const fromX = player.x, toX = r.x;
+    ride = { fromX, toX, t0: performance.now(), dur: clamp(Math.abs(toX - fromX) / 0.5, 1800, 5000), dir: Math.sign(toX - fromX) || 1, text: stopName(to) };
+  });
+}
+function updateRide(now) {
+  if (!ride) return false;
+  const p = clamp((now - ride.t0) / ride.dur, 0, 1);
+  player.x = ride.fromX + (ride.toX - ride.fromX) * ease(p); player.dir = ride.dir; player.moving = false;
+  ride.x = player.x;
+  if (p >= 1) { player.x = ride.toX; lastSent = { x: player.x, at: now }; ride = null; toast('🚏 ' + t('bus.arrived')); }
+  return true;
+}
+const roleOf = c => seed?.templates.find(tp => tp.key === c.nameKey)?.role || (c.nameKey === 'npc.busCard' ? 'busCard' : null);
+
 // ---------- Game loop ----------
 let lastT = performance.now();
 function frame(now) {
@@ -413,6 +518,7 @@ function updateStreet(dt) {
     if (o.moving) { o.x += clamp(d, -SPEED * dt * 1.3, SPEED * dt * 1.3); o.phase += dt * 16; } else o.x = o.tx;
   }
   npcs.update(dt, npcLimit());
+  traffic.update(dt, view.camX, view.w / view.s, wWidth(), seed?.busStops || [], perf.low ? 1 : isPres() ? 2 : 3);
 }
 const npcLimit = () => (perf.low ? NPC_LOW : isPres() ? NPC_PRESENTATION : NPC_COUNT);
 function cameraTarget(now) {
@@ -450,16 +556,18 @@ function renderStreet(now) {
   draw(ctx, {
     state, view: v, time: now, myId: myId(), player, others: isPres() ? new Map() : others, npcs, buildings,
     near: isPres() ? null : near, nearNpc: isPres() ? null : nearNpc, targetId: player.targetId, met, low: perf.low, npcLimit: npcLimit(), hideMe: isPres(),
-    ranks: boardOpen ? lotRanks() : null,
+    ranks: boardOpen ? lotRanks() : null, traffic, busStops: seed?.busStops, night: nightFactor(gameMinutes()), riding: ride,
+    nearStop: isPres() ? null : nearStop, stopHint: touch ? null : `E 🚏 ${t('bus.board')}`, money,
     t, name: companyName, sector: sectorOf, maxTenants: lot => maxTenants(seed, lot),
     tenants: lot => lot.companyIds.map(id => state.companies[id]).filter(Boolean),
     trend: list => list.reduce((s, c) => s + (c.fin?.lastDay && c.fin.prevCash != null ? c.fin.lastDay.cash - c.fin.prevCash : 0), 0),
-    keyHint: touch || isPres() ? null : nearNpc ? `E 💬 ${t('npc.talk')}` : `W ⬆ ${t('ui.enter')}`
+    keyHint: touch || isPres() ? null : nearNpc ? `E 💬 ${t('npc.talk')}` : nearStop != null && !near ? `E 🚏 ${t('bus.board')}` : `W ⬆ ${t('ui.enter')}`
   });
   if (white > 0) { ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0); ctx.fillStyle = `rgba(255,255,255,${white})`; ctx.fillRect(0, 0, view.w, view.h); }
 }
 function updatePlayer(dt, now) {
-  if (scene.name !== 'street' || isPres()) { near = nearNpc = null; $('actBtn').hidden = true; return; }
+  if (scene.name !== 'street' || isPres()) { near = nearNpc = nearStop = null; $('actBtn').hidden = true; return; }
+  if (updateRide(now)) { near = nearNpc = nearStop = null; return; }
   let axis = 0;
   if (keys.has('left')) axis -= 1;
   if (keys.has('right')) axis += 1;
@@ -476,7 +584,9 @@ function updatePlayer(dt, now) {
   if (vx) { player.dir = Math.sign(vx); player.phase += dt * 16; }
   near = state ? buildings.find(b => b.kind !== 'locked' && player.x >= b.x && player.x <= b.x + b.w) || null : null;
   nearNpc = state && !player.moving ? npcs.nearest(player.x) : null;
-  $('actBtn').hidden = !(touch && (near || nearNpc));
+  const si = (seed?.busStops || []).findIndex(x => Math.abs(x - player.x) < 30);
+  nearStop = state && si >= 0 ? si : null;
+  $('actBtn').hidden = !(touch && (near || nearNpc || nearStop != null));
   if (state && Math.abs(player.x - lastSent.x) > 1 && now - lastSent.at > MOVE_SEND_MS) {
     lastSent = { x: player.x, at: now };
     socket.emit('move', { x: Math.round(player.x), dir: player.dir });
@@ -574,7 +684,7 @@ function chip(icon, label, value, pct, color, onClick) {
   if (pct != null) { const b = el('div', null, 'bar'), i = el('i'); i.style.width = `${clamp(pct, 0, 1) * 100}%`; if (color) i.style.background = color; b.append(i); c.append(b); }
   return c;
 }
-const signed = (n, cls) => el('span', (n >= 0 ? '+' : '') + fmt(n), cls || (n >= 0 ? 'pos' : 'neg'));
+const signed = (n, cls) => { const v = Math.abs(n) < 0.5 ? 0 : n; return el('span', (v >= 0 ? '+' : '') + fmt(v), cls || (v >= 0 ? 'pos' : 'neg')); };
 let hudSig = '';
 function renderHud() {
   const p = me(), hud = $('hud');
@@ -608,7 +718,15 @@ function boardRows() {
       owners: c.isNpc ? 'NPC' : c.founders.map(id => state.players[id]?.name || '—').join(', ') };
   });
 }
-function sortedRows() { const k = $('boardSort').value || 'cash'; return boardRows().sort((a, b) => b[k] - a[k]); }
+function sortedRows() { let k = $('boardSort').value || 'cash'; if (k === 'teams') k = 'cash'; return boardRows().sort((a, b) => b[k] - a[k]); }
+function teamRows() {
+  const rows = boardRows();
+  return Object.values(state?.teams || {}).map(tm => {
+    const ids = Object.values(state.players).filter(p => p.team === tm.id).map(p => p.id);
+    const mine = rows.filter(r => r.c.founders.some(id => ids.includes(id)));
+    return { tm, members: ids.length, cash: mine.reduce((s, r) => s + r.cash, 0), month: mine.reduce((s, r) => s + r.month, 0), sales: mine.reduce((s, r) => s + r.sales, 0), companies: mine.length };
+  }).sort((a, b) => b.cash - a.cash);
+}
 function myRank() { const rows = sortedRows(); const i = rows.findIndex(r => r.c.founders.includes(myId())); return i >= 0 ? i + 1 : null; }
 function lotRanks() {
   const m = new Map();
@@ -618,6 +736,18 @@ function lotRanks() {
 function toggleBoard(v = !boardOpen) { boardOpen = v; $('board').hidden = !v; if (v) renderBoard(); }
 function renderBoard() {
   if (!boardOpen) return;
+  if ($('boardSort').value === 'teams') {
+    const head = el('tr'); ['#', t('team.title'), '👥', '🏢', '💰', '📅', '🛒'].forEach(h => head.append(el('th', h)));
+    const thead = el('thead'); thead.append(head); const tbody = el('tbody');
+    teamRows().forEach((r, i) => {
+      const tr = el('tr'); const nameTd = el('td'); const dot = el('i', null, 'dot'); dot.style.background = r.tm.color; nameTd.append(dot, ' ' + r.tm.name);
+      if (me()?.team === r.tm.id) tr.className = 'mine';
+      tr.append(el('td', ['🥇', '🥈', '🥉'][i] || String(i + 1)), nameTd, el('td', String(r.members)), el('td', String(r.companies)), el('td', fmt(r.cash)), el('td', (r.month >= 0 ? '+' : '') + fmt(r.month)), el('td', String(r.sales)));
+      tbody.append(tr);
+    });
+    if (!tbody.children.length) { const tr = el('tr'); const td = el('td', t('team.none')); td.colSpan = 7; tr.append(td); tbody.append(tr); }
+    return $('boardTable').replaceChildren(thead, tbody);
+  }
   const head = el('tr');
   ['#', t('board.company'), t('board.owner'), '🏢', '💰', '📅', '🛒', '👷'].forEach(h => head.append(el('th', h)));
   const thead = el('thead'); thead.append(head);
@@ -800,9 +930,80 @@ function render() {
   } else { logSig = ''; $('log').replaceChildren(); $('ideas').replaceChildren(); $('hud').replaceChildren(); hudSig = ''; }
 }
 let profSig = '';
+// ---------- Quests, teams, badges (profile card) ----------
+const BADGE_ICON = { firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
+  social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗' };
+let extraSig = '';
+function renderExtras(p) {
+  const teams = state?.teams || {};
+  const sig = p ? JSON.stringify([p.quests, p.badges, p.team, teams, joined?.mode, i18next.language]) : '';
+  if (sig === extraSig) return;
+  extraSig = sig;
+  const qBox = $('quests'), tBox = $('teams'), bBox = $('badges');
+  qBox.replaceChildren(); tBox.replaceChildren(); bBox.replaceChildren();
+  if (!p) return;
+  // daily quests
+  (p.quests || []).forEach(q => {
+    const d = el('div', null, 'quest' + (q.done ? ' done' : ''));
+    const r1 = el('div', null, 'row1'); r1.append(el('span', (q.done ? '✅ ' : '🎯 ') + t('quest.' + q.id, { goal: q.goal })), el('b', `${Math.min(q.progress, q.goal)}/${q.goal}`));
+    const bar = el('div', null, 'bar'), fill = el('i'); fill.style.width = `${(Math.min(q.progress, q.goal) / q.goal) * 100}%`; bar.append(fill);
+    d.append(r1, bar, el('small', t('quest.reward', { amount: q.coins, xp: q.xp }), 'muted'));
+    qBox.append(d);
+  });
+  qBox.append(el('small', t('quest.resets'), 'muted'));
+  // teams
+  if (!joined || joined.mode === 'solo') tBox.append(el('small', t('team.soloNote'), 'muted'));
+  else {
+    const list = Object.values(teams);
+    if (!list.length) tBox.append(el('small', t('team.none'), 'muted'));
+    list.forEach(tm => {
+      const members = Object.values(state.players).filter(x => x.team === tm.id).length;
+      const row = el('div', null, 'teamRow'); const dot = el('i', null, 'dot'); dot.style.background = tm.color;
+      row.append(dot, el('b', `${tm.name} · ${t('team.members', { n: members })}`));
+      if (p.team === tm.id) row.append(btn(t('team.leave'), () => socket.emit('leaveTeam')));
+      else row.append(btn(t('team.join'), () => socket.emit('joinTeam', { teamId: tm.id }), { primary: !p.team }));
+      tBox.append(row);
+    });
+    if (joined.mode === 'multiplayer' && list.length < 8) {
+      const used = list.map(x => x.color), row = el('div', null, 'row');
+      const nm = el('input'); nm.placeholder = t('team.namePh'); nm.maxLength = 24;
+      const col = el('select'); (seed.teamColors || []).filter(c => !used.includes(c)).forEach((c, i) => { const o = new Option('● ' + t('team.color', { n: i + 1 }), c); o.style.color = c; col.append(o); });
+      row.append(nm, col, btn(t('team.create'), () => { if (nm.value.trim()) socket.emit('createTeam', { name: nm.value.trim(), color: col.value }); }));
+      tBox.append(row);
+    } else if (joined.mode === 'presentation') tBox.append(el('small', t('team.adminOnly'), 'muted'));
+  }
+  // badges
+  (seed.badges || []).forEach(id => {
+    const has = (p.badges || []).includes(id), d = el('div', null, 'badge2' + (has ? '' : ' locked'));
+    d.title = t('badgeDesc.' + id); d.append(el('span', BADGE_ICON[id] || '🏅'), document.createTextNode(t('badge.' + id)));
+    bBox.append(d);
+  });
+}
+// ---------- Real data (TÜİK / SGK / market) reference card ----------
+let realSig = '';
+function renderRealData() {
+  const box = $('realData'), e = seed?.economy;
+  if (!e || realSig === i18next.language) return;
+  realSig = i18next.language;
+  const d = e.data, tbl = el('table'), row = (k, v, est) => { const tr = el('tr'); const td = el('td', k); if (est) td.append(el('span', '*', 'est')); tr.append(td, el('td', v)); tbl.append(tr); };
+  const emp = d.sgk.employer + d.sgk.unemploymentEmployer;
+  row(t('real.minGross'), tl(d.minWage.gross)); row(t('real.minNet'), tl(d.minWage.net));
+  row(t('real.sgk', { pct: (d.sgk.employer * 100).toFixed(2), un: (d.sgk.unemploymentEmployer * 100).toFixed(0) }), '%' + (emp * 100).toFixed(2));
+  row(t('real.employerCost'), tl(d.minWage.gross * (1 + emp)));
+  Object.entries(e.collars).forEach(([k, v]) => row(t('collar.' + k) + ' ' + t('hr.gross'), tl(v.gross), v.est));
+  Object.values(e.cities).forEach(c => row(t('real.rent', { city: c.name }), tl(c.rentM2) + '/m²', c.est));
+  row(t('real.fuel', { date: d.fuel.asOf }), tl(d.fuel.gasoline) + ' / L');
+  row(t('real.car'), tl(d.car.buyPrice), true); row(t('real.carRent'), tl(d.car.rentDaily) + '/' + t('real.day'), true);
+  row(t('real.rate'), `1c = ${tl(e.rate)}`);
+  const wrap = el('div', null, 'real'); wrap.append(tbl, el('small', t('real.note')));
+  const src = el('ul'); d.sources.forEach(x => { const li = el('li'); const a = el('a', x.label); a.href = x.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; li.append(a); src.append(li); });
+  wrap.append(src);
+  box.replaceChildren(wrap);
+}
 function renderProfile(p) {
+  renderExtras(p);
   const box = $('profile');
-  const sig = p ? `${p.coins}|${Math.round(p.stats.xp)}|${p.stats.knowledge}|${p.stats.success}|${p.role}|${i18next.language}` : '';
+  const sig = p ? `${p.coins}|${p.busCard}|${Math.round(p.stats.xp)}|${p.stats.knowledge}|${p.stats.success}|${p.role}|${i18next.language}` : '';
   if (sig === profSig) return;
   profSig = sig; box.replaceChildren();
   if (!p) return;
@@ -815,7 +1016,8 @@ function renderProfile(p) {
   row(t('ui.knowledge'), s.knowledge);
   row(t('ui.success'), s.success);
   row(t('ui.performance'), 'x' + s.performance);
-  row('💰', p.coins);
+  row('💰', money(p.coins));
+  row('💳 ' + t('bus.card'), money(p.busCard || 0));
   row('🎭', t(p.role));
 }
 
@@ -824,7 +1026,7 @@ let modalClosable = true;
 function openModal(fill, { closable = true, onClose = null } = {}) {
   if (modalOpen && modalOnClose) { const cb = modalOnClose; modalOnClose = null; cb(); }
   modalClosable = closable; modalOpen = true; modalOnClose = onClose;
-  const body = $('modalBody'); body.replaceChildren(); delete body.dataset.npc; fill(body);
+  const body = $('modalBody'); body.replaceChildren(); delete body.dataset.npc; delete body.dataset.modes; fill(body);
   if (closable) { const b = el('button', t('ui.close')); b.onclick = closeModal; body.append(b); }
   $('modal').style.display = 'flex';
   const def = body.querySelector('[data-default]');
@@ -839,35 +1041,38 @@ const btn = (label, onClick, { primary = false, isDefault = false } = {}) => {
   const b = el('button', label, primary ? 'primary' : ''); b.onclick = onClick; if (isDefault) b.dataset.default = '1'; return b;
 };
 
+// lot.rent / lot.price come from the server (city real-estate data converted to coins)
 const costLabel = (ws, lot) => {
-  if (ws === 'shop') { const base = seed.lotSizes[lot.size].rent, n = lot.companyIds.length + 1; return Math.ceil(base / n) + Math.ceil(base * 0.3 / n); }
+  if (ws === 'shop') { const base = lot.rent, n = lot.companyIds.length + 1; return Math.ceil(base / n) + Math.ceil(base * 0.3 / n); }
   return seed.workspaces[ws].rent + (seed.workspaces[ws].electricity || 0);
 };
-const depositLabel = (ws, lot) => (ws === 'shop' ? Math.ceil(seed.lotSizes[lot.size].rent / (lot.companyIds.length + 1)) * 5 : seed.workspaces[ws].deposit);
+const depositLabel = (ws, lot) => (ws === 'shop' ? Math.ceil(lot.rent / (lot.companyIds.length + 1)) * 5 : seed.workspaces[ws].deposit);
+const breakEvenYears = lot => (lot.price / (lot.rent * 360)).toFixed(1);
 const freeLot = type => state.lots.find(l => l.type === type && l.companyIds.length < maxTenants(seed, l));
 
 // Template select with "Other (add your own)"
 function productPicker(box, defaultIdx, sector) {
   const tplSel = el('select');
-  seed.templates.forEach((tp, i) => { if (!sector || tp.sector === sector) tplSel.append(new Option(`${t(tp.key)} (${t(tp.sector)}, ${tp.price}c)`, i)); });
+  seed.templates.forEach((tp, i) => { if (!sector || tp.sector === sector) tplSel.append(new Option(`${t(tp.key)} (${t(tp.sector)}, ${money(tp.price)})`, i)); });
   tplSel.append(new Option('➕ ' + t('ui.otherTemplate'), 'custom'));
   tplSel.value = [...tplSel.options].some(o => o.value === String(defaultIdx)) ? String(defaultIdx) : tplSel.options[0].value;
   const custom = el('div', null, 'row'); custom.hidden = true;
   const label = el('input'); label.placeholder = t('ui.customLabelPh'); label.maxLength = 30;
   const secSel = el('select'); seed.custom.sectors.forEach(s => secSel.append(new Option(t(s), s))); if (sector) secSel.value = sector;
-  const price = el('input'); price.type = 'number'; price.min = seed.custom.minPrice; price.max = seed.custom.maxPrice; price.value = 10;
-  price.title = t('ui.customPrice', { min: seed.custom.minPrice, max: seed.custom.maxPrice });
+  const unit = isTR() ? RATE() : 1; // Turkish players type the price in ₺
+  const price = el('input'); price.type = 'number'; price.min = Math.round(seed.custom.minPrice * unit); price.max = Math.round(seed.custom.maxPrice * unit); price.value = Math.round(10 * unit);
+  price.title = t('ui.customPrice', { min: money(seed.custom.minPrice), max: money(seed.custom.maxPrice) });
   custom.append(label, secSel, price);
   tplSel.onchange = () => { custom.hidden = tplSel.value !== 'custom'; if (!custom.hidden) label.focus(); };
   box.append(tplSel, custom);
   return () => (tplSel.value === 'custom'
-    ? { custom: { label: label.value.trim(), sector: secSel.value, price: Number(price.value) } }
+    ? { custom: { label: label.value.trim(), sector: secSel.value, price: Math.max(seed.custom.minPrice, Math.min(seed.custom.maxPrice, Math.round(Number(price.value) / unit))) } }
     : { templateIdx: +tplSel.value });
 }
 function foundForm(body, { lot = null, choices, isDefault, rec }) {
   const box = el('div', null, isDefault ? 'rec' : 'co');
   box.append(el('h4', (isDefault ? '⭐ ' : '') + t('ui.foundHere')));
-  if (rec) box.append(el('small', t(rec.reasonKey, rec.params)));
+  if (rec) box.append(el('small', t(rec.reasonKey, resolve(rec.params))));
   const wsSel = el('select');
   choices.forEach(ws => wsSel.append(new Option(t('ws.' + ws), ws)));
   wsSel.value = rec?.action.payload.workspace || choices[0];
@@ -876,6 +1081,12 @@ function foundForm(body, { lot = null, choices, isDefault, rec }) {
   wsSel.onchange = refresh; refresh();
   if (choices.length > 1) box.append(wsSel);
   box.append(info);
+  let own = null;
+  if (lot && lot.type === 'shop' && !lot.companyIds.length && !lot.owner) {
+    own = el('select');
+    own.append(new Option(t('estate.rentOpt', { dep: depositLabel('shop', lot), rent: lot.rent }), 'rent'), new Option(t('estate.buyOpt', { buy: lot.price }), 'buy'));
+    box.append(own, el('small', t('estate.plan', { years: breakEvenYears(lot), city: seed.economy.cities[state.city]?.name || '' }), 'muted'));
+  }
   const pick = productPicker(box, rec?.action.payload.templateIdx ?? (lot ? lot.id % seed.templates.length : 2));
   const nm = el('input'); nm.placeholder = t('ui.companyNamePh'); nm.maxLength = 40;
   box.append(nm);
@@ -883,7 +1094,7 @@ function foundForm(body, { lot = null, choices, isDefault, rec }) {
   row.append(btn((isDefault ? '✓ ' : '') + t('ui.found'), () => {
     const prod = pick();
     if (prod.custom && !prod.custom.label) return toast(t('toast.badCustom'));
-    socket.emit('found', { lotId: lot?.id ?? null, workspace: wsSel.value, name: nm.value, ...prod }); closeModal();
+    socket.emit('found', { lotId: lot?.id ?? null, workspace: wsSel.value, name: nm.value, ownership: own?.value, ...prod }); closeModal();
   }, { primary: true, isDefault }), btn('🧭 ' + t('wiz.open'), () => openWizard()));
   box.append(row);
   body.append(box);
@@ -929,7 +1140,7 @@ function openWizard() {
     } else {
       const nm = el('input'); nm.placeholder = t('ui.companyNamePh'); nm.maxLength = 40; nm.value = w.name; nm.oninput = () => (w.name = nm.value);
       body.append(nm);
-      const prodLabel = w.product?.custom ? `${w.product.custom.label} (${w.product.custom.price}c)` : t(seed.templates[w.product?.templateIdx ?? 0].key);
+      const prodLabel = w.product?.custom ? `${w.product.custom.label} (${money(w.product.custom.price)})` : t(seed.templates[w.product?.templateIdx ?? 0].key);
       body.append(el('p', t('wiz.summary', { sector: t(w.sector), product: prodLabel, place: t('ws.' + w.workspace) })));
       next = btn('✓ ' + t('ui.found'), () => {
         socket.emit('found', { lotId: seed.workspaces[w.workspace].physical ? 'auto' : null, workspace: w.workspace, name: w.name, ...w.product });
@@ -977,13 +1188,20 @@ function companyBlock(body, c, isDefault) {
   const top = list.find(a => a.recommended);
   if (top) {
     const r = el('div', null, 'rec');
-    r.append(el('small', '⭐ ' + t('ui.recommended') + (rec ? ' · ' + t(rec.reasonKey, rec.params) : '')));
-    r.append(btn('✓ ' + t(top.key), run(top), { primary: true, isDefault }));
+    r.append(el('small', '⭐ ' + t('ui.recommended') + (rec ? ' · ' + t(rec.reasonKey, resolve(rec.params)) : '')));
+    r.append(btn('✓ ' + t(top.key, top.payload), run(top), { primary: true, isDefault }));
     box.append(r);
   }
+  const role = roleOf(c);
+  if (role === 'busCard' && !isPres()) {
+    const r2 = el('div', null, 'others');
+    seed.economy.busTopups.forEach(a => r2.append(btn(`💳 ${t('bus.topup', { amount: a })}`, () => { socket.emit('busTopup', { cid: c.id, amount: a }); })));
+    box.append(el('small', t('bus.cardInfo', { balance: me()?.busCard || 0, fare: seed.economy.busFare }), 'muted'), r2);
+  }
+  if (role === 'carDealer' || role === 'rentACar') box.append(el('small', t('veh.dealerInfo.' + role, { buy: seed.economy.vehicle.buyPrice, rent: seed.economy.vehicle.rentPerDay }), 'muted'));
   const rest = list.filter(a => !a.recommended);
   const row = el('div', null, 'others');
-  rest.forEach(a => row.append(btn(t(a.key), run(a))));
+  rest.forEach(a => row.append(btn(t(a.key, a.payload), run(a))));
   if (!isPres()) row.append(btn('🚪 ' + t(isMember(c) ? 'ui.enterOffice' : 'ui.visit'), () => enterCompany(c)));
   if (row.children.length) { box.append(el('small', t('ui.otherOptions'), 'muted')); box.append(row); }
   body.append(box);
@@ -993,6 +1211,7 @@ function openBuilding(b) {
   cancelPlan();
   const forThis = ranked.find(s => buildingOf(s.target)?.id === b.id);
   if (b.kind === 'guide') return openModal(body => { body.append(el('h3', t('ui.guide'))); seed.tutorial.forEach(k => body.append(el('p', t(k)))); });
+  if (b.kind === 'demoday') return openDemoDay();
   if (b.kind === 'locked') return toast(t('ui.premiumAlert', { feature: t('locked.skyscraper') }));
   if (b.kind === 'lot' && !isPres()) {
     const mine = b.lot.companyIds.map(id => state.companies[id]).find(c => c?.founders.includes(myId()));
@@ -1027,13 +1246,75 @@ function benefitsEditor(box, c) {
     const cb = el('input'); cb.type = 'checkbox'; cb.checked = !!c.benefits?.[k]; cb.style.minHeight = '20px';
     if (k === 'transport' && remote) { cb.disabled = true; cb.checked = false; }
     checks[k] = cb;
-    lab.append(cb, el('span', `${t('ben.' + k)} (${seed.benefits[k].cost}c, +${Math.round(seed.benefits[k].perf * 100)}%)`));
+    lab.append(cb, el('span', `${t('ben.' + k)} (${money(seed.benefits[k].cost)}, +${Math.round(seed.benefits[k].perf * 100)}%)`));
     wrap.append(lab);
   }
   if (remote) wrap.append(el('p', t('ui.remoteNote')));
   wrap.append(el('p', `${t('ui.benefitCost', { cost: c.benefitCost || 0 })} · ${t('ui.perfInfo', { perf: c.performance || 1 })}`));
   wrap.append(btn(t('ui.saveBenefits'), () => { socket.emit('setBenefits', { cid: c.id, benefits: Object.fromEntries(Object.entries(checks).map(([k, cb]) => [k, cb.checked])) }); closeModal(); }));
   box.append(wrap);
+}
+// Delivery & company vehicle: courier/taxi per km vs. rented or owned car (fuel + upkeep)
+function vehiclePanel(box, c, founder) {
+  const V = seed.economy.vehicle, km = seed.economy.deliveryKm[sectorOf(c)] ?? 2, f = c.fin || {};
+  const monthKm = (f.month?.km || 0) + (f.today?.km || 0), monthFuel = f.month?.fuel || 0;
+  const wrap = el('div', null, 'co'); wrap.append(el('h4', '🚚 ' + t('veh.title')));
+  wrap.append(el('p', t('veh.info', { km, monthKm: Math.round(monthKm), fuel: monthFuel })));
+  const k = el('div', null, 'mini');
+  k.append(kpi(t('veh.courier'), money(V.courierPerKm * Math.max(1, km))), kpi(t('veh.ownFuel'), money(V.fuelPerKm * Math.max(1, km))),
+    kpi(t('veh.rentDay'), money(V.rentPerDay)), kpi(t('veh.buy'), money(V.buyPrice, true)));
+  wrap.append(el('small', t('veh.perSale'), 'muted'), k);
+  const status = c.vehicle ? t('veh.has.' + c.vehicle.type) : t('veh.none');
+  wrap.append(el('p', '🚗 ' + status));
+  if (founder) {
+    // recommendation: compare last-30-day courier cost with renting a car
+    const courierMonth = monthKm * V.courierPerKm, rentMonth = V.rentPerDay * 30 + monthKm * V.fuelPerKm;
+    const row = el('div', null, 'others');
+    if (!c.vehicle) {
+      const better = courierMonth > rentMonth;
+      row.append(btn((better ? '✓ ' : '') + t('veh.rent', { rent: V.rentPerDay }), () => { socket.emit('vehicle', { cid: c.id, mode: 'rent' }); closeModal(); }, { primary: better, isDefault: better }));
+      row.append(btn(t('veh.buyBtn', { buy: V.buyPrice }), () => { socket.emit('vehicle', { cid: c.id, mode: 'buy' }); closeModal(); }));
+      wrap.append(el('small', better ? t('veh.recRent') : t('veh.recCourier'), 'muted'));
+    } else row.append(btn(t(c.vehicle.type === 'own' ? 'veh.sell' : 'veh.return'), () => { socket.emit('vehicle', { cid: c.id, mode: 'none' }); closeModal(); }));
+    wrap.append(row);
+  }
+  box.append(wrap);
+}
+// Real estate: rent vs. buy for the lot the company occupies
+function estatePanel(box, c, founder) {
+  if (c.lotId == null) return;
+  const lot = state.lots[c.lotId]; if (lot.type !== 'shop') return;
+  const wrap = el('div', null, 'co'); wrap.append(el('h4', '🏠 ' + t('estate.title', { city: seed.economy.cities[state.city]?.name || '' })));
+  const k = el('div', null, 'mini');
+  k.append(kpi(t('estate.rentDay'), money(lot.rent)), kpi(t('estate.rentMonth'), money(lot.rent * 30, true)), kpi(t('estate.price'), money(lot.price, true)), kpi(t('estate.breakEven'), t('estate.years', { years: breakEvenYears(lot) })));
+  wrap.append(k);
+  if (founder) {
+    if (lot.owner === c.id) wrap.append(el('p', '🔑 ' + t('estate.owned')), btn(t('estate.sell', { sale: Math.round(lot.price * 0.9) }), () => { socket.emit('sellLot', { cid: c.id }); closeModal(); }));
+    else if (!lot.owner && lot.companyIds.length === 1) wrap.append(btn(t('estate.buy', { buy: lot.price }), () => { socket.emit('buyLot', { cid: c.id }); closeModal(); }));
+    else wrap.append(el('small', t('estate.shared'), 'muted'));
+  }
+  box.append(wrap);
+}
+// HR: blue / grey / white collar hiring with real 2026 salary data
+const collarNet = (c, k) => { const col = seed.economy.collars[k]; return Math.round(c.price * (seed.workspaces[c.workspace]?.salesMult || 1) * col.factor - col.salary); };
+function collarPanel(box, c, emit) {
+  const cols = seed.economy.collars, best = Object.keys(cols).sort((a, b) => collarNet(c, b) - collarNet(c, a))[0];
+  const tbl = el('table'); tbl.className = 'real'; tbl.style.width = '100%';
+  const head = el('tr'); ['', t('hr.gross'), t('hr.net'), t('hr.employer'), t('hr.daily'), t('hr.contrib')].forEach(h => head.append(el('th', h))); tbl.append(head);
+  Object.entries(cols).forEach(([k, v]) => {
+    const tr = el('tr');
+    [t('collar.' + k) + (v.est ? ' *' : ''), tl(v.gross), tl(v.net), tl(v.employerCost), money(v.salary), (collarNet(c, k) >= 0 ? '+' : '') + money(collarNet(c, k))].forEach(x => tr.append(el('td', x)));
+    tbl.append(tr);
+  });
+  box.append(el('small', t('hr.source'), 'muted'), tbl);
+  const mix = c.staffMix || { blue: c.npcStaff || 0, grey: 0, white: 0 };
+  box.append(el('p', t('hr.mix', { blue: mix.blue || 0, grey: mix.grey || 0, white: mix.white || 0 })));
+  const r = el('div', null, 'rec'); r.append(el('small', '⭐ ' + t('hr.recommend', { collar: t('collar.' + best) })));
+  r.append(btn('✓ ' + t('hr.hire', { collar: t('collar.' + best), salary: cols[best].salary }), emit('hireNpc', { collar: best }), { primary: true, isDefault: true }));
+  box.append(r);
+  const row = el('div', null, 'others');
+  Object.keys(cols).filter(k => k !== best).forEach(k => row.append(btn(t('hr.hire', { collar: t('collar.' + k), salary: cols[k].salary }), emit('hireNpc', { collar: k }))));
+  box.append(row);
 }
 function openDept(c, d) {
   const founder = c.founders.includes(myId()), member = isMember(c);
@@ -1051,6 +1332,7 @@ function openDept(c, d) {
         box.append(el('p', t('dept.salesInfo', { product: c.product || t(c.nameKey), price: c.price, units: c.fin?.today?.units || 0 })));
         if (member) rec(t('ui.clickSell'), () => socket.emit('click', { cid: c.id }), t('adv.sellWhy'));
         else rec(t('ui.buy'), emit('buy'), t('adv.buyWhy'));
+        vehiclePanel(box, c, founder);
         break;
       }
       case 'finance': {
@@ -1063,6 +1345,7 @@ function openDept(c, d) {
         if (!founder && !c.isNpc && c.founders.length < 3) row.append(btn(t('ui.cofound'), emit('cofound')));
         if (member) row.append(btn('📊 ' + t('dept.openFinance'), () => { closeModal(); finSel = c.id; renderFinance(true); showTab('finance'); }));
         box.append(row);
+        estatePanel(box, c, founder);
         break;
       }
       case 'accounting': {
@@ -1089,7 +1372,7 @@ function openDept(c, d) {
         box.append(el('p', t('dept.hrInfo', { staff, cap, npc: c.npcStaff || 0, salary: seed.salary })));
         if (names.length) box.append(el('p', names.join(' · ')));
         if (founder) {
-          if (staff < cap) rec(t('dept.hireNpc', { salary: seed.salary }), emit('hireNpc'), t('adv.hireWhy', { profit: Math.round(c.price * (seed.workspaces[c.workspace]?.salesMult || 1) * 4 - seed.salary) }));
+          if (staff < cap) collarPanel(box, c, emit);
           if (c.npcStaff > 0) box.append(btn(t('dept.fireNpc'), emit('fireNpc')));
           benefitsEditor(box, c);
         } else if (!c.employees.includes(myId()) && staff < cap) rec(t('npc.apply'), emit('work'), t('adv.workWhy', { salary: seed.salary }));
@@ -1117,7 +1400,7 @@ function idCard(w) {
   const dl = el('dl');
   const row = (k, v) => dl.append(el('dt', k), el('dd', v));
   row(t('npc.name'), p.name); row(t('npc.age'), String(p.age)); row(t('npc.job'), t('job.' + p.job));
-  row(t('npc.trait'), t('trait.' + p.trait)); row(t('npc.interest'), t(p.interest)); row(t('npc.budget'), `${p.budget}c`);
+  row(t('npc.trait'), t('trait.' + p.trait)); row(t('npc.interest'), t(p.interest)); row(t('npc.budget'), money(p.budget));
   if (met.has(w.id)) dl.append(el('dt', ''), (() => { const dd = el('dd'); dd.append(el('span', '🤝 ' + t('npc.met'), 'badge')); return dd; })());
   card.append(dl);
   return card;
@@ -1140,13 +1423,147 @@ function openNpc(w) {
     const options = [];
     if (!known) options.push({ label: '👋 ' + t('npc.meet'), fn: talk('meet'), why: t('npc.meetWhy') });
     if (mine) options.push({ label: '🛍 ' + t('npc.sell', { company: companyName(mine) }), fn: talk('sell', mine.id), why: t('npc.sellWhy', { interest: t(p.interest) }) });
-    if (founded) options.push({ label: '🤝 ' + t('npc.hire', { company: companyName(founded) }), fn: talk('hire', founded.id), why: t('npc.hireWhy', { salary: seed.salary }) });
+    const collar = { engineer: 'white', developer: 'white', accountant: 'white', designer: 'white', marketer: 'white', nurse: 'grey', chef: 'grey', teacher: 'grey', recruiter: 'grey' }[p.job] || 'blue';
+    if (founded) options.push({ label: '🤝 ' + t('npc.hire', { company: companyName(founded) }) + ` · ${t('collar.' + collar)}`,
+      fn: () => socket.emit('npcTalk', { npcId: w.id, kind: 'hire', cid: founded.id, collar }), why: t('npc.hireWhy', { salary: seed.economy.collars[collar].salary }) });
     if (p.job === 'recruiter' && openJob) options.push({ label: '📝 ' + t('npc.applyAt', { company: companyName(openJob) }), fn: () => { socket.emit('work', { cid: openJob.id }); closeModal(); }, why: t('adv.workWhy', { salary: seed.salary }) });
     if (p.job !== 'student' && p.job !== 'retired') options.push({ label: '🎓 ' + t('npc.service', { cost: seed.npcTalk?.serviceCost ?? 30 }), fn: talk('service'), why: t('npc.serviceWhy') });
     const [first, ...rest] = options;
     if (first) { const r = el('div', null, 'rec'); r.append(el('small', '⭐ ' + first.why), btn('✓ ' + first.label, first.fn, { primary: true, isDefault: true })); body.append(r); }
     if (rest.length) { const row = el('div', null, 'others'); rest.forEach(o => row.append(btn(o.label, o.fn))); body.append(row); }
   }, { onClose: () => { w.talking = false; } });
+}
+
+// ---------- Demo Day: business model canvas, elevator pitch, pitch deck, investor / grant / angel events ----------
+const CANVAS_KEYS = ['keyPartners', 'keyActivities', 'keyResources', 'valueProps', 'customerRelationships', 'channels', 'customerSegments', 'costStructure', 'revenueStreams'];
+const BMC_ICON = { keyPartners: '🤝', keyActivities: '⚙️', keyResources: '🧰', valueProps: '🎁', customerRelationships: '💬', channels: '📢', customerSegments: '👥', costStructure: '💸', revenueStreams: '💰' };
+function openDemoDay(cidArg, tab = 'events') {
+  if (!state) return;
+  const mine = Object.values(state.companies).filter(c => c.founders.includes(myId()));
+  if (!mine.length) return openModal(body => {
+    body.append(el('h3', '🎤 ' + t('demo.title')), el('p', t('demo.needCompany'), 'muted'));
+    body.append(btn('🧭 ' + t('wiz.open'), () => openWizard(), { primary: true, isDefault: true }));
+  });
+  const c = state.companies[cidArg] && mine.includes(state.companies[cidArg]) ? state.companies[cidArg] : mine[0];
+  socket.timeout(4000).emit('pitchGet', { cid: c.id }, (err, data) => { if (!err && data) renderDemo(c, data, tab, mine); });
+}
+function demoFacts(c) {
+  const f = finOf([c]), sector = t(sectorOf(c) || 'sector.service'), product = c.product || t(c.nameKey);
+  return { company: companyName(c), product, sector, price: c.price, city: seed.economy.cities[state.city]?.name || '', sales: c.sales || 0,
+    month: f.monthRev, cash: c.cash, staff: staffOf(c), founders: c.founders.map(id => state.players[id]?.name || '—').join(', ') };
+}
+function renderDemo(c, data, tab, mine) {
+  const facts = demoFacts(c), canvas = { ...data.canvas };
+  openModal(body => {
+    body.append(el('h3', `🎤 ${t('demo.title')} · ${companyName(c)}`));
+    if (mine.length > 1) { const sel = el('select'); mine.forEach(x => sel.append(new Option(companyName(x), x.id))); sel.value = c.id; sel.onchange = () => openDemoDay(sel.value, tab); body.append(sel); }
+    const tabs = el('div', null, 'others');
+    ['events', 'canvas', 'pitch', 'deck'].forEach(k => tabs.append(btn(t('demo.tab.' + k), () => renderDemo(c, data, k, mine), { primary: k === tab })));
+    body.append(tabs);
+    const box = el('div', null, 'co'); body.append(box);
+    if (tab === 'canvas') {
+      box.append(el('p', t('demo.canvasIntro'), 'muted'));
+      const grid = el('div', null, 'bmc'), areas = {};
+      CANVAS_KEYS.forEach(k => {
+        const cell = el('label', null, 'bmcCell bmc-' + k); cell.append(el('b', `${BMC_ICON[k]} ${t('bmc.' + k)}`), el('small', t('bmcHint.' + k), 'muted'));
+        const ta = el('textarea'); ta.maxLength = 300; ta.value = canvas[k] || ''; ta.rows = 3; areas[k] = ta; cell.append(ta); grid.append(cell);
+      });
+      box.append(grid);
+      const row = el('div', null, 'row');
+      row.append(btn('✨ ' + t('demo.suggest'), () => { CANVAS_KEYS.forEach(k => { if (!areas[k].value.trim()) areas[k].value = t('bmcSuggest.' + k, facts); }); }));
+      row.append(btn('✓ ' + t('demo.save'), () => {
+        const next = Object.fromEntries(CANVAS_KEYS.map(k => [k, areas[k].value]));
+        socket.emit('saveCanvas', { cid: c.id, canvas: next }); data.canvas = next; setTimeout(() => openDemoDay(c.id, 'events'), 250);
+      }, { primary: true, isDefault: true }));
+      box.append(row);
+    } else if (tab === 'pitch') {
+      box.append(el('p', t('demo.pitchIntro'), 'muted'));
+      const ta = el('textarea'); ta.rows = 7; ta.maxLength = 900; ta.value = data.pitch || t('pitch.template', { ...facts, value: canvas.valueProps || '…', segment: canvas.customerSegments || '…' });
+      const info = el('small', '', 'muted');
+      const words = () => ta.value.trim().split(/\s+/).filter(Boolean).length;
+      const upd = () => (info.textContent = t('demo.words', { n: words(), sec: Math.round(words() / 2.2) }));
+      ta.oninput = upd; upd();
+      const timer = el('b', '');
+      let iv = null;
+      const rehearse = btn('⏱ ' + t('demo.rehearse'), () => {
+        clearInterval(iv); let left = 60; timer.textContent = ` ${left}s`;
+        iv = setInterval(() => { left--; timer.textContent = left > 0 ? ` ${left}s` : ' ⏰ ' + t('demo.timeUp'); if (left <= 0 || !modalOpen) clearInterval(iv); }, 1000);
+      });
+      const row = el('div', null, 'row');
+      row.append(rehearse, btn('✓ ' + t('demo.save'), () => { socket.emit('saveCanvas', { cid: c.id, pitch: ta.value }); data.pitch = ta.value; }, { primary: true, isDefault: true }));
+      box.append(ta, info, timer, row);
+    } else if (tab === 'deck') {
+      deckViewer(box, c, data, facts);
+    } else {
+      const r = data.readiness, partsMax = { canvas: 36, pitch: 10, traction: 30, growth: 10, team: 14 };
+      box.append(el('h4', `📈 ${t('demo.readiness')}: ${r.score}/100`));
+      const bar = el('div', null, 'bar'), fill = el('i'); fill.style.width = r.score + '%'; bar.append(fill); box.append(bar);
+      const k = el('div', null, 'mini');
+      Object.entries(r.parts).forEach(([key, v]) => k.append(kpi(t('demo.part.' + key), `${v}/${partsMax[key]}`)));
+      box.append(k, el('small', t('demo.valuation', { cash: r.valuation }), 'muted'));
+      if (data.offer) {
+        const o = data.offer, card = el('div', null, 'rec');
+        card.append(el('b', '💼 ' + t('demo.offerTitle.' + o.kind)), el('p', t('demo.offerText', { amount: o.amount, equity: o.equity, cash: o.valuation, day: o.until })));
+        const row = el('div', null, 'row');
+        row.append(btn('✓ ' + t('demo.accept'), () => { socket.emit('offerReply', { cid: c.id, offerId: o.id, accept: true }); closeModal(); }, { primary: true, isDefault: true }),
+          btn(t('demo.decline'), () => { socket.emit('offerReply', { cid: c.id, offerId: o.id, accept: false }); closeModal(); }));
+        card.append(row); body.append(card);
+      }
+      const ev = (kind, cool) => {
+        const card = el('div', null, 'co'); card.append(el('h4', t('demo.event.' + kind)), el('p', t('demo.eventDesc.' + kind, { amount: 2000, cash: 0 }), 'muted'));
+        const wait = cool && cool > data.day ? cool - data.day : 0;
+        const b = btn(wait ? t('demo.wait', { days: wait }) : t('demo.go.' + kind), () => {
+          socket.timeout(5000).emit('pitchEvent', { cid: c.id, kind }, (err, res) => {
+            if (err || !res) return;
+            toast(t(res.key || 'demo.noOffer', { score: res.score, days: res.days, amount: res.amount, blocks: res.need?.blocks, age: res.age }));
+            openDemoDay(c.id, 'events');
+          });
+        }, { primary: !wait && kind === (r.score >= 60 ? 'demoday' : 'angel') });
+        b.disabled = !!wait || (kind === 'grant' && data.granted);
+        card.append(b); return card;
+      };
+      body.append(ev('demoday', data.cooldowns.demo), ev('angel', data.cooldowns.angel), ev('grant', 0));
+    }
+  });
+}
+function deckSlides(c, data, facts) {
+  const cv = data.canvas, r = data.readiness;
+  const ask = Math.round(r.valuation * 0.15);
+  return [
+    { title: facts.company, sub: t('deck.tagline', facts), lines: [`${facts.sector} · ${facts.city}`, t('deck.founders', facts)] },
+    { title: t('deck.problem'), lines: [cv.customerSegments || t('deck.fill'), cv.valueProps ? t('deck.pain') : ''] },
+    { title: t('deck.solution'), lines: [cv.valueProps || t('deck.fill'), t('deck.product', facts)] },
+    { title: t('deck.market'), lines: [cv.customerSegments || t('deck.fill'), cv.channels || ''] },
+    { title: t('deck.model'), lines: [cv.revenueStreams || t('deck.fill'), t('deck.price', facts)] },
+    { title: t('deck.traction'), kpis: [[t('deck.sales'), String(facts.sales)], [t('fin.revenue'), money(facts.month, true)], [t('fin.cash'), money(facts.cash, true)], [t('hud.employees'), String(facts.staff)]] },
+    { title: t('deck.competition'), lines: [cv.keyActivities || t('deck.fill'), cv.keyResources || ''] },
+    { title: t('deck.team'), lines: [t('deck.founders', facts), t('deck.staff', facts), cv.keyPartners || ''] },
+    { title: t('deck.financials'), chart: true, lines: [cv.costStructure || t('deck.fill')] },
+    { title: t('deck.ask'), lines: [t('deck.askText', { amount: ask, cash: r.valuation }), t('deck.useOfFunds')] }
+  ];
+}
+function deckViewer(box, c, data, facts) {
+  const slides = deckSlides(c, data, facts);
+  let i = 0;
+  const stageEl = el('div', null, 'slide'), nav = el('div', null, 'row'), counter = el('b');
+  const show = () => {
+    const sl = slides[i]; stageEl.replaceChildren(el('small', `${i + 1}/${slides.length}`, 'muted'), el('h2', sl.title));
+    if (sl.sub) stageEl.append(el('p', sl.sub, 'lead'));
+    (sl.lines || []).filter(Boolean).forEach(l => stageEl.append(el('p', '• ' + l)));
+    if (sl.kpis) { const k = el('div', null, 'mini'); sl.kpis.forEach(([a, b]) => k.append(kpi(a, b))); stageEl.append(k); }
+    if (sl.chart) {
+      const cvs = el('canvas'); cvs.className = 'spark'; stageEl.append(cvs);
+      getHistory(c.id, h => sparkline(cvs, h.monthly.map(m => m.revenue - m.expenses - m.losses).concat([finOf([c]).monthRev - finOf([c]).monthExp])), 5000);
+    }
+    counter.textContent = ` ${i + 1}/${slides.length} `;
+  };
+  nav.append(btn('◀', () => { i = (i + slides.length - 1) % slides.length; show(); }), counter, btn('▶', () => { i = (i + 1) % slides.length; show(); }, { primary: true, isDefault: true }),
+    btn('⬇ ' + t('deck.download'), () => {
+      const md = slides.map((sl, k) => `## ${k + 1}. ${sl.title}\n${sl.sub ? sl.sub + '\n' : ''}${(sl.lines || []).filter(Boolean).map(l => '- ' + l).join('\n')}${sl.kpis ? '\n' + sl.kpis.map(([a, b]) => `- ${a}: ${b}`).join('\n') : ''}`).join('\n\n');
+      const blob = new Blob([`# ${facts.company} — Pitch Deck\n\n${md}\n`], { type: 'text/markdown' });
+      const a = el('a'); a.href = URL.createObjectURL(blob); a.download = `${facts.company.replace(/[^\p{L}\p{N}]+/gu, '-')}-pitch.md`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }));
+  box.append(stageEl, nav); show();
 }
 
 $('sendText').onclick = () => {
@@ -1157,7 +1574,7 @@ $('sendText').onclick = () => {
 
 // Test hook (only with ?debug): lets automated UI tests reach NPCs / scenes without pixel hunting
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__fb = { npcs, player, perf, openNpc, enterCompany, openDept, toggleBoard, openWizard, state: () => state, seed: () => seed, myId, inner, scene };
+  window.__fb = { npcs, player, perf, openNpc, enterCompany, openDept, toggleBoard, openWizard, openDemoDay, openStop, socket, traffic, state: () => state, seed: () => seed, myId, inner, scene };
 }
 
 // ---------- Boot ----------

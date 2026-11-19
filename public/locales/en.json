@@ -15,17 +15,17 @@
     "emptyLotTitle": "Empty shop ({{size}} m²)",
     "cash": "Cash",
     "sales": "Sales",
-    "deposit": "Deposit: {{amount}} coins",
+    "deposit": "Deposit: {{amount}}",
     "companyNamePh": "Company name (optional)",
     "found": "Found Company",
     "clickSell": "🖱 Make a Sale",
     "buy": "🛒 Be a Customer",
     "cofound": "🤝 Become Co-founder",
     "work": "👷 Become Employee",
-    "invest": "💸 Invest 100c",
+    "invest": "💸 Invest {{amount}}",
     "withdraw": "🏦 Withdraw Dividend",
     "close": "Close",
-    "info": "Price: {{price}}c | Cash: {{cash}} | Founders: {{founders}} | Employees: {{employees}}",
+    "info": "Price: {{price}} | Cash: {{cash}} | Founders: {{founders}} | Employees: {{employees}}",
     "lockedDistrict": "☁🔒 Apartments & Skyscrapers — Premium",
     "premiumAlert": "{{feature}} — unlocks with a Premium account.",
     "joinFirst": "Pick a mode and enter the game first.",
@@ -41,7 +41,7 @@
     "plazaTitle": "🌐 Digital Plaza — Virtual / E-office / Home Office",
     "coworkingSign": "🪑 COWORKING",
     "tenants": "Tenants: {{n}}/{{max}}",
-    "cost": "Cost per minute: {{cost}} coins",
+    "cost": "Daily cost: {{cost}}",
     "foundHere": "➕ Found a company here",
     "full": "This space is full.",
     "noVirtual": "No digital companies yet.",
@@ -68,7 +68,7 @@
     "performance": "Performance",
     "benefits": "🎁 Benefits (per employee)",
     "saveBenefits": "Save Benefits",
-    "benefitCost": "Benefit cost per employee: {{cost}} coins/day",
+    "benefitCost": "Benefit cost per employee: {{cost}}/day",
     "perfInfo": "Employee performance: x{{perf}}",
     "remoteNote": "Transport isn't paid for remote work.",
     "announce": "📢 Announcement",
@@ -96,7 +96,7 @@
     "chat": "💬 Chat & Polls",
     "chatPh": "Type a message or /help",
     "customLabelPh": "Product / service name",
-    "customPrice": "Price ({{min}}-{{max}}c)",
+    "customPrice": "Price ({{min}}-{{max}})",
     "exit": "🚪 Exit",
     "joinTitle": "🔑 Join a Room / Presentation",
     "joinDesc": "Join with a 6-digit room code and PIN. Presentation rooms are opened by an admin.",
@@ -116,10 +116,10 @@
     "visit": "Look inside"
   },
   "tutorial": {
-    "welcome": "Guide Building: Welcome! Your starting balance is 1000 coins.",
+    "welcome": "Guide Building: Welcome! Your starting capital is ready.",
     "modes": "🎮 Solo: on your own. Multiplayer: with friends via room link + 4-digit PIN. Online: coming soon.",
     "s1": "1) Click an empty shop and found your company (solo founder).",
-    "s1b": "💡 Low on coins? Start cheap at the Digital Plaza with a home office, virtual office or e-office, or rent a coworking desk.",
+    "s1b": "💡 Short on money? Start cheap at the Digital Plaza with a home office, virtual office or e-office, or rent a coworking desk.",
     "s2": "2) You can join another company as co-founder, employee or customer.",
     "s2b": "🎁 Working at a company with benefits (transport, insurance, meals) boosts your performance and experience.",
     "s3": "3) Click your shop to make sales (idle clicker).",
@@ -149,7 +149,10 @@
     "consulting": "Consulting",
     "bikeRepair": "Bike Repair",
     "petShop": "Pet Shop",
-    "custom": "Custom Business"
+    "custom": "Custom Business",
+    "carDealer": "Car Dealer",
+    "rentACar": "Rent a Car",
+    "busCard": "Transit Card Center"
   },
   "sector": {
     "food": "Food",
@@ -158,7 +161,9 @@
     "retail": "Retail",
     "health": "Health",
     "education": "Education",
-    "creative": "Creative"
+    "creative": "Creative",
+    "auto": "Automotive",
+    "transport": "Transport"
   },
   "npc": {
     "simit": "Ahmet the Bagel Seller (NPC)",
@@ -180,11 +185,12 @@
     "sell": "Sell your product ({{company}})",
     "sellWhy": "Interest: {{interest}}. Twice a normal sale.",
     "hire": "Hire ({{company}})",
-    "hireWhy": "An NPC employee earns passive income for {{salary}}c/day.",
+    "hireWhy": "An NPC employee earns passive income for {{salary}}/day.",
     "apply": "Apply for a job",
     "applyAt": "Apply for a job ({{company}})",
-    "service": "Get consulting ({{cost}}c)",
-    "serviceWhy": "Boosts your knowledge and XP."
+    "service": "Get consulting ({{cost}})",
+    "serviceWhy": "Boosts your knowledge and XP.",
+    "busCard": "City Card Kiosk (NPC)"
   },
   "locked": {
     "onlineMode": "Online Mode",
@@ -211,7 +217,7 @@
   "event": {
     "customer": "A bulk customer arrived!",
     "sponsor": "Sponsorship / ad deal!",
-    "investor": "An NPC investor invested 500 coins (5% equity).",
+    "investor": "An NPC investor put money in (5% equity).",
     "thief": "A thief robbed the register!",
     "scammer": "A scammer placed a fake order!"
   },
@@ -240,7 +246,7 @@
   },
   "toast": {
     "full": "No space left here.",
-    "noCoins": "Not enough coins.",
+    "noCoins": "Not enough money.",
     "noDesk": "No free desk/position.",
     "roomNotFound": "Room not found.",
     "wrongPin": "Wrong PIN.",
@@ -261,7 +267,13 @@
     "npcBoughtToday": "This person already bought today.",
     "npcBusy": "Fully booked today.",
     "npcTaken": "This person was already hired.",
-    "slowDown": "Slow down a little."
+    "slowDown": "Slow down a little.",
+    "cannotBuy": "You must be the only tenant to buy.",
+    "noBusCard": "Not enough card balance.",
+    "notAtStop": "You need to be at a stop.",
+    "saved": "Saved.",
+    "teamsFull": "Team limit reached.",
+    "topupOk": "Card topped up."
   },
   "log": {
     "joined": "{{player}} entered the street.",
@@ -269,7 +281,7 @@
     "foundedWs": "{{player}} founded \"{{company}}\" as a {{ws}}.",
     "cofounded": "{{player}} became co-founder of {{company}}.",
     "hired": "{{player}} started working at {{company}}.",
-    "invested": "{{player}} invested {{amount}} coins in {{company}}.",
+    "invested": "{{player}} invested {{amount}} in {{company}}.",
     "idea": "{{player}} shared a {{kind}} idea.",
     "bankrupt": "💥 {{company}} went bankrupt!",
     "npc": "🤖 {{company}}: {{event}}",
@@ -278,7 +290,14 @@
     "crisisOver": "✅ {{company}} survived the crisis.",
     "campaign": "📣 {{player}} started a {{days}}-day campaign for {{company}}.",
     "itUpgrade": "🛡 {{company}} raised security to level {{level}}.",
-    "hiredNpc": "🤝 {{company}} hired an NPC employee."
+    "hiredNpc": "🤝 {{company}} hired an NPC employee.",
+    "badge": "🏅 {{player}} earned a badge: {{badge}}",
+    "boughtLot": "🔑 {{player}} bought the {{size}} m² shop for {{company}}.",
+    "funded": "💼 {{company}} raised {{amount}} ({{equity}}%).",
+    "grant": "🏛 {{company}} received a {{amount}} grant.",
+    "teamCreated": "👥 {{player}} created team \"{{team}}\".",
+    "teamJoined": "👥 {{player}} joined \"{{team}}\".",
+    "vehicle": "🚗 {{player}} vehicle for {{company}}: {{mode}}"
   },
   "crisis": {
     "concordat": "Filed for concordat (debt restructuring)",
@@ -318,21 +337,25 @@
     "sellWhy": "Every sale grows your cash, your building rises and you earn XP.",
     "sellLowWhy": "Cash is low. Make sales to recover.",
     "sellJobWhy": "Sell for your employer and gain experience.",
-    "rescue": "Invest 100c in {{company}}",
+    "rescue": "Invest {{amount}} in {{company}}",
     "rescueWhy": "Cash is negative; at −200 you go bankrupt.",
     "withdraw": "{{company}}: Take dividends",
     "withdrawWhy": "Cash is strong; pocket part of your earnings.",
     "work": "Work at {{company}}",
-    "workWhy": "Earn {{salary}}c salary and XP every day.",
+    "workWhy": "Earn {{salary}} salary and XP every day.",
     "cofound": "{{company}}: Become co-founder",
     "cofoundWhy": "Partner up and grow it together.",
     "buy": "{{company}}: Be a customer",
     "buyWhy": "Support a neighbour business.",
     "none": "No suggestion right now. Explore the street!",
     "hire": "{{company}}: Hire an NPC employee",
-    "hireWhy": "Each NPC employee adds ~{{profit}}c net per day.",
+    "hireWhy": "Each NPC employee adds ~{{profit}} net per day.",
     "marketing": "{{company}}: Start a marketing campaign",
-    "marketingWhy": "Sales +30% for {{days}} days."
+    "marketingWhy": "Sales +30% for {{days}} days.",
+    "canvas": "{{company}}: Complete the business model canvas ({{n}}/9)",
+    "canvasWhy": "Raises your readiness score for Demo Day, grants and angels.",
+    "demo": "{{company}}: Pitch to investors at Demo Day",
+    "demoWhy": "Canvas and pitch are ready; you may get an offer."
   },
   "board": {
     "title": "🏆 Street Leaderboard",
@@ -343,7 +366,8 @@
     "byStaff": "By staff",
     "company": "Company",
     "owner": "Owner",
-    "hint": "Toggle with Space / Ctrl · Click a row to go to the building"
+    "hint": "Toggle with Space / Ctrl · Click a row to go to the building",
+    "byTeams": "By teams"
   },
   "acc": {
     "perDay": "Daily cost breakdown (estimate)",
@@ -376,20 +400,20 @@
       "board": "Big strategic decisions."
     },
     "premium": "Unlocks with Premium",
-    "unlockAt": "Unlocks at {{cash}}c cash",
+    "unlockAt": "Unlocks at {{cash}} cash",
     "campaignOn": "📣 Campaign live",
-    "campaignInfo": "Campaign: {{cost}}c (from company cash), sales +{{pct}}% for {{days}} days.",
+    "campaignInfo": "Campaign: {{cost}} (from company cash), sales +{{pct}}% for {{days}} days.",
     "campaignLeft": "📣 Campaign live · {{days}} days left",
-    "startCampaign": "Start campaign ({{cost}}c)",
-    "hrInfo": "Team: {{staff}}/{{cap}} · NPC staff: {{npc}} ({{salary}}c/day each)",
-    "hireNpc": "Hire an NPC employee ({{salary}}c/day)",
+    "startCampaign": "Start campaign ({{cost}})",
+    "hrInfo": "Team: {{staff}}/{{cap}} · NPC staff: {{npc}} ({{salary}}/day each)",
+    "hireNpc": "Hire an NPC employee ({{salary}}/day)",
     "fireNpc": "Let one NPC employee go",
     "itInfo": "Security level {{lvl}}/{{max}} · cyber attack damage −{{pct}}%",
-    "itUpgrade": "Upgrade security ({{cost}}c)",
+    "itUpgrade": "Upgrade security ({{cost}})",
     "itWhy": "Each level reduces cyber attack damage by 25%.",
     "membersOnly": "Only founders can act in this department.",
     "openFinance": "Detailed finance panel",
-    "salesInfo": "Product: {{product}} · Price: {{price}}c · Sold today: {{units}}"
+    "salesInfo": "Product: {{product}} · Price: {{price}} · Sold today: {{units}}"
   },
   "job": {
     "engineer": "Engineer",
@@ -415,8 +439,8 @@
   },
   "npcres": {
     "met": "Nice to meet you! +XP, +knowledge",
-    "sold": "Sale made: +{{amount}}c",
-    "service": "Consulting done (−{{amount}}c): +knowledge, +XP",
+    "sold": "Sale made: +{{amount}}",
+    "service": "Consulting done (−{{amount}}): +knowledge, +XP",
     "hired": "NPC hired!"
   },
   "poll": {
@@ -428,7 +452,7 @@
     "title": "Company Wizard",
     "back": "Back",
     "next": "Next",
-    "deposit": "deposit {{dep}}c · {{cost}}c/day",
+    "deposit": "deposit {{dep}} · {{cost}}/day",
     "q": {
       "sector": "Which sector do you want to start in?",
       "product": "What will you sell? Pick one or add your own with \"Other\".",
@@ -436,5 +460,288 @@
       "name": "Give your company a name (optional)."
     },
     "summary": "Summary: {{sector}} · {{product}} · {{place}}"
+  },
+  "badge": {
+    "title": "🏅 Badges",
+    "unlocked": "New badge",
+    "firstCompany": "First Company",
+    "sales10": "10 Sales",
+    "sales100": "100 Sales",
+    "sales1000": "1000 Sales",
+    "floor3": "3 Floors",
+    "floor6": "Skyline",
+    "firstHire": "First Hire",
+    "marketer": "Marketer",
+    "secure": "Cyber Shield",
+    "social": "Social",
+    "commuter": "Commuter",
+    "teamPlayer": "Team Player",
+    "questHero": "Quest Hero",
+    "survivor": "Survivor",
+    "investor": "Investor",
+    "tycoon": "Tycoon",
+    "landlord": "Landlord",
+    "driver": "Company Car",
+    "pitcher": "On Stage",
+    "funded": "Funded",
+    "grantee": "Grantee"
+  },
+  "badgeDesc": {
+    "firstCompany": "Found your first company",
+    "sales10": "Make 10 sales",
+    "sales100": "Make 100 sales",
+    "sales1000": "Make 1000 sales",
+    "floor3": "Grow your building to 3 floors",
+    "floor6": "Grow your building to 6 floors",
+    "firstHire": "Hire your first employee",
+    "marketer": "Start your first campaign",
+    "secure": "Max out IT security",
+    "social": "Meet 5 NPCs",
+    "commuter": "Ride the bus 3 times",
+    "teamPlayer": "Join a team",
+    "questHero": "Complete 10 quests",
+    "survivor": "Survive a crisis",
+    "investor": "Invest in a company",
+    "tycoon": "Reach 10,000c company cash",
+    "landlord": "Buy a shop",
+    "driver": "Get a company car",
+    "pitcher": "Pitch at Demo Day or to an angel",
+    "funded": "Accept an investment offer",
+    "grantee": "Receive a grant"
+  },
+  "bus": {
+    "arrived": "You arrived at the stop.",
+    "board": "Take the bus",
+    "card": "Transit card",
+    "cardInfo": "Card balance: {{balance}} · Single ride: {{fare}}",
+    "goTopup": "Top up at {{company}}",
+    "info": "Card balance {{balance}} · Single ride {{fare}}",
+    "noBalance": "Not enough balance. Top up your card at a card center first.",
+    "stop": "Stop {{n}}",
+    "topup": "Top up +{{amount}}"
+  },
+  "city": {
+    "hint": "Pick a city: shop rents and sale prices follow its real-estate data (* estimate).",
+    "label": "City",
+    "rent": "rent {{m2}} ₺/m²"
+  },
+  "clock": {
+    "title": "Game time {{time}} · 1 game day = 1 minute"
+  },
+  "deck": {
+    "tagline": "{{product}} · {{sector}}",
+    "founders": "Founders: {{founders}}",
+    "staff": "Team: {{staff}} people",
+    "problem": "Problem",
+    "pain": "An unmet need of this segment",
+    "solution": "Solution",
+    "product": "Product / service: {{product}}",
+    "market": "Market & Customers",
+    "model": "Business Model",
+    "price": "Average order: {{price}}",
+    "traction": "Traction (live data)",
+    "sales": "Sales",
+    "competition": "Competitive Edge",
+    "team": "Team",
+    "financials": "Financial Plan",
+    "ask": "The Ask",
+    "askText": "Raising {{amount}} · valuation {{cash}}",
+    "useOfFunds": "Use of funds: 40% marketing, 35% team, 25% infrastructure",
+    "fill": "(fill this block in the business model canvas)",
+    "download": "Download Markdown"
+  },
+  "demo": {
+    "title": "Demo Day & Investment Hub",
+    "sign": "INVESTOR PITCH · GRANTS · ANGEL INVESTORS",
+    "needCompany": "Found a company first to join Demo Day.",
+    "tab": {
+      "events": "🎤 Events",
+      "canvas": "🧩 Business Model Canvas",
+      "pitch": "⏱ Elevator Pitch",
+      "deck": "📊 Pitch Deck"
+    },
+    "canvasIntro": "9-block Business Model Canvas. Each block needs a few words; 36% of the readiness score comes from here.",
+    "pitchIntro": "60-second elevator pitch (~130 words/min). At least 40 words scores points.",
+    "suggest": "Suggest a draft",
+    "save": "Save",
+    "rehearse": "60 s rehearsal",
+    "timeUp": "Time is up!",
+    "words": "{{n}} words · ~{{sec}} s",
+    "readiness": "Investment readiness",
+    "valuation": "Estimated valuation: {{cash}}",
+    "part": {
+      "canvas": "Canvas",
+      "pitch": "Pitch",
+      "traction": "Traction",
+      "growth": "Growth",
+      "team": "Team"
+    },
+    "event": {
+      "demoday": "🎤 Demo Day · Investor Pitch",
+      "angel": "😇 Angel Investor Meetup",
+      "grant": "🏛 Grant & Support Desk"
+    },
+    "eventDesc": {
+      "demoday": "Jury score 60+ → offer for 10-20% equity. Every 30 days.",
+      "angel": "Score 45+ → small offer for 5-10% equity. Every 15 days.",
+      "grant": "Non-repayable {{amount}} grant: company at least 10 days old and 7+ canvas blocks. Once."
+    },
+    "go": {
+      "demoday": "Go on stage",
+      "angel": "Meet and pitch",
+      "grant": "Apply"
+    },
+    "wait": "in {{days}} days",
+    "offerTitle": {
+      "demoday": "Demo Day investment offer",
+      "angel": "Angel investor offer"
+    },
+    "offerText": "{{amount}} for {{equity}}% · valuation {{cash}} · until day {{day}}",
+    "accept": "Accept offer",
+    "decline": "Decline",
+    "offer": "You got an offer! Score {{score}}",
+    "noOffer": "No offer this time (score {{score}}). Strengthen canvas, pitch and sales.",
+    "cooldown": "You can pitch again in {{days}} days.",
+    "grantOk": "Grant approved: +{{amount}}",
+    "grantRejected": "Grant rejected: needs a 10-day-old company and 7 filled canvas blocks.",
+    "grantUsed": "This company already used its grant."
+  },
+  "estate": {
+    "title": "Real estate · {{city}}",
+    "rentDay": "Rent / day",
+    "rentMonth": "Rent / month",
+    "price": "Sale price",
+    "breakEven": "Break-even",
+    "years": "{{years}} yrs",
+    "rentOpt": "Rent · deposit {{dep}} · {{rent}}/day",
+    "buyOpt": "Buy · {{buy}} (no rent)",
+    "plan": "{{city}} data: buying pays back in ~{{years}} years. Renting protects cash flow early on.",
+    "buy": "Buy the shop ({{buy}})",
+    "sell": "Sell the shop ({{sale}})",
+    "owned": "You own this shop; no rent, other tenants pay you.",
+    "shared": "You must be the only tenant to buy."
+  },
+  "hr": {
+    "gross": "Gross",
+    "net": "Net",
+    "employer": "Employer cost",
+    "daily": "In game / day",
+    "contrib": "Net / day",
+    "source": "2026 data: minimum wage, SGK employer 21.75% + unemployment 2% (* estimate).",
+    "mix": "NPC team: 🔵 blue {{blue}} · ⚪ grey {{grey}} · ⚫ white {{white}}",
+    "recommend": "Most profitable for this price: {{collar}}",
+    "hire": "Hire {{collar}} ({{salary}}/day)"
+  },
+  "collar": {
+    "blue": "Blue collar",
+    "grey": "Grey collar",
+    "white": "White collar"
+  },
+  "vehmode": {
+    "buy": "bought",
+    "rent": "rented",
+    "none": "released"
+  },
+  "pitch": {
+    "template": "We are {{company}}. We offer {{product}} for {{segment}}. Our value proposition: {{value}}. So far we made {{sales}} sales in {{city}} with a team of {{staff}}. We are looking for investors to grow this market together."
+  },
+  "quest": {
+    "title": "🎯 Daily Quests",
+    "resets": "Quests reset every day (Istanbul time).",
+    "reward": "Reward: {{amount}} · +{{xp}} XP",
+    "sell10": "Make {{goal}} sales",
+    "sell30": "Make {{goal}} sales",
+    "earn300": "Earn {{goal}} units of revenue",
+    "meetNpc": "Meet {{goal}} NPCs",
+    "npcSale": "Sell to NPCs {{goal}} times",
+    "busRide": "Take the bus",
+    "invest": "Invest in a company",
+    "campaign": "Start a marketing campaign",
+    "hire": "Hire an employee",
+    "topup": "Top up your transit card",
+    "chat": "Post a chat message"
+  },
+  "real": {
+    "title": "📚 Real Data (Türkiye 2026)",
+    "minGross": "Minimum wage (gross)",
+    "minNet": "Minimum wage (net)",
+    "sgk": "SGK employer {{pct}}% + unemployment {{un}}%",
+    "employerCost": "Minimum wage employer cost",
+    "rent": "{{city}} shop rent",
+    "fuel": "Gasoline ({{date}})",
+    "car": "Company car (buy)",
+    "carRent": "Car rental",
+    "day": "day",
+    "rate": "Game rate",
+    "note": "Costs (salary, SGK, rent, fuel, car) are derived from real 2026 data. Product prices are scaled as \"basket per order\" for game balance. * estimate."
+  },
+  "team": {
+    "title": "👥 Teams",
+    "adminOnly": "In presentation rooms the admin creates teams.",
+    "color": "Colour {{n}}",
+    "create": "Create team",
+    "join": "Join",
+    "leave": "Leave",
+    "members": "{{n}} members",
+    "namePh": "Team name",
+    "none": "No teams yet.",
+    "soloNote": "Teams are available in multiplayer and presentation rooms."
+  },
+  "veh": {
+    "title": "Delivery & Company Car",
+    "info": "~{{km}} km delivery per sale · {{monthKm}} km this month · fuel {{fuel}}",
+    "courier": "Courier/taxi",
+    "ownFuel": "Fuel by car",
+    "rentDay": "Rental car/day",
+    "buy": "Car price",
+    "perSale": "Cost per sale and vehicle options",
+    "none": "No company car: deliveries by courier/taxi.",
+    "has": {
+      "own": "Company owns a car (upkeep + insurance charged daily).",
+      "rent": "Using a rental car (daily fee)."
+    },
+    "rent": "Rent a car ({{rent}}/day)",
+    "buyBtn": "Buy a car ({{buy}})",
+    "sell": "Sell the car (60% back)",
+    "return": "Return the rental",
+    "recRent": "With this month's km a rental is cheaper than couriers.",
+    "recCourier": "Couriers are cheaper for now; consider a car when sales grow.",
+    "dealerInfo": {
+      "carDealer": "Car dealer: when companies buy a car ({{buy}}), the revenue comes here.",
+      "rentACar": "Rent a car: daily fees ({{rent}}) of renting companies come here."
+    }
+  },
+  "bmc": {
+    "keyPartners": "Key Partners",
+    "keyActivities": "Key Activities",
+    "keyResources": "Key Resources",
+    "valueProps": "Value Proposition",
+    "customerRelationships": "Customer Relationships",
+    "channels": "Channels",
+    "customerSegments": "Customer Segments",
+    "costStructure": "Cost Structure",
+    "revenueStreams": "Revenue Streams"
+  },
+  "bmcHint": {
+    "keyPartners": "Who do we work with?",
+    "keyActivities": "What are our most important activities?",
+    "keyResources": "What do we have / need?",
+    "valueProps": "Which problem do we solve, why us?",
+    "customerRelationships": "How do we bond with customers?",
+    "channels": "How do we reach them?",
+    "customerSegments": "Who do we serve?",
+    "costStructure": "Biggest costs?",
+    "revenueStreams": "How do we make money?"
+  },
+  "bmcSuggest": {
+    "keyPartners": "Suppliers, local trade associations in {{city}}, delivery and payment partners",
+    "keyActivities": "Producing/delivering {{product}}, sales and customer care",
+    "keyResources": "Team ({{staff}} people), shop/office, digital channels",
+    "valueProps": "Fast, reliable and affordable {{product}} in {{sector}}",
+    "customerRelationships": "Loyalty card, social media, personal care",
+    "channels": "Shop, website, social media, delivery",
+    "customerSegments": "Individuals and small businesses in {{city}} looking for {{sector}}",
+    "costStructure": "Rent, salaries + SGK, fuel/delivery, marketing",
+    "revenueStreams": "Sales of {{product}} (~{{price}} per order), repeat customers"
   }
 }
