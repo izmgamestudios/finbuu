@@ -1,0 +1,69 @@
+# .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      PM2_APP: ${{ secrets.PM2_APP }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required secrets
+        run: |
+          for v in SSH_HOST SSH_USER DEPLOY_PATH; do
+            if [ -z "${!v}" ]; then echo "::error::Missing repo secret $v"; exit 1; fi
+          done
+          if [ -z "${{ secrets.SSH_KEY }}" ]; then echo "::error::Missing repo secret SSH_KEY"; exit 1; fi
+
+      - name: Prepare SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      # .env and data/ (admin.json etc.) live only on the server; never overwrite or delete them.
+      - name: Upload source
+        run: |
+          rsync -az --delete \
+            --exclude='.git/' --exclude='.github/' \
+            --exclude='node_modules/' --exclude='.env' --exclude='.env.*' --exclude='data/' \
+            -e "ssh -i ~/.ssh/id_deploy -p ${SSH_PORT:-22}" \
+            ./ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+
+      - name: Install dependencies and restart pm2
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' PM2_APP='${PM2_APP:-finbuu}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+          npm ci --omit=dev
+          if pm2 describe "$PM2_APP" >/dev/null 2>&1; then
+            pm2 restart "$PM2_APP" --update-env
+          else
+            pm2 start server.js --name "$PM2_APP"
+          fi
+          pm2 save
+          REMOTE
+
+      - name: Smoke test
+        run: |
+          sleep 3
+          ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
+            "pm2 describe '${PM2_APP:-finbuu}' | grep -E 'status|restarts'"
