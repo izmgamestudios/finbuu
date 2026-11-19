@@ -40,24 +40,24 @@
 </head>
 <body>
 <div id="login" class="card">
-  <form id="loginForm" style="display:flex;flex-direction:column;gap:10px" novalidate>
+  <form id="loginForm" onsubmit="return false" style="display:flex;flex-direction:column;gap:10px" novalidate>
     <h3>🔐 Admin Girişi</h3>
-    <input id="email" name="email" type="email" placeholder="E-posta" autocomplete="username">
+    <input id="email" type="email" placeholder="E-posta" autocomplete="username">
     <div class="pwWrap">
-      <input id="password" name="password" type="password" placeholder="Şifre" autocomplete="current-password">
+      <input id="password" type="password" placeholder="Şifre" autocomplete="current-password">
       <button id="togglePw" type="button" title="Şifreyi göster/gizle">👁</button>
     </div>
     <button id="loginBtn" type="submit" class="primary">Giriş</button>
     <span class="muted">İlk girişte şifre olarak sunucudaki ADMIN_TOKEN kullanılır; ardından yeni şifre belirlemen istenir.</span>
   </form>
-  <form id="pwForm" style="display:none;flex-direction:column;gap:10px" novalidate>
+  <form id="pwForm" onsubmit="return false" style="display:none;flex-direction:column;gap:10px" novalidate>
     <h3>🔑 Yeni Şifre Belirle</h3>
     <p class="muted">Güvenliğin için ilk girişten sonra şifreni değiştirmen gerekiyor (en az 10 karakter).</p>
     <div class="pwWrap">
-      <input id="newPw" name="new-password" type="password" placeholder="Yeni şifre" autocomplete="new-password">
+      <input id="newPw" type="password" placeholder="Yeni şifre" autocomplete="new-password">
       <button id="toggleNewPw" type="button" title="Şifreyi göster/gizle">👁</button>
     </div>
-    <input id="newPw2" name="confirm-password" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
+    <input id="newPw2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
     <button id="pwBtn" type="submit" class="primary">Şifreyi Kaydet</button>
   </form>
   <span id="loginErr" class="muted"></span>
@@ -194,6 +194,10 @@ let socket = null, ov = null, report = null, token = sessionStorage.getItem('adm
 const charts = {};
 function chart(id, config) { if (!window.Chart) return; charts[id]?.destroy(); charts[id] = new Chart($(id), config); }
 
+// ---------- Prefill email if passed in URL ----------
+const urlEmail = new URLSearchParams(location.search).get('email');
+if (urlEmail && !$('email').value) $('email').value = urlEmail;
+
 // ---------- Password visibility toggles ----------
 function bindPwToggle(inputId, btnId) {
   $(btnId).onclick = () => {
@@ -243,8 +247,8 @@ async function handlePwChange() {
   $('newPw').value = $('newPw2').value = ''; $('loginErr').textContent = '';
   connect();
 }
-$('loginForm').onsubmit = e => { e.preventDefault(); handleLogin(); };
-$('pwForm').onsubmit = e => { e.preventDefault(); handlePwChange(); };
+$('loginForm').addEventListener('submit', e => { e.preventDefault(); handleLogin(); });
+$('pwForm').addEventListener('submit', e => { e.preventDefault(); handlePwChange(); });
 $('logout').onclick = async () => { await post('/logout', {}); showLogin(); location.reload(); };
 if (token) connect();
 
@@ -419,8 +423,7 @@ $('prChat').onclick = () => { const r = prRoom(); if (r) socket.emit('lockChat',
 $('prActions').onclick = () => { const r = prRoom(); if (r) socket.emit('lockActions', { roomId: r.id, locked: !r.presentation.actionsLocked }); };
 $('pollCreate').onclick = () => {
   const r = prRoom(); if (!r) return;
-  const options = $('pollOpts').value.split('
-').map(x => x.trim()).filter(Boolean);
+  const options = $('pollOpts').value.split('\n').map(x => x.trim()).filter(Boolean);
   if (!$('pollQ').value.trim() || options.length < 2) return alert('Soru ve en az 2 seçenek gir.');
   socket.emit('createPoll', { roomId: r.id, question: $('pollQ').value, options });
 };
