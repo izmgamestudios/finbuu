@@ -8,8 +8,10 @@
 <style>
   :root{--bg:#12131c;--panel:#1e2130;--line:#2c3045;--accent:#4caf50;--warn:#e67e22;--bad:#e74c3c;--text:#e8e8ef}
   *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--text)}
-  button,input,select{font:inherit;color:inherit;background:#2a2f45;border:0;border-radius:8px;padding:8px 10px;min-height:38px}
-  button{cursor:pointer} button:hover{background:#3a4060} button.primary{background:var(--accent);color:#08140a;font-weight:600} button.danger{background:var(--bad)}
+  button,input,select,textarea{font:inherit;color:#e8e8ef;background:#2a2f45;border:1px solid #3a4060;border-radius:8px;padding:8px 10px;min-height:38px}
+  input,textarea{pointer-events:auto;user-select:text;-webkit-user-select:text}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  button{cursor:pointer;border:0} button:hover{background:#3a4060} button.primary{background:var(--accent);color:#08140a;font-weight:600} button.danger{background:var(--bad)}
   header{display:flex;gap:10px;align-items:center;padding:10px 16px;background:#0c0d14;position:sticky;top:0;z-index:5;flex-wrap:wrap}
   header h1{font-size:1.1rem;margin:0;flex:1}
   .tabs{display:flex;gap:4px;padding:8px 16px;overflow-x:auto;background:#0f1018}
@@ -27,27 +29,37 @@
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   label.f{display:flex;flex-direction:column;font-size:.8rem;gap:4px} label.f input{width:110px}
   canvas{max-height:320px}
-  #login{max-width:360px;margin:15vh auto;display:flex;flex-direction:column;gap:10px}
+  #login{max-width:360px;margin:15vh auto;display:flex;flex-direction:column;gap:10px;position:relative;z-index:20}
+  #login input{width:100%}
+  .pwWrap{display:flex;gap:6px;align-items:center}
+  .pwWrap input{flex:1}
+  .pwWrap button{flex:0 0 auto;padding:8px 11px}
   #app{display:none}
   .muted{opacity:.6;font-size:.8rem}
 </style>
 </head>
 <body>
 <div id="login" class="card">
-  <div id="loginForm" style="display:flex;flex-direction:column;gap:10px">
+  <form id="loginForm" style="display:flex;flex-direction:column;gap:10px" novalidate>
     <h3>🔐 Admin Girişi</h3>
-    <input id="email" type="email" placeholder="E-posta" autocomplete="username">
-    <input id="password" type="password" placeholder="Şifre" autocomplete="current-password">
-    <button id="loginBtn" class="primary">Giriş</button>
+    <input id="email" name="email" type="email" placeholder="E-posta" autocomplete="username">
+    <div class="pwWrap">
+      <input id="password" name="password" type="password" placeholder="Şifre" autocomplete="current-password">
+      <button id="togglePw" type="button" title="Şifreyi göster/gizle">👁</button>
+    </div>
+    <button id="loginBtn" type="submit" class="primary">Giriş</button>
     <span class="muted">İlk girişte şifre olarak sunucudaki ADMIN_TOKEN kullanılır; ardından yeni şifre belirlemen istenir.</span>
-  </div>
-  <div id="pwForm" style="display:none;flex-direction:column;gap:10px">
+  </form>
+  <form id="pwForm" style="display:none;flex-direction:column;gap:10px" novalidate>
     <h3>🔑 Yeni Şifre Belirle</h3>
     <p class="muted">Güvenliğin için ilk girişten sonra şifreni değiştirmen gerekiyor (en az 10 karakter).</p>
-    <input id="newPw" type="password" placeholder="Yeni şifre" autocomplete="new-password">
-    <input id="newPw2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
-    <button id="pwBtn" class="primary">Şifreyi Kaydet</button>
-  </div>
+    <div class="pwWrap">
+      <input id="newPw" name="new-password" type="password" placeholder="Yeni şifre" autocomplete="new-password">
+      <button id="toggleNewPw" type="button" title="Şifreyi göster/gizle">👁</button>
+    </div>
+    <input id="newPw2" name="confirm-password" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
+    <button id="pwBtn" type="submit" class="primary">Şifreyi Kaydet</button>
+  </form>
   <span id="loginErr" class="muted"></span>
 </div>
 
@@ -173,11 +185,27 @@ const NAMES = { 'npc.simit': 'Simitçi Ahmet (NPC)', 'npc.grocery': 'Mahalle Bak
   'tpl.coffee': 'Kahve Dükkanı', 'tpl.phoneRepair': 'Telefon Tamircisi', 'tpl.softwareAgency': 'Yazılım Ajansı', 'tpl.bakery': 'Butik Fırın', 'tpl.stationery': 'Kırtasiye' };
 const cname = c => c.name || NAMES[c.nameKey] || c.nameKey;
 const pill = s => { const p = el('span', STATUS_TR[s] || s); p.className = 'pill s-' + s; return p; };
-Chart.defaults.color = '#cfd2e0'; Chart.defaults.borderColor = '#2c3045';
+if (window.Chart) {
+  Chart.defaults.color = '#cfd2e0';
+  Chart.defaults.borderColor = '#2c3045';
+}
 
 let socket = null, ov = null, report = null, token = sessionStorage.getItem('adminSession') || '';
 const charts = {};
-function chart(id, config) { charts[id]?.destroy(); charts[id] = new Chart($(id), config); }
+function chart(id, config) { if (!window.Chart) return; charts[id]?.destroy(); charts[id] = new Chart($(id), config); }
+
+// ---------- Password visibility toggles ----------
+function bindPwToggle(inputId, btnId) {
+  $(btnId).onclick = () => {
+    const inp = $(inputId);
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    $(btnId).textContent = show ? '🙈' : '👁';
+    inp.focus();
+  };
+}
+bindPwToggle('password', 'togglePw');
+bindPwToggle('newPw', 'toggleNewPw');
 
 // ---------- Auth ----------
 function showLogin(msg) {
@@ -187,6 +215,7 @@ function showLogin(msg) {
   $('loginErr').textContent = msg || '';
 }
 function connect() {
+  if (!window.io) { $('loginErr').textContent = 'Socket.IO yüklenemedi, sayfayı yenile.'; return; }
   socket = io('/admin', { auth: { token } });
   socket.on('connect_error', err => {
     socket.close();
@@ -200,22 +229,22 @@ async function post(path, body) {
   const r = await fetch('/admin/auth' + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) });
   return { status: r.status, data: await r.json().catch(() => ({})) };
 }
-$('loginBtn').onclick = async () => {
+async function handleLogin() {
   const { status, data } = await post('/login', { email: $('email').value.trim(), password: $('password').value });
   if (status !== 200) return ($('loginErr').textContent = status === 429 ? 'Çok fazla hatalı deneme, 15 dk bekle.' : 'E-posta veya şifre hatalı.');
   token = data.token; $('password').value = ''; $('loginErr').textContent = '';
   if (data.mustChange) { $('loginForm').style.display = 'none'; $('pwForm').style.display = 'flex'; $('newPw').focus(); }
   else connect();
-};
-$('pwBtn').onclick = async () => {
+}
+async function handlePwChange() {
   if ($('newPw').value !== $('newPw2').value) return ($('loginErr').textContent = 'Şifreler eşleşmiyor.');
   const { status, data } = await post('/password', { newPassword: $('newPw').value });
   if (status !== 200) return ($('loginErr').textContent = data.error === 'tooShort' ? `En az ${data.min} karakter olmalı.` : data.error === 'sameAsBootstrap' ? 'Yeni şifre ADMIN_TOKEN ile aynı olamaz.' : 'Oturum süresi doldu, tekrar giriş yap.');
   $('newPw').value = $('newPw2').value = ''; $('loginErr').textContent = '';
   connect();
-};
-$('password').onkeydown = e => e.key === 'Enter' && $('loginBtn').click();
-$('newPw2').onkeydown = e => e.key === 'Enter' && $('pwBtn').click();
+}
+$('loginForm').onsubmit = e => { e.preventDefault(); handleLogin(); };
+$('pwForm').onsubmit = e => { e.preventDefault(); handlePwChange(); };
 $('logout').onclick = async () => { await post('/logout', {}); showLogin(); location.reload(); };
 if (token) connect();
 
@@ -390,7 +419,8 @@ $('prChat').onclick = () => { const r = prRoom(); if (r) socket.emit('lockChat',
 $('prActions').onclick = () => { const r = prRoom(); if (r) socket.emit('lockActions', { roomId: r.id, locked: !r.presentation.actionsLocked }); };
 $('pollCreate').onclick = () => {
   const r = prRoom(); if (!r) return;
-  const options = $('pollOpts').value.split('\n').map(x => x.trim()).filter(Boolean);
+  const options = $('pollOpts').value.split('
+').map(x => x.trim()).filter(Boolean);
   if (!$('pollQ').value.trim() || options.length < 2) return alert('Soru ve en az 2 seçenek gir.');
   socket.emit('createPoll', { roomId: r.id, question: $('pollQ').value, options });
 };
