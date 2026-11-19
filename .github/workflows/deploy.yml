@@ -50,8 +50,14 @@ jobs:
       - name: Install dependencies and restart pm2
         run: |
           ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
-            "DEPLOY_PATH='$DEPLOY_PATH' PM2_APP='${PM2_APP:-finbuu}' bash -s" <<'REMOTE'
+            "DEPLOY_PATH='$DEPLOY_PATH' PM2_APP='${PM2_APP:-finbuu}' bash -l -s" <<'REMOTE'
           set -euo pipefail
+          # Non-interactive SSH may not load Node/pm2 into PATH (nvm, fnm, volta)
+          export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          export PATH="$HOME/.local/share/fnm:$HOME/.volta/bin:$HOME/.npm-global/bin:$PATH"
+          command -v npm >/dev/null || { echo "npm not found in PATH: $PATH"; exit 127; }
+          command -v pm2 >/dev/null || { echo "pm2 not found in PATH: $PATH"; exit 127; }
           cd "$DEPLOY_PATH"
           npm ci --omit=dev
           if pm2 describe "$PM2_APP" >/dev/null 2>&1; then
@@ -66,4 +72,8 @@ jobs:
         run: |
           sleep 3
           ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
-            "pm2 describe '${PM2_APP:-finbuu}' | grep -E 'status|restarts'"
+            "PM2_APP='${PM2_APP:-finbuu}' bash -l -s" <<'REMOTE'
+          export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          pm2 describe "$PM2_APP" | grep -E 'status|restarts'
+          REMOTE
