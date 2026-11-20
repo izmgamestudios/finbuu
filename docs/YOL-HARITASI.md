@@ -34,10 +34,10 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **UI-2 — Mobil header + çekmece** | Mobil header: logo + 🪙 para + ⭐ seviye (XP çizgili) + ⏱ + ☰ (❓🏆🌓 ve saat çekmeceye taşındı) · alt menü 6 sekme kaldı, aktif ikon amber hap, okunmamış sohbet kırmızı nokta · çekmece: lacivert profil kartı (isim, şehir/gün/saat, XP barı, coin) + 3×2 hızlı erişim (Harita, Sıralama, Yardım, Fikir, Kılavuz, Mod) + ayarlar (dil, tema, kalite, durum paneli) | ✅ Tamam |
 | **UI-3 — Masaüstü sol ray** | Masaüstünde alt menü sol dikey ray oldu (72 px, lacivert, amber aktif çubuk, tuş numarası ipucu) · sağ panel tek odaklı: Cadde = sohbet+finans+profil özeti, diğer sekmeler kendi kartını gösterir (Kılavuz/Fikir kutusu çekmeceden) · `1–6` klavye kısayolları (6 = menü) · ipucu/etiketler dil değişince güncellenir | ✅ Tamam |
 | **UI-4 — Bottom sheet + animasyon** | Mobil paneller alttan açılan sheet: tutamaç (sürükle/dokun ile kapanır, hızlı kaydırma da kapatır), amber üst çizgi · sekme/kart geçiş animasyonu · header para/seviye pill'lerinde parlama (artış amber, harcama mercan) · canvas'ta oyuncu etiketi/oku/E-W ipucu amber · `prefers-reduced-motion` desteği | ✅ Tamam |
-| **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ⬜ |
-| **15 — Başlangıç & yardım** | İlk girişte atlanabilir tutorial · chatbot · yardım penceresi · oyun içi ayrıntılı arama (işletme, üye, görev, özellik) | ⬜ |
-| **16 — Premium yönetimi** | Admin Premium'u aç/kapa, şehir ve özellik kilitlerini yönet | ⬜ |
-| **17 — Mini SaaS** | ERP/CRM/KPI aracı · takvim yönetimi · Gantt şeması | ⬜ |
+| **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ✅ Tamam |
+| **15 — Başlangıç & yardım** | İlk girişte atlanabilir tutorial · chatbot · yardım penceresi · oyun içi ayrıntılı arama (işletme, üye, görev, özellik) | ✅ Tamam |
+| **16 — Premium yönetimi** | Admin Premium'u aç/kapa, şehir ve özellik kilitlerini yönet | ✅ Tamam |
+| **17 — Mini SaaS** | ERP/CRM/KPI aracı · takvim yönetimi · Gantt şeması | ✅ Tamam |
 | **18 — Sesli sohbet** *(en sonda, Premium · şimdilik "pek yakında")* | Bina boyu mesafede yakın sesli sohbet (mikrofona basınca kubbe, mute/ses ayarı) · sesli mesaj baloncuğu (oynat/duraklat/durdur) · fon müziği ve efektler | 🔒 Pek yakında |
 | **19 — Sesli/görüntülü toplantı** *(en sonda, Premium · şimdilik "pek yakında")* | Başka şehirdeki firma/NPC/oyuncuyla sesli veya videolu görüşme · anlaşma kesinleşirse yüz yüze görüşme randevusu roleplay'i | 🔒 Pek yakında |
 
@@ -206,3 +206,24 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - Seviye ödülü mevcut oyuncuları geriye dönük ödemez (`rewardedLevel` ilk kontrolde mevcut seviyeye eşitlenir).
 - Haftalık yarış puanı = hafta içindeki `counters.revenue` farkı (`weekBase`); tek oyunculuda ödül sadece rekor kırınca verilir (kolay farm edilemesin).
 - Sprint 26 adayları: ortak hedefler, oyuncular arası pazar, olaylar.
+
+## Plan — Sprint 26 ve sonrası (öneri)
+Sıra: önce **oynanış döngüsü** (oyuncuyu geri getiren şeyler), sonra **sosyal/ekonomi derinliği**, sonra **büyüme/altyapı**, en son **Premium ses/video**.
+
+| Sprint | Konu | İçerik | Neden / etki | Boyut |
+|---|---|---|---|---|
+| **26a** | Ortak hedefler | Oda/takım hedefi (ör. "bu ay toplam 50.000 coin ciro"), ilerleme çubuğu, tamamlanınca herkese ödül + rozet | İşbirliğini ödüllendirir, yarışla dengeler | S |
+| **26b** | Pazar yeri | Oyuncular arası ürün/stok satışı, B2B sipariş (şirket→şirket), teklif/karşı teklif | Oyuncular birbirine bağımlı olur; ekonomi canlanır | M |
+| **26c** | Olaylar & krizler | Haftalık rastgele olay (enflasyon, vergi affı, tedarik krizi, fuar), sektöre göre etki, admin'den aç/kapa | Her oyun farklı geçer; denge ayarı admin'de | M |
+| **27** | Günlük görev & seri | Günlük giriş serisi, günün görevi, haftalık sezon puanı + sezon sonu ödülü | Geri dönüşü artırır (retention) | S |
+| **28** | Başarım & profil | Profil sayfası (istatistik, rozet vitrini), oyun sonu özeti, paylaşılabilir "karne" görseli | Viral büyüme, sosyal kanıt | M |
+| **29** | Yatırım & ortaklık | Oyuncular arası ortaklık/hisse, yatırımcı pitch'ine gerçek oyuncu yatırımcı, hibe başvuruları gerçek ödül | Girişimcilik temasının çekirdeği | L |
+| **30** | Eğitim modu | Öğretmen/kulüp odası: sabit senaryo, ders görevleri, sınıf raporu CSV | B2B/eğitim geliri (Teknodoz/Viadom ile bağlanır) | M |
+| **31** | Hesap & kalıcılık | Giriş (e-posta/Google), oyuncu ilerlemesi hesaba bağlı, odalar arası kalıcı profil | Şimdiki geçici kimlik en büyük kayıp noktası | L |
+| **32** | Altyapı | rooms.json → Supabase/PostgreSQL, Cloudflare önbellek, yük testi, yedek | Çok oyuncuda güvenli büyüme; maliyet izleme | L |
+| **33** | Mobil cila & erişilebilirlik | Dokunmatik jestler, klavye/ekran okuyucu, renk körü teması, düşük bant genişliği modu | Kitle genişletir | M |
+| **34** | Lokalizasyon | EN tamamlama, ek diller (DE/AR), bölgesel ekonomi ön ayarları | Global (Workworld) açılım | M |
+| **18–19** | Sesli sohbet, sesli/görüntülü toplantı | Premium · "pek yakında" | Gelir kalemi; en sona | L |
+
+**Önerilen sıra:** 26c → 26a → 27 → 26b → 31 → 28 → 29 → 32 → 30 → 33 → 34 → 18–19.
+**Pushback:** 31 (hesap) ve 32 (veritabanı) erken yapılmazsa 29 ve 30 kalıcı veri gerektirdiği için tekrar iş çıkarır; 26'lar bitince 31'e geçmek en az risklisi. Sesli/görüntülü (18–19) ancak kullanıcı tabanı oluşunca değer üretir.
