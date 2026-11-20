@@ -304,6 +304,7 @@
     "adSent": "Ad sent for approval.",
     "hasVehicle": "You already have a vehicle.",
     "rentMax": "A rental cannot exceed 60 days in total.",
+    "cityLocked": "This city is not playable yet (Premium / coming soon).",
     "ownerOnly": "Only the room owner can do this.",
     "slowDown": "Slow down a little.",
     "cannotBuy": "You must be the only tenant to buy.",
@@ -583,6 +584,16 @@
     "fCaption": "Caption under the image (optional)",
     "imageNote": "The image is not uploaded to our server; it is shown straight from the URL. Use an image you have rights to.",
     "submit": "Send for approval"
+  },
+  "map": {
+    "title": "Minimap",
+    "stop": "Stop {{n}}",
+    "pickTitle": "Choose your city",
+    "pickBtn": "Pick on the map",
+    "choose": "Start with this city",
+    "open": "Playable",
+    "premium": "Premium",
+    "soon": "Coming soon"
   },
   "badge": {
     "title": "🏅 Badges",

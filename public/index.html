@@ -63,6 +63,12 @@
     <button id="talkBtn" hidden></button>
     <button id="actBtn" hidden></button>
     <button id="hudBtn" aria-label="HUD">▾</button>
+    <button id="mapBtn" aria-label="Map" title="M">🗺</button>
+    <div id="minimap" hidden>
+      <div class="mmHead"><b data-i18n="map.title"></b><button id="mmClose" aria-label="Close">✕</button></div>
+      <canvas id="mmCv"></canvas>
+      <div id="mmList"></div>
+    </div>
     <span id="hint"></span>
     <div id="status" aria-live="off"></div>
   </section>
@@ -138,6 +144,7 @@
 </div>
 
 <div id="modal"><div class="card" id="modalBody" role="dialog" aria-modal="true"></div></div>
+<div id="mapOverlay" hidden></div>
 <div id="toast"></div>
 
 <script src="/vendor/i18next/i18next.min.js"></script>

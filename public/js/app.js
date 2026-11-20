@@ -4,6 +4,7 @@
 // founding wizard, chat + polls, presentation (watch-only) mode. The server stays authoritative for every action.
 import { layout, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook } from './world.js';
 import { paintAd, AD_SIZE } from './ads.js';
+import { renderTrMap } from './trmap.js';
 import { suggestions, companyActions, employeeCap, maxTenants, staffOf, floorsFor, floorsOfCompany, deptOpen } from './advisor.js';
 import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON } from './interior.js';
 
@@ -225,6 +226,28 @@ $('copyLink').onclick = async () => {
   try { await navigator.clipboard.writeText(link); toast(t('ui.copied')); } catch { prompt(t('ui.copyLink'), link); }
 };
 
+// ---------- Türkiye map: choose the city of a room ----------
+function openCityMap(current, onPick) {
+  const ov = $('mapOverlay'), cities = seed.economy.cityMap, info = seed.economy.cities;
+  let picked = current;
+  const render = () => {
+    const card = el('div', null, 'card mapCard');
+    const head = el('div', null, 'mmHead'); head.append(el('h3', '🗺 ' + t('map.pickTitle')), btn('✕', () => (ov.hidden = true)));
+    const status = el('p', null, 'mapStatus');
+    const say = c => {
+      if (c.status !== 'open') status.textContent = `🔒 ${c.name} · ${t(c.status === 'premium' ? 'map.premium' : 'map.soon')}`;
+      else status.textContent = `🏙 ${c.name} · ${t('city.rent', { m2: info[c.key].rentM2 })}${info[c.key].est ? ' *' : ''}`;
+    };
+    say(cities.find(c => c.key === picked) || cities[0]);
+    const svg = renderTrMap(cities, { selected: picked, onPick: c => { say(c); if (c.status === 'open') { picked = c.key; render(); } } });
+    const legend = el('div', null, 'mapLegend'); legend.append(el('span', '● ' + t('map.open')), el('span', '🔒 ' + t('map.premium')), el('span', '🔒 ' + t('map.soon')));
+    card.append(head, svg, status, legend, btn('✓ ' + t('map.choose'), () => { ov.hidden = true; onPick(picked); }, { primary: true }));
+    ov.replaceChildren(card);
+  };
+  render(); ov.hidden = false;
+}
+$('mapOverlay').onclick = e => { if (e.target === $('mapOverlay')) $('mapOverlay').hidden = true; };
+
 // ---------- Mode selection ----------
 function showModes() {
   if (joined) return toast(t('ui.roomInfo', { room: joined.roomId, pin: joined.pin || '—' }));
@@ -237,7 +260,8 @@ function showModes() {
     const city = el('select'); city.setAttribute('aria-label', t('city.label'));
     Object.entries(seed?.economy?.cities || {}).forEach(([k, c]) => city.append(new Option(`🏙 ${c.name} · ${t('city.rent', { m2: c.rentM2 })}${c.est ? ' *' : ''}`, k)));
     city.value = loadJSON('city', 'istanbul'); city.onchange = () => saveJSON('city', city.value);
-    body.append(el('small', t('city.hint'), 'muted'), city);
+    const mapB = btn('🗺 ' + t('map.pickBtn'), () => openCityMap(city.value, k => { city.value = k; saveJSON('city', k); }));
+    body.append(el('small', t('city.hint'), 'muted'), city, mapB);
     const solo = el('div', null, 'mode');
     solo.append(el('b', t('ui.solo')), el('p', t('ui.soloDesc')));
     const soloBtn = el('button', t('ui.startSolo'), 'primary');
@@ -305,6 +329,7 @@ function updateControls() {
   $('innerBar').hidden = !inside;
   $('advisor').hidden = !joined || scene.name !== 'street';
   $('advChip').hidden = $('advisor').hidden;
+  const mapOk = !!joined && scene.name === 'street' && !isPres(); $('mapBtn').hidden = !mapOk; if (!mapOk && minimapOpen) toggleMinimap(false);
 }
 
 // ---------- Input: keyboard ----------
@@ -323,6 +348,7 @@ addEventListener('keydown', e => {
   if (typing(e)) return;
   if (k === 'shift') { keys.add('shift'); return; }
   if (k === 'f3') { e.preventDefault(); $('toggleStatus').click(); return; }
+  if (k === 'm' && state) { e.preventDefault(); toggleMinimap(); return; }
   if ((k === ' ' || k === 'control') && state) { e.preventDefault(); toggleBoard(); return; }
   if (boardOpen) { if (k === 'escape') toggleBoard(false); return; }
   if (!state) return;
@@ -567,6 +593,7 @@ function frame(now) {
   const t0 = performance.now();
   if (scene.name === 'interior') { updateInner(dt); renderInterior(now); }
   else { updatePlayer(dt, now); updateStreet(dt); renderStreet(now); }
+  if (minimapOpen) { drawMinimap(); if (now - (frame.mmAt || 0) > 800) { frame.mmAt = now; renderMinimapList(); } }
   perf.frameMs = perf.frameMs * 0.9 + (performance.now() - t0) * 0.1;
   if (dt > 0) perf.fps = perf.fps * 0.92 + (1 / dt) * 0.08;
   adaptQuality(now);
@@ -1715,6 +1742,41 @@ function updateAdBanner() {
   if (show) paintAd($('adCv'), 'mobile', live[adBannerIdx % live.length]);
 }
 setInterval(() => { adBannerIdx++; updateAdBanner(); }, 8000);
+// ---------- Minimap: the whole street at a glance (M key / map button), click to walk there ----------
+let minimapOpen = false, mmSig = '';
+function toggleMinimap(force) { minimapOpen = force ?? !minimapOpen; $('minimap').hidden = !minimapOpen; mmSig = ''; if (minimapOpen) renderMinimapList(); }
+const mmColor = b => { if (b.kind === 'guide') return '#f2b84b'; if (b.kind === 'plaza') return '#3987e5'; if (b.kind === 'demoday') return '#9b59b6'; if (b.kind === 'parking') return '#5b6475'; if (b.kind === 'locked') return '#b8c0cc';
+  const ts = b.lot.companyIds.map(id => state.companies[id]).filter(Boolean); return !ts.length ? '#a9adb8' : ts.some(c => isMember(c)) ? '#f2b84b' : ts.some(c => c.isNpc) ? '#9b7be0' : '#3fa36b'; };
+function drawMinimap() {
+  const cv = $('mmCv'); if (!minimapOpen || !state || scene.name !== 'street') return;
+  const w = cv.clientWidth || 340, h = 72, dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = h * dpr; }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const W = wWidth(), k = w / W;
+  g.fillStyle = css('--panel-2'); g.fillRect(0, h - 14, w, 14);
+  for (const b of buildings) { g.fillStyle = mmColor(b); const bh = Math.max(8, Math.min(46, b.h / 8)); g.fillRect(b.x * k, h - 14 - bh, Math.max(2, b.w * k), bh); }
+  g.fillStyle = css('--accent'); for (const x of seed.busStops || []) { g.beginPath(); g.moveTo(x * k, h - 2); g.lineTo(x * k - 3, h - 9); g.lineTo(x * k + 3, h - 9); g.fill(); }
+  g.strokeStyle = css('--text'); g.lineWidth = 1; g.strokeRect(view.camX * k, 2, (view.w / view.s) * k, h - 6);
+  g.fillStyle = '#2a9d4b'; for (const o of others.values()) { g.beginPath(); g.arc(o.x * k, h - 7, 2.5, 0, 7); g.fill(); }
+  g.fillStyle = '#e63946'; g.beginPath(); g.arc(player.x * k, h - 7, 3.5, 0, 7); g.fill();
+}
+$('mmCv').onclick = e => { const r = $('mmCv').getBoundingClientRect(); walkTo(((e.clientX - r.left) / r.width) * wWidth(), null, null); };
+function renderMinimapList() {
+  const box = $('mmList'); if (!state) return box.replaceChildren();
+  const sig = buildings.map(b => b.id + (b.lot ? b.lot.companyIds.map(id => state.companies[id]?.name || id).join() : '')).join('|') + i18next.language;
+  if (sig === mmSig) return; mmSig = sig;
+  const items = [];
+  const go = b => () => { walkTo(b.x + b.w / 2, () => openBuilding(b), b.id); if (touch) toggleMinimap(false); };
+  for (const b of buildings) {
+    if (b.kind === 'locked') continue;
+    const name = b.kind === 'guide' ? t('ui.guideSign') : b.kind === 'plaza' ? t('ui.plazaTitle') : b.kind === 'demoday' ? '🎤 Demo Day' : b.kind === 'parking' ? '🅿 ' + t('veh.parkingSign')
+      : b.lot.companyIds.length ? b.lot.companyIds.map(id => state.companies[id]).filter(Boolean).map(c => (isMember(c) ? '⭐ ' : '') + companyName(c)).join(', ') : null;
+    if (name) items.push({ name, fn: go(b), color: mmColor(b) });
+  }
+  (seed.busStops || []).forEach((x, i) => items.push({ name: '🚏 ' + t('map.stop', { n: i + 1 }), fn: () => { walkTo(x, null, null); if (touch) toggleMinimap(false); }, color: css('--accent') }));
+  box.replaceChildren(...items.map(it => { const b = btn(it.name, it.fn); b.style.borderLeft = `4px solid ${it.color}`; b.className = 'mmItem'; return b; }));
+}
+$('mapBtn').onclick = () => toggleMinimap(); $('mmClose').onclick = () => toggleMinimap(false);
 // ---------- Amount pickers: a 1-100 slider and a manual number stay in sync ----------
 // moneyPicker: choose an amount of coins up to maxCoins. TR players type ₺, others coins.
 function moneyPicker({ title, note, maxCoins, defCoins, confirmLabel, onConfirm }) {

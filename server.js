@@ -187,7 +187,7 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(),
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
-  busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, tax: ECON.tax });
+  busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, cityMap: ECON.cityMap, tax: ECON.tax });
 const publicAdConfig = () => ({ kinds: ADS.KINDS, maxBoost: ADS.MAX_BOOST, maxSlots: ADS.MAX_SLOTS_PER_COMPANY, limits: ADS.LIMITS });
 const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops,
   teamColors: SEED.teams.colors, quests: SEED.quests, badges: SEED.badges, salary: SEED.salary, custom: SEED.custom, departments: SEED.departments, marketing: SEED.marketing, itUpgrade: SEED.itUpgrade, npcTalk: { serviceCost: SEED.npcTalk.serviceCost, ids: SEED.npcTalk.ids }, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
@@ -491,8 +491,10 @@ io.on('connection', socket => {
   }
 
   // Solo: private street, only you + NPCs
+  const cityLocked = city => { const m = ECON.cityMap.find(x => x.key === city); return !!m && m.status !== 'open'; };
   socket.on('startSolo', ({ name, city } = {}) => {
     if (street) return;
+    if (cityLocked(city)) return socket.emit('toast', 'toast.cityLocked');
     const id = 'solo-' + newRoomId();
     rooms[id] = createStreet(id, 'solo', null, city);
     enter(rooms[id], name);
@@ -501,6 +503,7 @@ io.on('connection', socket => {
   // Multiplayer: create a private room → share link + 4-digit PIN
   socket.on('createRoom', ({ name, pin, city } = {}) => {
     if (street) return;
+    if (cityLocked(city)) return socket.emit('toast', 'toast.cityLocked');
     const id = newRoomId();
     rooms[id] = createStreet(id, 'multiplayer', pinOrRandom(pin), city);
     enter(rooms[id], name);

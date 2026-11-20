@@ -13,7 +13,8 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **8b — Vergiler & giderler** | Yıl sonu (360. gün) kademeli gelir vergisi (2026 dilimleri) · damga vergisi (kira binde 9,48, bordro binde 7,59) · muhasebeci seviyesi (yok +%15 ceza / temel / pro −%7) · dükkânda elektrik, su, doğalgaz, internet faturaları (sabit %60 + değişken %40, doğalgaz mevsimsel) ve kapatmanın satışa etkisi | ✅ Tamam |
 | **9 — Reklam sistemi** | Billboard (4), durak (her durak), otobüs giydirme, bina duvarı ve çatısı, mobil banner (3) · metin (başlık, yazı boyutu, renk, hizalama, kalın) veya https görsel adresi · şirket sahibi kiralar ve düzenler, **admin onaylar**; admin kendi reklamını onaysız yerleştirebilir · canlı reklam satışı en fazla +%15 artırır, günlük kira gider olarak yazılır | ✅ Tamam |
 | **10 — Araç** | Galeri: binek/ticari van × sıfır/ikinci el (4 model) · kiralama 1/3/7/14/30 gün, süre bitince otomatik iade, uzatma (en fazla 60 gün) · üstte kalan süre barı · araç bina kapısında park eder (ücretsiz, günlük %0,4 hasar riski) ya da caddenin sonundaki otoparka çekilir (günlük ücret, risk yok) | ✅ Tamam |
-| **11 — Harita & şehirler** | Minimap (M tuşu, mobilde harita ikonu) · Türkiye haritasından şehir seçimi (bazıları Premium/"pek yakında") · otobüs terminali, şehirler arası seyahat (maliyet + süre), özel/kiralık araçla seyahat · aynı odada farklı şehirler | ⬜ |
+| **11a — Minimap & şehir haritası** | Minimap (M tuşu / köşedeki 🗺 düğmesi): tüm cadde, bina renkleri, duraklar, siz ve diğer oyuncular, görünür alan; işletme listesi, tıklayınca yürür ve açar · lobide Türkiye haritasından şehir seçimi: 5 oynanabilir şehir, Premium (Adana, Konya, Gaziantep, Kayseri) ve Pek yakında (7 şehir) kilitleri | ✅ Tamam |
+| **11b — Şehirler arası seyahat** | Otobüs terminali, şehirler arası otobüs (maliyet + süre), özel/kiralık araçla seyahat · aynı odada farklı şehir caddeleri (durum şehir bazlı bölünür; önce 2–3 şehir) | ⬜ |
 | **12 — Ev** | Kılavuzun solunda ev · kişisel harcamalar · ev içi: kişisel faturalar, hobi, kendini geliştirme | ⬜ |
 | **13 — Çok oyunculu iç sahne** | Aynı binaya giren oyuncular iç sahnede birbirini görür · takım arkadaşını yanına çağır / yanına git · açık odalar listesi (şifre ile giriş) · AFK ve offline devam (tarayıcı tarafında saklanır) | ⬜ |
 | **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ⬜ |
@@ -53,6 +54,11 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - Elde tutulan aracın değeri aylık ~%1 düşer; yeni araç %80, ikinci el %65 ile başlar, taban %40. Satışta bu değer geri alınır.
 - Bir şirket aynı anda tek araç tutar (satın alma veya kiralama). Şehirler arası seyahatte (Sprint 11) araç kullanımı bu alt yapıya bağlanacak.
 - Otopark, dünyanın sonunda ayrı bir bina (`parking`): içinde otoparka çekilen şirket araçları görünür.
+
+## Sprint 11a notları
+- Harita, kabaca çizilmiş bir Türkiye taslağıdır (kesin sınır değil), şehir konumları yaklaşık boylam/enlemdir.
+- Şehir durumları `economy.js` içindeki `cityMap` listesinde (`open` / `premium` / `soon`). Premium'u admin'in açıp kapatması Sprint 16'da gelecek; şimdilik sunucu açık olmayan şehirleri reddeder.
+- Minimap yalnızca cadde sahnesinde ve sunum odası dışında görünür.
 
 ## Kararlar
 - **Veri saklama:** Şimdilik tarayıcıda (localStorage/çerez) yönetilir. SQLite/PostgreSQL daha sonra bağlanacak; bunun için durum okuma/yazma tek bir katmandan geçmeli (depolama arayüzü), böylece geçiş tek yerde yapılır.

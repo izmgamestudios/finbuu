@@ -43,6 +43,25 @@ const TR2026 = {
     bursa: { name: 'Bursa', rentM2: 320, est: true },
     antalya: { name: 'Antalya', rentM2: 400, est: true }
   },
+  // Türkiye haritasındaki şehirler: durum 'open' (oynanabilir) | 'premium' | 'soon' (pek yakında). Konumlar yaklaşık (boylam, enlem).
+  cityMap: [
+    { key: 'istanbul', name: 'İstanbul', lon: 28.98, lat: 41.01, status: 'open' },
+    { key: 'ankara', name: 'Ankara', lon: 32.85, lat: 39.93, status: 'open' },
+    { key: 'izmir', name: 'İzmir', lon: 27.14, lat: 38.42, status: 'open' },
+    { key: 'bursa', name: 'Bursa', lon: 29.06, lat: 40.19, status: 'open' },
+    { key: 'antalya', name: 'Antalya', lon: 30.71, lat: 36.89, status: 'open' },
+    { key: 'adana', name: 'Adana', lon: 35.32, lat: 37.0, status: 'premium' },
+    { key: 'konya', name: 'Konya', lon: 32.48, lat: 37.87, status: 'premium' },
+    { key: 'gaziantep', name: 'Gaziantep', lon: 37.38, lat: 37.07, status: 'premium' },
+    { key: 'kayseri', name: 'Kayseri', lon: 35.49, lat: 38.72, status: 'premium' },
+    { key: 'samsun', name: 'Samsun', lon: 36.33, lat: 41.29, status: 'soon' },
+    { key: 'trabzon', name: 'Trabzon', lon: 39.72, lat: 41.0, status: 'soon' },
+    { key: 'erzurum', name: 'Erzurum', lon: 41.27, lat: 39.9, status: 'soon' },
+    { key: 'diyarbakir', name: 'Diyarbakır', lon: 40.22, lat: 37.91, status: 'soon' },
+    { key: 'van', name: 'Van', lon: 43.38, lat: 38.5, status: 'soon' },
+    { key: 'mugla', name: 'Muğla', lon: 28.37, lat: 37.21, status: 'soon' },
+    { key: 'eskisehir', name: 'Eskişehir', lon: 30.52, lat: 39.77, status: 'soon' }
+  ],
   sources: [
     { label: 'Asgari ücret 2026 (QNB Yatırım)', url: 'https://www.qnbinvest.com.tr/investodak/qnbarastirma/2026-asgari-ucret-aciklandi-net-28075-tl' },
     { label: 'Asgari ücret işveren maliyeti (PwC)', url: 'https://www.pwc.com.tr/tr/medya/kose-yazilari/celal-ozcan/2026-yili-asgari-ucreti-ve-sektorlere-gore-isveren-maliyeti.html' },
@@ -95,7 +114,7 @@ function build(blueSalaryCoins) {
       }
     },
     busFare: Math.max(1, Math.round(c(TR2026.busFare))), busTopups: [10, 20, 50],
-    deliveryKm: DELIVERY_KM,
+    deliveryKm: DELIVERY_KM, cityMap: TR2026.cityMap,
     cities: Object.fromEntries(Object.entries(TR2026.cities).map(([k, v]) => [k, { ...v }])),
     lotRent: (cityKey, size) => Math.max(1, Math.ceil(c((size * (TR2026.cities[cityKey] || TR2026.cities.istanbul).rentM2) / 30))),
     lotPrice: (cityKey, size) => Math.ceil(c(size * (TR2026.cities[cityKey] || TR2026.cities.istanbul).rentM2 * TR2026.priceToRentMonths))
