@@ -440,7 +440,8 @@
     "partnerJoined": "💼 {{player}}, {{company}} şirketine %{{pct}} ortak oldu ({{amount}} coin).",
     "partnerPayout": "💼 {{company}} ortaklarına {{amount}} coin temettü ödedi.",
     "partnerNoPayout": "💼 {{company}}: bu ay kâr yok, temettü ödenmedi.",
-    "partnerBoughtOut": "💼 {{company}}, {{player}} ortağının %{{pct}} payını geri aldı ({{amount}} coin)."
+    "partnerBoughtOut": "💼 {{company}}, {{player}} ortağının %{{pct}} payını geri aldı ({{amount}} coin).",
+    "companySold": "💰 {{player}}, {{company}} şirketini {{amount}} coine sattı."
   },
   "crisis": {
     "concordat": "Konkordato ilan etti",
@@ -1027,7 +1028,8 @@
     "streak7": "7 Gün Serisi",
     "seasonStar": "Sezon Yıldızı",
     "trader": "Tüccar",
-    "partner": "Ortak"
+    "partner": "Ortak",
+    "exit": "Exit"
   },
   "badgeDesc": {
     "firstCompany": "İlk şirketini kur",
@@ -1060,7 +1062,8 @@
     "streak7": "7 gün üst üste oyuna gir",
     "seasonStar": "Bir sezonda 500 puana ulaş",
     "trader": "5 toptan pazar işlemi yap",
-    "partner": "Bir oyuncu ortaklığına katıl veya ortak al"
+    "partner": "Bir oyuncu ortaklığına katıl veya ortak al",
+    "exit": "Bir şirketi başarıyla sat"
   },
   "bus": {
     "arrived": "Durağa vardın.",
@@ -1112,7 +1115,8 @@
       "canvas": "🧩 İş Modeli Kanvası",
       "pitch": "⏱ Asansör Konuşması",
       "deck": "📊 Pitch Deck",
-      "partners": "Ortaklar"
+      "partners": "Ortaklar",
+      "exit": "Satış (Exit)"
     },
     "canvasIntro": "9 bloklu Business Model Canvas. Her blok en az birkaç kelime olmalı; hazırlık puanının %36'sı buradan gelir.",
     "pitchIntro": "60 saniyelik asansör konuşması (~130 kelime/dk). En az 40 kelime puan getirir.",
@@ -2010,5 +2014,36 @@
     "zoomIn": "Yakınlaş",
     "zoomOut": "Uzaklaş",
     "worldBtn": "Türkiye haritası"
+  },
+  "exit": {
+    "tab": "Satış (Exit)",
+    "title": "Şirketi sat",
+    "intro": "Şirketini bir alıcıya sat: fiyat = son 30 günün kârı × çarpan (olgunluk arttıkça yükselir) + şirket kasası. Gelir kurucular, ortaklar ve NPC yatırımcılar arasında pay oranına göre bölünür; şirket arşivlenir.",
+    "rules": "En az {{min}} günlük şirket, 30 günde bir satış.",
+    "profit": "Son 30 gün kâr",
+    "ready": "Olgunluk",
+    "goodwill": "Marka/itibar değeri",
+    "cash": "Şirket kasası",
+    "total": "Tahmini fiyat",
+    "split": "Dağılım",
+    "founders": "Kurucu(lar)",
+    "partnersLine": "Ortaklar",
+    "npc": "NPC yatırımcılar",
+    "request": "Alıcı teklifi iste",
+    "offerTitle": "Alıcı teklifi",
+    "until": "Teklif {{n}} gün geçerli",
+    "accept": "Satışı onayla",
+    "decline": "Reddet",
+    "confirm": "Şirket satılıp arşivlenecek. Emin misin?",
+    "sold": "Şirket satıldı!",
+    "declined": "Teklif reddedildi",
+    "toastDone": "💰 {{company}} satıldı: toplam {{total}} · senin payın +{{each}} coin",
+    "toastPartner": "💰 {{company}} satıldı: ortak payın +{{amount}} coin",
+    "off": "Şirket satışı şu an kapalı.",
+    "tooYoung": "Şirket henüz çok yeni: {{n}} gün daha gerekli.",
+    "cooldown": "Yeni satış için {{n}} gün beklemelisin.",
+    "noValue": "Şirketin değeri henüz çok düşük.",
+    "gone": "Teklif artık geçerli değil.",
+    "wait": "Yeni satışa {{n}} gün var."
   }
 }

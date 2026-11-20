@@ -440,7 +440,8 @@
     "partnerJoined": "💼 {{player}} became a {{pct}}% partner in {{company}} ({{amount}} coins).",
     "partnerPayout": "💼 {{company}} paid {{amount}} coins in partner dividends.",
     "partnerNoPayout": "💼 {{company}}: no profit this month, no dividend.",
-    "partnerBoughtOut": "💼 {{company}} bought back {{player}}'s {{pct}}% stake ({{amount}} coins)."
+    "partnerBoughtOut": "💼 {{company}} bought back {{player}}'s {{pct}}% stake ({{amount}} coins).",
+    "companySold": "💰 {{player}} sold {{company}} for {{amount}} coins."
   },
   "crisis": {
     "concordat": "Filed for concordat (debt restructuring)",
@@ -1027,7 +1028,8 @@
     "streak7": "7-Day Streak",
     "seasonStar": "Season Star",
     "trader": "Trader",
-    "partner": "Partner"
+    "partner": "Partner",
+    "exit": "Exit"
   },
   "badgeDesc": {
     "firstCompany": "Found your first company",
@@ -1060,7 +1062,8 @@
     "streak7": "Play 7 days in a row",
     "seasonStar": "Reach 500 points in one season",
     "trader": "Complete 5 wholesale trades",
-    "partner": "Join or take on a player partnership"
+    "partner": "Join or take on a player partnership",
+    "exit": "Sell a company successfully"
   },
   "bus": {
     "arrived": "You arrived at the stop.",
@@ -1112,7 +1115,8 @@
       "canvas": "🧩 Business Model Canvas",
       "pitch": "⏱ Elevator Pitch",
       "deck": "📊 Pitch Deck",
-      "partners": "Partners"
+      "partners": "Partners",
+      "exit": "Sell (Exit)"
     },
     "canvasIntro": "9-block Business Model Canvas. Each block needs a few words; 36% of the readiness score comes from here.",
     "pitchIntro": "60-second elevator pitch (~130 words/min). At least 40 words scores points.",
@@ -2010,5 +2014,36 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "worldBtn": "Map of Türkiye"
+  },
+  "exit": {
+    "tab": "Sell (Exit)",
+    "title": "Sell the company",
+    "intro": "Sell your company to a buyer: price = last 30 days' profit × multiple (higher with readiness) + company cash. Proceeds are split between founders, partners and NPC investors by stake; the company is archived.",
+    "rules": "Company must be at least {{min}} days old; one sale per 30 days.",
+    "profit": "Profit, last 30 days",
+    "ready": "Readiness",
+    "goodwill": "Goodwill",
+    "cash": "Company cash",
+    "total": "Estimated price",
+    "split": "Split",
+    "founders": "Founder(s)",
+    "partnersLine": "Partners",
+    "npc": "NPC investors",
+    "request": "Ask for a buyer offer",
+    "offerTitle": "Buyer offer",
+    "until": "Offer valid for {{n}} days",
+    "accept": "Confirm sale",
+    "decline": "Decline",
+    "confirm": "The company will be sold and archived. Are you sure?",
+    "sold": "Company sold!",
+    "declined": "Offer declined",
+    "toastDone": "💰 {{company}} sold for {{total}} · your share +{{each}} coins",
+    "toastPartner": "💰 {{company}} was sold: your partner share +{{amount}} coins",
+    "off": "Company sales are off right now.",
+    "tooYoung": "The company is too new: {{n}} more days needed.",
+    "cooldown": "You must wait {{n}} days before another sale.",
+    "noValue": "The company is worth too little for now.",
+    "gone": "That offer is no longer valid.",
+    "wait": "{{n}} days until you can sell again."
   }
 }

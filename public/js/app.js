@@ -249,6 +249,8 @@ socket.on('marketSold', e => { toast(t('market.sold', { qty: e.qty, coins: e.coi
 socket.on('partnerOffer', e => toast(t('partner.toastOffer', { from: e.from, company: e.company || (e.companyKey ? t(e.companyKey) : ''), pct: e.pct, amount: e.amount })));
 socket.on('dividend', e => { toast(t('partner.toastDividend', { company: e.company || (e.companyKey ? t(e.companyKey) : ''), amount: e.amount })); profSig = ''; });
 socket.on('partnerBoughtOut', e => { toast(t('partner.toastBought', { company: e.company || (e.companyKey ? t(e.companyKey) : ''), amount: e.amount })); profSig = ''; });
+socket.on('exitDone', e => { toast(t('exit.toastDone', { company: e.company || (e.companyKey ? t(e.companyKey) : ''), total: fmt(e.total), each: e.each })); profSig = ''; });
+socket.on('exitPartner', e => { toast(t('exit.toastPartner', { company: e.company || (e.companyKey ? t(e.companyKey) : ''), amount: e.amount })); profSig = ''; });
 socket.on('levelUp', e => { toast(t('week.levelUp', e)); profSig = ''; });
 socket.on('weekEnd', e => { toast(t('week.ended', e) + (e.coins ? t('week.endedWin', e) : '')); profSig = ''; });
 socket.on('questDone', q => { toast(`✅ ${t('quest.' + q.id, { goal: '' })} · +${money(q.coins)} · +${q.xp} XP`); profSig = ''; });
@@ -3006,6 +3008,28 @@ function demoFacts(c) {
   return { company: companyName(c), product, sector, price: c.price, city: seed.economy.cities[state.city]?.name || '', sales: c.sales || 0,
     month: f.monthRev, cash: c.cash, staff: staffOf(c), founders: c.founders.map(id => state.players[id]?.name || '—').join(', ') };
 }
+// Sprint 29b: company sale (exit) tab
+function renderExit(box, c) {
+  box.append(el('p', t('exit.intro'), 'muted'));
+  socket.emit('exitGet', { cid: c.id }, g => {
+    if (!g?.ok) return;
+    const row = (k, v) => el('div', `${t('exit.' + k)}: ${v}`);
+    box.append(el('small', t('exit.rules', { min: g.minAge }) + (g.wait ? ' · ' + t('exit.wait', { n: g.wait }) : ''), 'muted'));
+    const k = el('div', null, 'mini'); k.append(kpi(t('exit.profit'), fmt(g.profit30)), kpi(t('exit.ready'), `${g.score}/100`), kpi(t('exit.goodwill'), fmt(g.goodwill)), kpi(t('exit.cash'), fmt(g.cash)), kpi(t('exit.total'), fmt(g.total)));
+    box.append(k);
+    const show = (offer, split) => {
+      const card = el('div', null, 'co'); card.append(el('h4', '💼 ' + t('exit.offerTitle') + ': ' + fmt(offer.total)), row('founders', fmt(split.founders)));
+      if (split.partners.length) card.append(row('partnersLine', split.partners.map(p => fmt(p.amount)).join(' + ')));
+      if (split.npc) card.append(row('npc', fmt(split.npc)));
+      card.append(el('small', t('exit.until', { n: Math.max(0, offer.until - (state.day || 0)) }), 'muted'));
+      const act = el('div', null, 'row');
+      act.append(btn('✓ ' + t('exit.accept'), () => { if (!confirm(t('exit.confirm'))) return; socket.emit('exitAnswer', { cid: c.id, accept: true }, r => { if (r?.key) toast(t(r.key)); if (r?.sold) { toast(t('exit.sold')); closeModal(); } }); }, { primary: true }), btn(t('exit.decline'), () => socket.emit('exitAnswer', { cid: c.id, accept: false }, () => { toast(t('exit.declined')); openDemoDay(c.id, 'exit'); })));
+      card.append(act); box.append(card);
+    };
+    if (g.offer) show(g.offer, g.split);
+    else box.append(btn(t('exit.request'), () => socket.emit('exitRequest', { cid: c.id }, r => { if (r?.key) return toast(t(r.key, r.params)); if (r?.ok) openDemoDay(c.id, 'exit'); }), { primary: true }));
+  });
+}
 // Sprint 29a: player partnerships tab (inside the Demo Day modal)
 function renderPartners(box, c0, valuation = 0) {
   const me_ = myId(), live = () => (c0 ? state.companies[c0.id] || c0 : null), c = live(), cname = x => x.name || (x.nameKey ? t(x.nameKey) : '—');
@@ -3041,10 +3065,11 @@ function renderDemo(c, data, tab, mine) {
     body.append(el('h3', `🎤 ${t('demo.title')} · ${companyName(c)}`));
     if (mine.length > 1) { const sel = el('select'); mine.forEach(x => sel.append(new Option(companyName(x), x.id))); sel.value = c.id; sel.onchange = () => openDemoDay(sel.value, tab); body.append(sel); }
     const tabs = el('div', null, 'others');
-    ['events', 'canvas', 'pitch', 'deck', 'partners'].forEach(k => tabs.append(btn(t('demo.tab.' + k), () => renderDemo(c, data, k, mine), { primary: k === tab })));
+    ['events', 'canvas', 'pitch', 'deck', 'partners', 'exit'].forEach(k => tabs.append(btn(t('demo.tab.' + k), () => renderDemo(c, data, k, mine), { primary: k === tab })));
     body.append(tabs);
     const box = el('div', null, 'co'); body.append(box);
-    if (tab === 'partners') renderPartners(box, c, data.readiness?.valuation || 0);
+    if (tab === 'exit') renderExit(box, c);
+    else if (tab === 'partners') renderPartners(box, c, data.readiness?.valuation || 0);
     else if (tab === 'canvas') {
       box.append(el('p', t('demo.canvasIntro'), 'muted'));
       const grid = el('div', null, 'bmc'), areas = {};

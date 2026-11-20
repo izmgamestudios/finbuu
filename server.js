@@ -146,7 +146,7 @@ const SEED = {
     { id: 'chat', metric: 'chat', goal: 1, xp: 5, coins: 10, shared: true }
   ],
   badges: ['firstCompany', 'sales10', 'sales100', 'sales1000', 'floor3', 'floor6', 'firstHire', 'marketer', 'secure', 'social',
-    'commuter', 'teamPlayer', 'teamGoal', 'streak7', 'seasonStar', 'trader', 'partner', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
+    'commuter', 'teamPlayer', 'teamGoal', 'streak7', 'seasonStar', 'trader', 'partner', 'exit', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
   demoDay: { canvasMax: 300, pitchMax: 900, demoCooldown: 30, angelCooldown: 15, offerDays: 3, grantAmount: 2000, grantMinDays: 10, grantMinBlocks: 7, demoMin: 60, angelMin: 45 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3, sector: 'sector.food' },
@@ -1194,6 +1194,38 @@ io.on('connection', socket => {
     io.to(pid).emit('partnerBoughtOut', { amount: price, ...cParams(c) });
     addLog(street, 'log.partnerBoughtOut', { player: pl.name, pct, amount: price, ...cParams(c) });
     sync(); reply({ ok: true, price });
+  });
+
+  // ---- Sprint 29b: company sale (exit): offer = goodwill (recent profit x multiple) + cash, split between founders, partners and NPC investors ----
+  const EXIT_MIN_AGE = 30, EXIT_COOLDOWN = 30;
+  const exitQuote = c => {
+    const profit30 = Math.max(0, Math.round((c.fin?.daily || []).slice(-30).reduce((a, d) => a + (d.revenue || 0) - (d.expenses || 0), 0)));
+    const score = readiness(street, c).score, goodwill = Math.round(profit30 * (BAL.CFG.exitMonths + score / 20)), cash = Math.max(0, Math.round(c.cash));
+    return { profit30, score, goodwill, cash, total: goodwill + cash };
+  };
+  const exitSplit = (c, total) => { const npc = Math.round(total * (c.npcEquity || 0) / 100), partners = Object.entries(c.partners || {}).map(([pid, pct]) => ({ pid, pct, amount: Math.round(total * pct / 100) })), rest = total - npc - partners.reduce((a, p) => a + p.amount, 0); return { npc, partners, founders: Math.max(0, rest) }; };
+  socket.on('exitGet', ({ cid } = {}, cb) => {
+    const c = founderOf(cid); if (!c || typeof cb !== 'function') return;
+    const age = (street.day || 0) - (c.fin?.foundedDay ?? (street.day || 0)), wait = Math.max(0, (me.exitAt ?? -1e9) + EXIT_COOLDOWN - (street.day || 0)), q = exitQuote(c);
+    cb({ ok: true, on: !!BAL.CFG.exitOn, age, minAge: EXIT_MIN_AGE, wait, ...q, split: exitSplit(c, q.total), offer: c.exitOffer && c.exitOffer.until > (street.day || 0) ? c.exitOffer : null, partnersCount: Object.keys(c.partners || {}).length, npcEquity: c.npcEquity || 0 });
+  });
+  socket.on('exitRequest', ({ cid } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = founderOf(cid); if (!c || limited() || c.isNpc || c.status !== 'active' || !BAL.CFG.exitOn) return reply({ ok: false, key: 'exit.off' });
+    const day = street.day || 0, age = day - (c.fin?.foundedDay ?? day);
+    if (age < EXIT_MIN_AGE) return reply({ ok: false, key: 'exit.tooYoung', params: { n: EXIT_MIN_AGE - age } });
+    if (me.exitAt != null && day < me.exitAt + EXIT_COOLDOWN) return reply({ ok: false, key: 'exit.cooldown', params: { n: me.exitAt + EXIT_COOLDOWN - day } });
+    const q = exitQuote(c); if (q.total < 100) return reply({ ok: false, key: 'exit.noValue' });
+    c.exitOffer = { id: crypto.randomBytes(4).toString('hex'), until: day + 3, ...q }; reply({ ok: true, offer: c.exitOffer, split: exitSplit(c, q.total) });
+  });
+  socket.on('exitAnswer', ({ cid, accept } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = founderOf(cid), o = c?.exitOffer; if (!c || !o || limited()) return reply({ ok: false, key: 'exit.gone' });
+    c.exitOffer = null; if (!accept) return reply({ ok: true, declined: true });
+    const day = street.day || 0; if (o.until <= day || c.status !== 'active') return reply({ ok: false, key: 'exit.gone' });
+    const q = exitQuote(c), total = Math.min(q.total, Math.round(o.total * 1.15)), sp = exitSplit(c, total), each = Math.floor(sp.founders / Math.max(1, c.founders.length));
+    for (const f of c.founders) { const fp = street.players[f] || street.pastPlayers[f]; if (!fp) continue; fp.coins += each; fp.exitAt = day; fp.counters ||= {}; fp.counters.exits = (fp.counters.exits || 0) + 1; award(street, fp, 'exit'); io.to(f).emit('exitDone', { total, each, ...cParams(c) }); }
+    for (const p of sp.partners) { const pl = street.players[p.pid] || street.pastPlayers[p.pid]; if (pl) { pl.coins += p.amount; io.to(p.pid).emit('exitPartner', { amount: p.amount, ...cParams(c) }); } }
+    addLog(street, 'log.companySold', { player: me.name, amount: total, ...cParams(c) }); audit('exit', `${street.id}: ${c.id} sold for ${total}`);
+    c.cash = 0; archiveCompany(street, c, 'sold'); sync(); reply({ ok: true, sold: true, total, each });
   });
 
   // ---- Sprint 26b: wholesale market (player companies sell surplus ERP stock to each other) ----
