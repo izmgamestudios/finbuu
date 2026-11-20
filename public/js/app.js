@@ -236,6 +236,7 @@ socket.on('joined', info => {
 });
 socket.on('badge', ({ id }) => { toast(`🏅 ${t('badge.unlocked')}: ${t('badge.' + id)}`); profSig = ''; });
 socket.on('marketEvent', e => { toast(t('event.started', { name: t('event.' + e.id) })); hudSig = ''; });
+socket.on('goalEnd', e => { toast(e.ok ? t('goal.ok', { progress: fmt0(e.progress), target: fmt0(e.target) }) + (e.coins ? t('goal.okCoins', e) : t('goal.okNoShare')) : t('goal.miss', { progress: fmt0(e.progress), target: fmt0(e.target) })); profSig = ''; });
 socket.on('levelUp', e => { toast(t('week.levelUp', e)); profSig = ''; });
 socket.on('weekEnd', e => { toast(t('week.ended', e) + (e.coins ? t('week.endedWin', e) : '')); profSig = ''; });
 socket.on('questDone', q => { toast(`✅ ${t('quest.' + q.id, { goal: '' })} · +${money(q.coins)} · +${q.xp} XP`); profSig = ''; });
@@ -1087,7 +1088,16 @@ function lotRanks() {
   return m;
 }
 function toggleBoard(v = !boardOpen) { boardOpen = v; $('board').hidden = !v; if (v) renderBoard(); }
+const fmt0 = n => Number(n).toLocaleString();
+function renderGoal() {
+  const g = state.goal, box = $('goalCard'); if (!box) return; box.replaceChildren(); if (!g) return;
+  const pct = Math.min(100, Math.round(100 * g.progress / g.target)), mine = g.contrib?.[myId()] || 0, need = Math.ceil(g.perPlayer * g.minShare);
+  const bar = el('div'); bar.style.cssText = 'height:8px;border-radius:4px;background:rgba(127,127,127,.25);overflow:hidden;margin:4px 0'; const fill = el('div'); fill.style.cssText = `height:100%;width:${pct}%;background:${pct >= 100 ? 'var(--good,#4ade80)' : 'var(--amber,#f5b942)'}`; bar.append(fill);
+  const unit = g.type === 'revenue' ? '🪙 ' : '';
+  box.append(el('div', `${t('goal.title')}: ${t('goal.' + g.type)} — ${unit}${fmt0(g.progress)} / ${fmt0(g.target)} (${pct}%) · ${t('goal.left', { n: g.n, left: g.left })}`), bar, el('small', `${t('goal.mine')}: ${fmt0(mine)}${mine < need ? ' · ' + t('goal.need', { min: fmt0(need) }) : ' ✓'}`, 'muted'));
+}
 function renderWeek() {
+  renderGoal();
   const w = state.week, box = $('weekCard'); if (!box || !w) return;
   const top = w.scores[0], mine = w.scores.find(s => s.id === myId());
   const parts = [`${t('week.title')} — ${t('week.left', { n: w.n, left: w.left })}`, top && top.score > 0 ? t('week.lead', { name: top.name, score: fmt(top.score) }) : t('week.none')];
@@ -1813,7 +1823,7 @@ function openHelp() {
 $('helpBtn').onclick = openHelp;
 addEventListener('keydown', e => { if ((e.key === 'F1' || (e.key === '?' && !typing(e))) && !modalOpen) { e.preventDefault(); openHelp(); } });
 
-const BADGE_ICON = { hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
+const BADGE_ICON = { teamGoal: '🎯', hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
   social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗', closer: '🤝', stockMaster: '📦', stackPro: '🧰' };
 let extraSig = '';
 function renderExtras(p) {

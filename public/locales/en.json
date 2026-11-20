@@ -432,7 +432,9 @@
     "vehicle": "🚗 {{player}} vehicle for {{company}}: {{mode}}",
     "toolInstalled": "{{player}} installed {{tool}} on {{company}}.",
     "toolsSuspended": "{{company}}: monthly hosting could not be paid, {{n}} tool(s) suspended.",
-    "marketEvent": "📰 Market event: {{event}}"
+    "marketEvent": "📰 Market event: {{event}}",
+    "goalMet": "🎯 Month {{n}} shared goal ({{goal}}) met!",
+    "goalMissed": "🎯 Month {{n}} shared goal ({{goal}}) missed."
   },
   "crisis": {
     "concordat": "Filed for concordat (debt restructuring)",
@@ -1014,7 +1016,8 @@
     "funded": "Funded",
     "grantee": "Grantee",
     "stockMaster": "Stock Master",
-    "stackPro": "Stack Pro"
+    "stackPro": "Stack Pro",
+    "teamGoal": "Team Win"
   },
   "badgeDesc": {
     "firstCompany": "Found your first company",
@@ -1042,7 +1045,8 @@
     "funded": "Accept an investment offer",
     "grantee": "Receive a grant",
     "stockMaster": "Never run out of stock for 30 days",
-    "stackPro": "Install open-source tools from 5 different categories"
+    "stackPro": "Install open-source tools from 5 different categories",
+    "teamGoal": "Contribute to a completed monthly room goal"
   },
   "bus": {
     "arrived": "You arrived at the stop.",
@@ -1714,5 +1718,23 @@
     "ended": "🏁 Week {{week}} is over — {{rank}}/{{of}} · score {{score}}",
     "endedWin": " · +{{coins}} coins",
     "levelUp": "⭐ Level {{level}}! +{{coins}} coins"
+  },
+  "goal": {
+    "revenue": "Shared revenue",
+    "sales": "Shared sales",
+    "quests": "Shared quests",
+    "desc": {
+      "revenue": "Total sales revenue of everyone in the room",
+      "sales": "Total number of sales by everyone in the room",
+      "quests": "Quests completed by everyone in the room"
+    },
+    "title": "🎯 Shared goal",
+    "left": "Month {{n}} · {{left}} days left",
+    "mine": "Your contribution",
+    "need": "Need at least {{min}} contribution to earn the reward",
+    "ok": "🎯 Shared goal met! {{progress}}/{{target}}",
+    "okCoins": " · +{{coins}} coins",
+    "okNoShare": " · your contribution was too low for the reward",
+    "miss": "🎯 Shared goal missed: {{progress}}/{{target}}"
   }
 }

@@ -432,7 +432,9 @@
     "vehicle": "🚗 {{player}}, {{company}} için araç: {{mode}}",
     "toolInstalled": "{{player}}, {{company}} şirketine {{tool}} kurdu.",
     "toolsSuspended": "{{company}}: aylık sunucu gideri ödenemedi, {{n}} araç askıya alındı.",
-    "marketEvent": "📰 Piyasa olayı: {{event}}"
+    "marketEvent": "📰 Piyasa olayı: {{event}}",
+    "goalMet": "🎯 {{n}}. ay ortak hedefi ({{goal}}) tamamlandı!",
+    "goalMissed": "🎯 {{n}}. ay ortak hedefi ({{goal}}) kaçırıldı."
   },
   "crisis": {
     "concordat": "Konkordato ilan etti",
@@ -1014,7 +1016,8 @@
     "funded": "Yatırım Aldı",
     "grantee": "Hibe Aldı",
     "stockMaster": "Stok Ustası",
-    "stackPro": "Araç Ustası"
+    "stackPro": "Araç Ustası",
+    "teamGoal": "Ortak Başarı"
   },
   "badgeDesc": {
     "firstCompany": "İlk şirketini kur",
@@ -1042,7 +1045,8 @@
     "funded": "Bir yatırım teklifini kabul et",
     "grantee": "Hibe al",
     "stockMaster": "30 gün boyunca hiç stoksuz kalma",
-    "stackPro": "5 farklı kategoriden açık kaynak araç kur"
+    "stackPro": "5 farklı kategoriden açık kaynak araç kur",
+    "teamGoal": "Odanın aylık ortak hedefine katkı yap ve tamamla"
   },
   "bus": {
     "arrived": "Durağa vardın.",
@@ -1714,5 +1718,23 @@
     "ended": "🏁 {{week}}. hafta bitti — {{rank}}/{{of}} · skor {{score}}",
     "endedWin": " · +{{coins}} coin",
     "levelUp": "⭐ Seviye {{level}}! +{{coins}} coin"
+  },
+  "goal": {
+    "revenue": "Ortak ciro",
+    "sales": "Ortak satış",
+    "quests": "Ortak görev",
+    "desc": {
+      "revenue": "Odadaki herkesin toplam satış cirosu",
+      "sales": "Odadaki herkesin toplam satış adedi",
+      "quests": "Odadaki herkesin tamamladığı görev sayısı"
+    },
+    "title": "🎯 Ortak hedef",
+    "left": "{{n}}. ay · {{left}} gün kaldı",
+    "mine": "Senin katkın",
+    "need": "Ödül için en az {{min}} katkı gerekir",
+    "ok": "🎯 Ortak hedef tamamlandı! {{progress}}/{{target}}",
+    "okCoins": " · +{{coins}} coin",
+    "okNoShare": " · ödül için katkın yetersizdi",
+    "miss": "🎯 Ortak hedef kaçtı: {{progress}}/{{target}}"
   }
 }

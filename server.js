@@ -124,7 +124,7 @@ const SEED = {
     { id: 'chat', metric: 'chat', goal: 1, xp: 5, coins: 10, shared: true }
   ],
   badges: ['firstCompany', 'sales10', 'sales100', 'sales1000', 'floor3', 'floor6', 'firstHire', 'marketer', 'secure', 'social',
-    'commuter', 'teamPlayer', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
+    'commuter', 'teamPlayer', 'teamGoal', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
   demoDay: { canvasMax: 300, pitchMax: 900, demoCooldown: 30, angelCooldown: 15, offerDays: 3, grantAmount: 2000, grantMinDays: 10, grantMinBlocks: 7, demoMin: 60, angelMin: 45 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3, sector: 'sector.food' },
@@ -195,7 +195,7 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
   presentation: publicPresentation(st) || null,
   flats: (st.flats || []).map(f => ({ id: f.id, name: f.name, open: !!f.open })),
-  city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(), event: EVT.active(st) ? { id: st.event.id, until: st.event.until, tone: EVT.EVENTS[st.event.id].tone, income: EVT.EVENTS[st.event.id].income, bills: EVT.EVENTS[st.event.id].bills } : null, week: { n: Math.floor((st.day || 0) / 7) + 1, left: 7 - ((st.day || 0) % 7), scores: weekScores(st).slice(0, 5), last: st.lastWeek || null },
+  city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(), goal: publicGoal(st), event: EVT.active(st) ? { id: st.event.id, until: st.event.until, tone: EVT.EVENTS[st.event.id].tone, income: EVT.EVENTS[st.event.id].income, bills: EVT.EVENTS[st.event.id].bills } : null, week: { n: Math.floor((st.day || 0) / 7) + 1, left: 7 - ((st.day || 0) % 7), scores: weekScores(st).slice(0, 5), last: st.lastWeek || null },
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 // ---------- PREMIUM FLAGS (Sprint 16): admin switches Premium features on/off globally; persisted in data/premium.json ----------
 // 'live' features change gameplay now; 'soon' features are only listed (voice/video arrive in Sprints 18-19) and cannot be switched on yet.
@@ -220,6 +220,7 @@ function saveToolsCfg() { try { fs.mkdirSync(path.dirname(TOOLS_CFG_FILE), { rec
 // ---------- BALANCE CONFIG (Sprint 25): price elasticity, level-up reward, weekly race; admin-tunable, persisted in data/balance-config.json ----------
 const BAL = require('./balance');
 const EVT = require('./events');
+const GOALS = require('./goals');
 const EVT_FILE = path.join(__dirname, 'data', 'events-config.json');
 try { EVT.setConfig(JSON.parse(fs.readFileSync(EVT_FILE, 'utf8'))); } catch { /* defaults */ }
 function saveEventsCfg() { try { fs.mkdirSync(path.dirname(EVT_FILE), { recursive: true, mode: 0o700 }); fs.writeFileSync(EVT_FILE, JSON.stringify(EVT.state()), { mode: 0o600 }); } catch (e) { console.warn('events config save failed:', e.message); } }
@@ -1714,6 +1715,29 @@ function weekSettle(st) {
   if (ev) { if (st.event) st.lastEventId = st.event.id; st.event = ev; addLog(st, 'log.marketEvent', { eventKey: 'event.' + ev.id }); io.to(st.id).emit('marketEvent', { id: ev.id, until: ev.until, tone: EVT.EVENTS[ev.id].tone }); }
   for (const p of Object.values(st.players)) p.weekBase = p.counters?.revenue || 0;
 }
+// Sprint 26a: monthly shared goal. Settled at day % 30 === 0, then the next goal starts
+function goalSettle(st) {
+  if (!BAL.CFG.goalOn) { st.goal = null; return; }
+  const g = st.goal;
+  if (g && (st.day || 0) >= g.endDay) {
+    const prog = GOALS.progress(st, g), ok = prog >= g.target, big = prog >= g.target * 1.5, cs = GOALS.contrib(st, g);
+    for (const p of Object.values(st.players)) {
+      if (p.isNpc) continue;
+      const mine = cs[p.id] || 0, eligible = ok && mine >= g.perPlayer * GOALS.MIN_SHARE, coins = eligible ? Math.round(BAL.CFG.goalReward * (big ? 1.5 : 1)) : 0;
+      if (coins) { p.coins += coins; p.counters ||= {}; p.counters.teamGoals = (p.counters.teamGoals || 0) + 1; award(st, p, 'teamGoal'); }
+      io.to(p.id).emit('goalEnd', { n: g.n, type: g.type, ok, progress: prog, target: g.target, mine, coins, big });
+    }
+    addLog(st, ok ? 'log.goalMet' : 'log.goalMissed', { n: g.n, goalKey: 'goal.' + g.type });
+    st.goal = null;
+  }
+  if (!st.goal) GOALS.start(st, BAL.CFG.goalDifficulty);
+}
+const publicGoal = st => {
+  if (!BAL.CFG.goalOn) return null;
+  if (!st.goal) GOALS.start(st, BAL.CFG.goalDifficulty);
+  const g = st.goal, cs = GOALS.contrib(st, g);
+  return { n: g.n, type: g.type, target: g.target, perPlayer: g.perPlayer, progress: Object.values(cs).reduce((a, b) => a + b, 0), left: Math.max(0, g.endDay - (st.day || 0)), minShare: GOALS.MIN_SHARE, contrib: cs };
+};
 function economyTick(only) {
   for (const st of only ? [only] : Object.values(rooms)) {
     for (const c of Object.values(st.companies)) {
@@ -1783,6 +1807,7 @@ function economyTick(only) {
     R.closeDay(st);
     for (const p of Object.values(st.players)) checkLevel(p);
     weekSettle(st);
+    goalSettle(st);
     st.tickAt = Date.now();
     for (const c of Object.values(st.companies)) {
       if (c.crisis && !crisisActive(st, c)) { addLog(st, 'log.crisisOver', cParams(c)); c.crisis = null; c.founders.forEach(pid => award(st, st.players[pid], 'survivor')); }
