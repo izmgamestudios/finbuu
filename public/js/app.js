@@ -396,7 +396,7 @@ function updateControls() {
   $('budgetBtn').hidden = $('doorBtn').hidden = !inOwnFlat();
   $('advisor').hidden = !joined || scene.name !== 'street';
   $('advChip').hidden = $('advisor').hidden;
-  const mapOk = !!joined && scene.name === 'street' && !isPres(); $('mapBtn').hidden = !mapOk; $('zoomBox').hidden = !mapOk; if (!mapOk && minimapOpen) toggleMinimap(false);
+  const mapOk = !!joined && scene.name === 'street' && !isPres(); $('mapBtn').hidden = !mapOk; $('zoomBox').hidden = !mapOk; $('guideBtn').hidden = !joined || isPres(); if (!mapOk && minimapOpen) toggleMinimap(false);
 }
 
 // ---------- Input: keyboard ----------
@@ -783,7 +783,7 @@ function updateRide(now) {
   const p = clamp((now - ride.t0) / ride.dur, 0, 1);
   player.x = ride.fromX + (ride.toX - ride.fromX) * ease(p); player.dir = ride.dir; player.moving = false;
   ride.x = player.x;
-  if (p >= 1) { const taxi = ride.kind === 'taxi'; player.x = ride.toX; lastSent = { x: player.x, at: now }; ride = null; toast(taxi ? '🚕 ' + t('taxi.arrived') : '🚏 ' + t('bus.arrived')); }
+  if (p >= 1) { const taxi = ride.kind === 'taxi', after = ride.after; player.x = ride.toX; lastSent = { x: player.x, at: now }; ride = null; toast(taxi ? '🚕 ' + t('taxi.arrived') : '🚏 ' + t('bus.arrived')); if (after) after(); }
   return true;
 }
 const roleOf = c => seed?.templates.find(tp => tp.key === c.nameKey)?.role || (c.nameKey === 'npc.busCard' ? 'busCard' : null);
@@ -815,6 +815,50 @@ function updateCarHud() {
   box.append(el('b', '🚗 ' + t('veh.driving')), bar('⛽', t('veh.fuel'), fp, fp < 15), bar('🔧', t('veh.cond'), cp, cp < 25), el('small', t('veh.range', { km: Math.max(0, Math.round(driving.fuel)) }) + ' · ' + t('veh.hudHint'), 'muted'));
 }
 $('carBtn').onclick = () => { if (driving) exitCar(); else { const c = nearOwnCar(); if (c) boardCar(c); } };
+
+// ---------- Guide window (anywhere) + automatic travel to a building (Sprint 32b): walk (time), taxi (coins) or teleport (instant) ----------
+function openGuideWindow() {
+  if (!joined || isPres()) return;
+  openModal(body => { body.classList.add('wideBody'); body.append(el('h3', '📚 ' + t('wiki.windowTitle'))); wikiUi.mount(body); });
+}
+$('guideBtn').onclick = openGuideWindow;
+addEventListener('keydown', e => { if (e.key === 'g' || e.key === 'G') { if (e.target.matches?.('input, textarea, select') || e.ctrlKey || e.metaKey || modalOpen) return; openGuideWindow(); } });
+function goToBuildingKind(kind) {
+  const b = buildings.find(x => x.kind === kind);
+  if (!b) return toast(t('wiki.noBuilding'));
+  if (scene.name !== 'street') exitCompany(true);
+  const x = b.x + b.w / 2, dist = Math.abs(x - player.x), open = () => openBuilding(b);
+  closeModal();
+  if (dist < 120 || driving) { manualInput(); return walkTo(x, open, b.id); }
+  const name = b.kind === 'lot' ? '' : (kind === 'guide' ? t('ui.guideSign') : kind === 'plaza' ? t('ui.plazaTitle') : kind === 'demoday' ? '🎤 Demo Day' : kind === 'oss' ? t('oss.name') : kind === 'grants' ? t('grants.name') : kind === 'gamfed' ? t('gamfed.name') : kind === 'home' ? t('home.title') : kind === 'parking' ? t('veh.parkingSign') : kind === 'terminal' ? t('travel.sign') : kind);
+  const km = (dist / seed.taxi.pxPerKm).toFixed(1), secs = Math.max(1, Math.round(dist / SPEED)), fare = taxiEstimate(x);
+  openModal(body => {
+    body.append(el('h3', `➜ ${name}`), el('small', t('gt.distance', { km }), 'muted'));
+    body.append(btn(`🚶 ${t('gt.walk', { s: secs })}`, () => { closeModal(); manualInput(); walkTo(x, open, b.id); }, { primary: true }));
+    body.append(btn(`🚕 ${t('gt.taxi', { price: taxiMoney(fare) })}`, () => { closeModal(); guideTaxi(b, x, open); }));
+    body.append(btn(`✨ ${t('gt.teleport')}`, () => socket.emit('guideTeleport', { x: Math.round(x) }, r => {
+      if (!r?.ok) return toast(t(r?.key || 'gt.fail', r?.params)); closeModal();
+      player.x = r.x; player.target = null; player.onArrive = null; lastSent = { x: player.x, at: performance.now() }; view.camX = clamp(player.x - view.w / view.s / 2, 0, Math.max(0, wWidth() - view.w / view.s)); toast('✨ ' + t('gt.teleported')); open();
+    })));
+  });
+}
+function guideTaxi(b, x, after) {
+  const fail = key => toast(t(key || 'toast.taxiBusy'));
+  socket.emit('taxiQuote', { to: Math.round(x) }, q => {
+    if (!q?.ok) return fail(q?.key);
+    socket.emit('taxiOffer', { pct: 100 }, r => {
+      if (!r?.ok || r.refused) return fail();
+      const go = () => setTimeout(() => socket.emit('taxiGo', {}, g => {
+        if (!g?.ok) return fail(g?.key);
+        const fromX = player.x, toX = g.x; manualInput();
+        ride = { kind: 'taxi', fromX, toX, t0: performance.now(), dur: clamp(Math.abs(toX - fromX) / 0.55, 1500, 6500), dir: Math.sign(toX - fromX) || 1, text: '', after };
+        toast('🚕 ' + t('taxi.paid', { price: taxiMoney(g.price) }));
+      }), 180);
+      if (r.accepted) return go();
+      setTimeout(() => socket.emit('taxiAccept', {}, a => (a?.ok ? go() : fail())), 180);   // the driver countered: take it
+    });
+  });
+}
 // ---------- Taxi (Sprint 24b): click a taxi, it pulls up, haggle over the fare, ride anywhere ----------
 let taxiHail = null;                       // { car, t0 } while a taxi is on its way / waiting
 function hailTaxi(car) {
@@ -1567,7 +1611,7 @@ function loadData(name, cb) {
   if (dataCache[name]) return cb(dataCache[name]);
   fetch(`/data/${name}.json`).then(r => r.json()).then(d => { dataCache[name] = d; cb(d); }).catch(() => toast(t('ui.dataError')));
 }
-const wikiUi = createWiki({ el, btn: (...x) => btn(...x), t, L10, loadData, buildings: () => buildings, walkTo: (...x) => walkTo(...x), openBuilding: b => openBuilding(b), showTab: k => showTab(k), closeModal: () => closeModal(), toast });
+const wikiUi = createWiki({ el, btn: (...x) => btn(...x), t, L10, loadData, goBuilding: k => goToBuildingKind(k), showTab: k => showTab(k), closeModal: () => closeModal() });
 const safeUrl = u => (typeof u === 'string' && /^https:\/\//.test(u) ? u : null);
 const extLink = (label, url) => { const a = el('a', label, 'extLink'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a; };
 const badgeEl = (text, cls) => el('span', text, 'tag ' + (cls || ''));

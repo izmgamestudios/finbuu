@@ -2056,7 +2056,7 @@
     "related": "İlgili maddeler",
     "results": "{{n}} madde",
     "none": "Eşleşen madde yok. Aramayı kısaltmayı veya filtreleri kaldırmayı dene.",
-    "goBuilding": "Binaya git",
+    "goBuilding": "Oraya git (yürü / taksi / ışınlan)",
     "goTab": "Menüyü aç",
     "noBuilding": "Bu bina şu an bu şehirde yok.",
     "type": {
@@ -2067,6 +2067,16 @@
       "term": "Terim",
       "quest": "Görev",
       "tip": "İpucu"
-    }
+    },
+    "windowTitle": "Rehber"
+  },
+  "gt": {
+    "distance": "Mesafe: {{km}} km",
+    "walk": "Yürüyerek git (~{{s}} sn, ücretsiz)",
+    "taxi": "Taksiyle git ({{price}})",
+    "teleport": "Işınlan (anında, ücretsiz)",
+    "teleported": "Işınlandın",
+    "cooldown": "Işınlanma için {{n}} sn bekle",
+    "fail": "Şu an gidilemiyor"
   }
 }

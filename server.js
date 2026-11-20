@@ -893,6 +893,15 @@ io.on('connection', socket => {
     if (!posDirty.has(street.id)) posDirty.set(street.id, new Map()); posDirty.get(street.id).set(me.id, { x: me.x, dir: me.dir });
     progress(street, me, 'taxiRides'); reply({ ok: true, x: me.x, price: d.price }); sync();
   });
+  // Sprint 32b: the Guide can teleport you to a building (free, short cooldown); walking and taxi use the normal systems
+  socket.on('guideTeleport', ({ x } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), nx = taxiTarget(x);
+    if (!street || !me || street.mode === 'presentation' || me.drive || nx == null) return reply({ ok: false });
+    const wait = Math.ceil(((me.tpAt || 0) + 20000 - Date.now()) / 1000); if (wait > 0) return reply({ ok: false, key: 'gt.cooldown', params: { n: wait } });
+    me.tpAt = Date.now(); me.x = nx; me.taxi = null; me.taxiDeal = null;
+    if (!posDirty.has(street.id)) posDirty.set(street.id, new Map()); posDirty.get(street.id).set(me.id, { x: me.x, dir: me.dir });
+    reply({ ok: true, x: me.x });
+  });
   socket.on('taxiCancel', () => { if (me) { me.taxi = null; me.taxiDeal = null; } });
 
   // Character position: lightweight, volatile broadcast (no full state sync)

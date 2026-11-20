@@ -6,7 +6,7 @@ import { norm, words } from './help.js';
 const TYPE_ICON = { faq: '❓', menu: '☰', building: '🏢', feature: '⚙️', term: '📖', quest: '🎯', tip: '💡' };
 const S = { q: '', type: '', cat: '', item: null, open: new Set(), tree: false };   // survives re-opening during the session
 
-export function createWiki({ el, btn, t, L10, loadData, buildings, walkTo, openBuilding, showTab, closeModal, toast }) {
+export function createWiki({ el, btn, t, L10, loadData, goBuilding, showTab, closeModal }) {
   function index(doc) {
     const catById = new Map(), parent = new Map(), order = [];
     const walk = (cs, par, path) => cs.forEach(c => { const p = [...path, c]; catById.set(c.id, { c, path: p }); parent.set(c.id, par); order.push(c.id); if (c.children) walk(c.children, c.id, p); });
@@ -41,11 +41,7 @@ export function createWiki({ el, btn, t, L10, loadData, buildings, walkTo, openB
   const goLabel = go => (go.kind === 'building' ? t('wiki.goBuilding') : t('wiki.goTab'));
   function go(it) {
     if (it.go.kind === 'tab') { closeModal(); return showTab(it.go.target); }
-    if (it.go.kind === 'building') {
-      const b = buildings().find(x => x.kind === it.go.target);
-      if (!b) return toast(t('wiki.noBuilding'));
-      closeModal(); walkTo(b.x + b.w / 2, () => openBuilding(b), b.id);
-    }
+    if (it.go.kind === 'building') goBuilding(it.go.target);   // the game offers walk / taxi / teleport
   }
   function render(body, doc, redraw) {
     const ix = index(doc), counts = new Map();

@@ -913,6 +913,44 @@
    "related": []
   },
   {
+   "id": "guide-window",
+   "cat": "ui-panels",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Rehber penceresi (📚, G)",
+    "en": "Guide window (📚, G)"
+   },
+   "body": {
+    "tr": "Rehber haritanın her yerinden açılır: sağ üstte 🗺 haritanın yanındaki 📚 düğmesi veya G tuşu. Bir maddede \"Oraya git\" dersen yürüyerek (süre), taksiyle (coin) ya da ışınlanarak (anında, 20 sn bekleme) otomatik gidilir; vardığında bina açılır.",
+    "en": "The Guide opens from anywhere: the 📚 button next to the 🗺 map at the top right, or the G key. Press \"Go there\" in an article to travel automatically by walking (time), taxi (coins) or teleport (instant, 20 s cooldown); the building opens on arrival."
+   },
+   "tags": [
+    "rehber",
+    "kilavuz",
+    "isinlan",
+    "taksi",
+    "git"
+   ],
+   "steps": {
+    "tr": [
+     "Sağ üstteki 📚 veya G tuşu",
+     "Bir madde → \"Oraya git\"",
+     "Yürü / Taksi / Işınlan seç"
+    ],
+    "en": [
+     "The 📚 at the top right or the G key",
+     "An article → \"Go there\"",
+     "Pick Walk / Taxi / Teleport"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
    "id": "mobile-sheet",
    "cat": "ui-panels",
    "type": "menu",

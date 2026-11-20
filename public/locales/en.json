@@ -2056,7 +2056,7 @@
     "related": "Related",
     "results": "{{n}} articles",
     "none": "No matching articles. Try a shorter search or clear the filters.",
-    "goBuilding": "Go to the building",
+    "goBuilding": "Go there (walk / taxi / teleport)",
     "goTab": "Open the menu",
     "noBuilding": "That building is not in this city right now.",
     "type": {
@@ -2067,6 +2067,16 @@
       "term": "Term",
       "quest": "Quest",
       "tip": "Tip"
-    }
+    },
+    "windowTitle": "Guide"
+  },
+  "gt": {
+    "distance": "Distance: {{km}} km",
+    "walk": "Walk there (~{{s}} s, free)",
+    "taxi": "Take a taxi ({{price}})",
+    "teleport": "Teleport (instant, free)",
+    "teleported": "Teleported",
+    "cooldown": "Wait {{n}} s to teleport again",
+    "fail": "Cannot go there right now"
   }
 }
