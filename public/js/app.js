@@ -1299,8 +1299,15 @@ const safeUrl = u => (typeof u === 'string' && /^https:\/\//.test(u) ? u : null)
 const extLink = (label, url) => { const a = el('a', label, 'extLink'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a; };
 const badgeEl = (text, cls) => el('span', text, 'tag ' + (cls || ''));
 
+const founderCos = () => Object.values(state?.companies || {}).filter(c => c.founders.includes(myId()) && !c.isNpc && c.status === 'active');
+const WIRED_FALLBACK = ['employeeProductivity', 'operatingCostReduction', 'customerRetention', 'conversionRate'];
+function fetchToolStates(cb) {
+  const cos = founderCos(), out = {}; if (!cos.length) return cb(out);
+  let left = cos.length; const done = () => { if (--left === 0) cb(out); };
+  cos.forEach(c => { let fin = false; const to = setTimeout(() => { if (!fin) { fin = true; done(); } }, 1500); socket.emit('toolsGet', { cid: c.id }, r => { if (fin) return; fin = true; clearTimeout(to); if (r?.ok) out[c.id] = r; done(); }); });
+}
 function openOss() {
-  loadData('open-source-tools', cat => openModal(body => {
+  loadData('open-source-tools', cat => fetchToolStates(states => openModal(body => {
     body.classList.add('wideBody'); body.append(el('h3', '🌱 ' + t('oss.title')), el('p', t('oss.intro'), 'muted'));
     const q = el('input'); q.placeholder = t('oss.search'); q.maxLength = 40;
     const catSel = el('select'), typeSel = el('select');
@@ -1311,7 +1318,10 @@ function openOss() {
     const effectText = e => { const label = cat.effectStats[e.stat] || e.stat; if (e.stat === 'onlineSalesChannel') return `${label.replace(/\s*\(.*\)/, '')}: ${t('oss.effectOpen')}`; const p = Math.round(e.value * 100); return `${label.replace(/\s*\([^)]*\)/, '')}: ${t(e.stat === 'operatingCostReduction' ? 'oss.effectNeg' : 'oss.effectVal', { p })}`; };
     const row = tool => {
       const box = el('div', null, 'ossTool'), head = el('button', null, 'ossHead'); head.type = 'button';
+      const have = Object.values(states).some(stt => stt.installed.some(x => x.id === tool.id));
+      if (tool.game.unlockLevel > me().stats.level && !have) box.classList.add('dim');
       head.append(el('b', tool.name), badgeEl(t('oss.type.' + tool.licenseType), 'lic ' + tool.licenseType), el('small', `${cat.categories[tool.category] || ''} · ${t('oss.tier', { n: tool.game.tier })}`, 'muted'));
+      if (have) head.append(badgeEl('✓ ' + t('tools.installed'), 'lic osi'));
       head.append(el('small', tool.description, 'ossDesc'));
       const detail = el('div', null, 'ossDetail'); detail.hidden = true;
       head.onclick = () => { detail.hidden = !detail.hidden; box.classList.toggle('open', !detail.hidden); };
@@ -1322,7 +1332,26 @@ function openOss() {
       detail.append(el('h4', t('oss.how'))); const ol = el('ol'); tool.howToUse.forEach(x => ol.append(el('li', x))); detail.append(ol);
       const links = el('div', null, 'row'); links.append(el('small', t('oss.links') + ':', 'muted'));
       ['repo', 'website', 'docs', 'community', 'support'].forEach(k => { const u = safeUrl(tool.links?.[k]); if (u) links.append(extLink(t('oss.l_' + k), u)); });
-      detail.append(links, el('small', t('oss.soon'), 'muted'));
+      detail.append(links);
+      // Sprint 21b: install on one of my companies
+      const cos = founderCos(), block = el('div', null, 'ossInstall'); detail.append(block);
+      if (!cos.length) block.append(el('small', t('tools.noCompany'), 'muted'));
+      else {
+        const sel = el('select'); cos.forEach(c => sel.append(new Option(companyName(c), c.id))); sel.hidden = cos.length < 2;
+        const info = el('small', '', 'muted'), go = btn('', () => {
+          const cid = sel.value;
+          socket.emit('toolInstall', { cid, id: tool.id }, r => { if (!r) return; if (r.key) return toast(t(r.key)); if (r.ok) { states[cid] = r; toast(t('tools.ok', { tool: tool.name, xp: r.xp })); render(); } });
+        }, { primary: true });
+        const refresh = () => {
+          const cid = sel.value, stt = states[cid], c = state.companies[cid], mine = stt?.installed.find(x => x.id === tool.id);
+          const wired = (stt?.wired || WIRED_FALLBACK).includes(g.effect.stat), cost = Math.round(g.setupCost * (stt?.scale ?? 0.4)), lvl = stt?.level ?? me().stats.level;
+          go.textContent = mine ? '✓ ' + t(mine.suspended ? 'tools.suspended' : 'tools.installed') : !wired ? t('tools.soonEffect') : lvl < g.unlockLevel ? t('tools.needLevel', { n: g.unlockLevel }) : '🧰 ' + t('tools.installFor', { cost: fmt(cost) });
+          go.disabled = !!mine || !wired || lvl < g.unlockLevel || !stt;
+          const rev = g.effect.value < 1 ? g.monthlyHostingCost / g.effect.value : 0;
+          if (wired && rev && c) { const ok = finOf([c]).monthRev >= rev; info.textContent = `${t('tools.breakEven', { rev: fmt(rev) })} · ${t(ok ? 'tools.enough' : 'tools.early')}`; } else info.textContent = '';
+        };
+        sel.onchange = refresh; refresh(); block.append(sel, go, info); block.refresh = refresh;
+      }
       box.append(head, detail); return box;
     };
     const render = () => {
@@ -1333,6 +1362,30 @@ function openOss() {
     };
     q.oninput = render; catSel.onchange = render; typeSel.onchange = render; render();
     body.append(count, list);
+  })));
+}
+function openMyTools(c, data) {
+  if (!data) return socket.emit('toolsGet', { cid: c.id }, r => { if (r?.ok) openMyTools(c, r); });
+  loadData('open-source-tools', cat => openModal(body => {
+    const again = r => { if (!r) return; if (r.key) toast(t(r.key)); if (r.ok) openMyTools(c, r); };
+    body.classList.add('wideBody'); body.append(el('h3', `${t('tools.title')} · ${companyName(c)}`));
+    const tiles = el('div', null, 'mini'); tiles.append(kpi(t('tools.monthly'), fmt(data.monthly)), kpi(t('tools.cash'), fmt(data.cash), data.cash < data.monthly ? '#dc2626' : undefined)); body.append(tiles);
+    const fx = Object.entries(data.effects || {}); if (fx.length) body.append(el('p', '⚡ ' + t('tools.effects') + ': ' + fx.map(([k, v]) => `${t('tools.stat.' + k) || k} +%${Math.round(v * 100)}`).join(' · ')));
+    if (!data.installed.length) body.append(el('p', t('tools.empty'), 'muted'));
+    const list = el('div', null, 'prodList');
+    data.installed.forEach(x => {
+      const tool = cat.tools.find(y => y.id === x.id); if (!tool) return;
+      const row = el('div', null, 'prodRow'), info = el('div');
+      info.append(el('b', `${x.suspended ? '⏸ ' : '✅ '}${tool.name}`), el('small', ` ${cat.categories[tool.category] || ''} · ${fmt(tool.game.monthlyHostingCost)}/${t('oss.hosting').toLowerCase()}`, 'muted'));
+      if (x.suspended) info.append(el('small', ' ' + t('tools.suspNote'), 'muted'));
+      const act = el('div', null, 'row');
+      if (x.suspended) act.append(btn(t('tools.reactivate', { cost: fmt(tool.game.monthlyHostingCost) }), () => socket.emit('toolReactivate', { cid: c.id, id: x.id }, again), { primary: true }));
+      act.append(btn('🗑 ' + t('tools.remove'), () => { if (confirm(t('tools.confirmRemove'))) socket.emit('toolRemove', { cid: c.id, id: x.id }, again); }));
+      row.append(info, act); list.append(row);
+    });
+    body.append(list, el('small', t('tools.capNote'), 'muted'));
+    const oss = buildings.find(b => b.kind === 'oss');
+    if (oss) body.append(btn('🌱 ' + t('tools.goBuilding'), () => { closeModal(); walkTo(oss.x + oss.w / 2, () => openBuilding(oss), oss.id); }, { primary: true }));
   }));
 }
 function openGrants() {
@@ -2511,6 +2564,7 @@ function openDept(c, d) {
         box.append(el('p', t('dept.itInfo', { lvl, max: it.maxLevel, pct: Math.round(lvl * it.cyberShield * 100) })));
         if (founder && lvl < it.maxLevel) rec(t('dept.itUpgrade', { cost: it.cost }), emit('itUpgrade'), t('dept.itWhy'));
         else if (!founder) visitorNote();
+        if (founder) box.append(btn(t('tools.myTools'), () => openMyTools(c)));
         if (member) box.append(btn(t('crm.open'), () => openCrm(c)), btn(t('plan.open'), () => openPlan(c)), btn(t(['sector.service', 'sector.tech', 'sector.education', 'sector.creative', 'sector.health'].includes(c.sector) ? 'erp.openService' : 'erp.open'), () => openErp(c)));
         break;
       }

@@ -11,6 +11,8 @@ const CAP = { default: 0.35, operatingCostReduction: 0.2 };
 const MAX_TOOLS = 12, XP_DIV = 5;      // catalog xpReward / 5 -> 10 / 24 / 50 / 100 XP on first install
 const GRACE_NOTE = 'suspended';        // a tool whose hosting cannot be paid is suspended (effects off), never bankrupting the company
 
+// effects that are already wired into the economy (Sprint 21a); the rest arrive in 21c and cannot be bought yet
+const WIRED = new Set(['employeeProductivity', 'operatingCostReduction', 'customerRetention', 'conversionRate']);
 const get = id => BY_ID.get(id) || null;
 const setupCost = tool => Math.max(1, Math.round(tool.game.setupCost * SETUP_SCALE));
 const book = c => (c.tools ||= []);
@@ -36,6 +38,7 @@ const effectOf = (c, stat) => (c.tools?.length ? effects(c)[stat] || 0 : 0);
 function checkInstall(c, id, level) {
   const tool = get(id);
   if (!tool) return { ok: false, key: 'toast.toolBad' };
+  if (!WIRED.has(tool.game.effect.stat)) return { ok: false, key: 'toast.toolSoon' };
   if (book(c).some(x => x.id === id)) return { ok: false, key: 'toast.toolHave' };
   if (book(c).length >= MAX_TOOLS) return { ok: false, key: 'toast.toolFull' };
   if (level < tool.game.unlockLevel) return { ok: false, key: 'toast.toolLevel' };
@@ -64,4 +67,4 @@ function reactivate(c, id) {
   c.cash -= cost; x.suspended = false; return { ok: true, cost };
 }
 const categories = c => new Set(book(c).map(x => BY_ID.get(x.id)?.category).filter(Boolean));
-module.exports = { SETUP_SCALE, DIMINISH, CAP, MAX_TOOLS, XP_DIV, get, setupCost, book, active, hostingMonthly, effects, effectOf, checkInstall, place, remove, chargeMonth, reactivate, categories, GRACE_NOTE };
+module.exports = { WIRED, SETUP_SCALE, DIMINISH, CAP, MAX_TOOLS, XP_DIV, get, setupCost, book, active, hostingMonthly, effects, effectOf, checkInstall, place, remove, chargeMonth, reactivate, categories, GRACE_NOTE };

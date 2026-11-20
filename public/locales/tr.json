@@ -345,7 +345,8 @@
     "toolBad": "Araç bulunamadı ya da bu işlem yapılamaz.",
     "toolHave": "Bu araç zaten kurulu.",
     "toolFull": "En fazla 12 araç kurulabilir.",
-    "toolLevel": "Bu aracın seviye şartını henüz karşılamıyorsun."
+    "toolLevel": "Bu aracın seviye şartını henüz karşılamıyorsun.",
+    "toolSoon": "Bu aracın etkisi henüz oyuna bağlı değil (yakında)."
   },
   "log": {
     "joined": "{{player}} caddeye girdi.",
@@ -1499,5 +1500,38 @@
     "sources": "Kaynakça",
     "step": "Adım {{n}}",
     "ref": "Kaynak: oyunlastirma.co · TOY Oyunlaştırma Modeli"
+  },
+  "tools": {
+    "install": "Şirkete kur",
+    "installFor": "Kur ({{cost}})",
+    "installed": "Kurulu",
+    "suspended": "Askıda",
+    "needLevel": "Seviye {{n}} gerekli",
+    "soonEffect": "Etkisi yakında",
+    "noCompany": "Önce bir şirket kur; araçlar şirkete kurulur.",
+    "onlyFounder": "Sadece kurucular araç kurabilir.",
+    "pick": "Hangi şirket?",
+    "breakEven": "Başa baş: yaklaşık {{rev}}/ay gelir",
+    "enough": "Şirketin için uygun",
+    "early": "Şirketin için henüz erken",
+    "ok": "{{tool}} kuruldu! +{{xp}} XP",
+    "myTools": "🧰 Kurulu araçlar",
+    "title": "Kurulu araçlar",
+    "empty": "Henüz araç kurmadın. Açık Kaynak binasından seç.",
+    "monthly": "Aylık sunucu gideri",
+    "effects": "Toplam etki",
+    "remove": "Kaldır",
+    "reactivate": "Aç ({{cost}})",
+    "suspNote": "Sunucu gideri ödenemedi; etkisi kapalı. Kasaya para koyup yeniden aç.",
+    "goBuilding": "Açık Kaynak binasına git",
+    "cash": "Kasa",
+    "confirmRemove": "Aracı kaldır? Kurulum bedeli iade edilmez.",
+    "stat": {
+      "employeeProductivity": "Çalışan verimliliği",
+      "operatingCostReduction": "Operasyon gideri düşüşü",
+      "customerRetention": "Müşteri sadakati",
+      "conversionRate": "Satışa dönüşüm"
+    },
+    "capNote": "Aynı etkiye eklenen her araç %80 değer katar (azalan getiri)."
   }
 }

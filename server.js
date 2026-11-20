@@ -919,7 +919,7 @@ io.on('connection', socket => {
 
   // ---- Sprint 21a: open-source tools installed on a company (founders only) ----
   const toolCo = cid => { const c = street?.companies[cid]; return c && !c.isNpc && c.status === 'active' && c.founders.includes(me?.id) ? c : null; };
-  const toolsReply = (c, extra = {}) => ({ ok: true, day: street.day || 0, scale: TOOLS.SETUP_SCALE, max: TOOLS.MAX_TOOLS, cash: Math.round(c.cash), monthly: TOOLS.hostingMonthly(c), effects: TOOLS.effects(c),
+  const toolsReply = (c, extra = {}) => ({ ok: true, day: street.day || 0, scale: TOOLS.SETUP_SCALE, max: TOOLS.MAX_TOOLS, wired: [...TOOLS.WIRED], cash: Math.round(c.cash), monthly: TOOLS.hostingMonthly(c), effects: TOOLS.effects(c),
     installed: TOOLS.book(c).map(x => ({ id: x.id, day: x.day, suspended: !!x.suspended })), level: founderLevel(c), ...extra });
   const founderLevel = c => Math.max(1, ...c.founders.map(f => street.players[f]?.stats.level || 1));
   socket.on('toolsGet', ({ cid } = {}, cb) => { const c = toolCo(cid); if (c && typeof cb === 'function') cb(toolsReply(c)); });

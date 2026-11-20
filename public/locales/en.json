@@ -345,7 +345,8 @@
     "toolBad": "Tool not found or action not possible.",
     "toolHave": "This tool is already installed.",
     "toolFull": "You can install at most 12 tools.",
-    "toolLevel": "You do not meet this tool's level requirement yet."
+    "toolLevel": "You do not meet this tool's level requirement yet.",
+    "toolSoon": "This tool's effect is not wired into the game yet (coming soon)."
   },
   "log": {
     "joined": "{{player}} entered the street.",
@@ -1499,5 +1500,38 @@
     "sources": "References",
     "step": "Step {{n}}",
     "ref": "Source: oyunlastirma.co · TOY Gamification Model"
+  },
+  "tools": {
+    "install": "Install on company",
+    "installFor": "Install ({{cost}})",
+    "installed": "Installed",
+    "suspended": "Suspended",
+    "needLevel": "Level {{n}} required",
+    "soonEffect": "Effect coming soon",
+    "noCompany": "Start a company first; tools are installed on a company.",
+    "onlyFounder": "Only founders can install tools.",
+    "pick": "Which company?",
+    "breakEven": "Break-even: about {{rev}}/month revenue",
+    "enough": "Fits your company",
+    "early": "Too early for your company",
+    "ok": "{{tool}} installed! +{{xp}} XP",
+    "myTools": "🧰 Installed tools",
+    "title": "Installed tools",
+    "empty": "No tools yet. Pick some at the Open Source building.",
+    "monthly": "Monthly hosting cost",
+    "effects": "Total effect",
+    "remove": "Remove",
+    "reactivate": "Reactivate ({{cost}})",
+    "suspNote": "Hosting could not be paid; its effect is off. Add cash and reactivate.",
+    "goBuilding": "Go to Open Source building",
+    "cash": "Cash",
+    "confirmRemove": "Remove the tool? The setup cost is not refunded.",
+    "stat": {
+      "employeeProductivity": "Employee productivity",
+      "operatingCostReduction": "Operating cost reduction",
+      "customerRetention": "Customer retention",
+      "conversionRate": "Conversion rate"
+    },
+    "capNote": "Each extra tool on the same effect adds 80% of the previous (diminishing returns)."
   }
 }

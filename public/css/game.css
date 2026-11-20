@@ -534,3 +534,7 @@ nav button.active { color: var(--accent) !important; background: rgba(255, 183, 
 .gfFloor.seen i { background: var(--good); color: #fff } .gfFloor.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent-deep) } .gfFloor.on i { background: var(--accent-ink); color: var(--accent) }
 .gfPanel { background: var(--panel-2); border-radius: 12px; padding: 12px 14px } .gfPanel h3 { margin: 2px 0 6px }
 @media (max-width: 640px) { .gfWrap { grid-template-columns: 1fr } .gfTower { max-height: 26vh } }
+
+/* Sprint 21b: tool install */
+.ossInstall { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line) } .ossInstall select { flex: 1 1 140px } .ossInstall small { flex-basis: 100% }
+.ossTool.dim { opacity: .6 }
