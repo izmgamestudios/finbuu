@@ -48,6 +48,19 @@ boardApi.post('/', (req, res) => { if (!BOARDS.allow(req.ip)) return res.status(
 boardApi.put('/:id', (req, res) => { if (!BOARDS.allow(req.ip)) return res.status(429).json({ ok: false }); const ok = /^[a-z0-9]{8}$/.test(req.params.id) && BOARDS.update(req.params.id, String(req.body?.editKey || ''), req.body?.board); res.status(ok ? 200 : 403).json({ ok: !!ok }); });
 boardApi.get('/:id', (req, res) => { const b = /^[a-z0-9]{8}$/.test(req.params.id) ? BOARDS.get(req.params.id) : null; if (!b) return res.status(404).json({ ok: false }); res.set('Cache-Control', 'no-cache'); res.json({ ok: true, ...b }); });
 app.use('/api/boards', boardApi);
+// Sprint 31: accounts (email + password). Sessions are bearer tokens kept in the browser's localStorage.
+const ACC = require('./accounts');
+const accApi = express.Router(); accApi.use(express.json({ limit: '4kb' }));
+const bearer = req => String(req.headers.authorization || '').replace(/^Bearer /, '');
+const answer = (res, r) => res.status(r.ok ? 200 : (r.error === 'rate' || r.error === 'locked' ? 429 : r.error === 'auth' ? 401 : 400)).json(r);
+accApi.post('/register', (req, res) => answer(res, ACC.register(req.body || {}, req.ip)));
+accApi.post('/login', (req, res) => answer(res, ACC.login(req.body || {}, req.ip)));
+accApi.post('/reset', (req, res) => answer(res, ACC.reset(req.body || {}, req.ip)));
+accApi.post('/logout', (req, res) => { ACC.logout(bearer(req)); res.json({ ok: true }); });
+accApi.post('/delete', (req, res) => answer(res, ACC.remove(bearer(req), req.body?.password, req.ip)));
+accApi.get('/me', (req, res) => { const a = ACC.fromToken(bearer(req)); if (!a) return res.status(401).json({ ok: false }); res.json({ ok: true, account: ACC.publicAcc(a), board: a.profile.board, share: a.profile.share }); });
+accApi.put('/board', express.json({ limit: '40kb' }), (req, res) => { const a = ACC.fromToken(bearer(req)); if (!a) return res.status(401).json({ ok: false }); const b = BOARDS.clean(req.body?.board); const sh = req.body?.share; ACC.setBoard(a.id, b, sh && typeof sh.id === 'string' && /^[a-z0-9]{8}$/.test(sh.id) && typeof sh.editKey === 'string' ? { id: sh.id, editKey: sh.editKey.slice(0, 40) } : null); res.json({ ok: true }); });
+app.use('/api/account', accApi);
 app.get('/b/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'board.html')));
 app.use(express.static(path.join(__dirname, 'public')));
 // Vendor libs served from node_modules (pinned via package-lock, no CDN dependency)
@@ -729,6 +742,22 @@ setInterval(() => {
   innerDirty.clear();
 }, 100);
 
+// Sprint 31: bind a logged-in account to a player: profile (badges, streak, season, best week) follows the account across rooms
+function hydrateFromAccount(p, accountId) {
+  const prof = ACC.profileOf(accountId); if (!prof) return;
+  p.accountId = accountId;
+  p.badges = { ...prof.badges, ...(p.badges || {}) };
+  if (prof.streak && p.streak) {
+    const ps = p.streak, as = prof.streak, best = Math.max(ps.best || 0, as.best || 0);
+    if (as.last === ps.last) p.streak = { last: ps.last, n: Math.max(ps.n, as.n), best };
+    else if (as.last === dayBefore(ps.last) && ps.n <= 1) { const n = as.n + 1; p.streak = { last: ps.last, n, best: Math.max(best, n) }; }   // played yesterday on the account, today is the next day
+    else p.streak = as.last > ps.last ? { ...as, best } : { ...ps, best };
+  } else if (prof.streak) p.streak = { ...prof.streak };
+  if (prof.season && (!p.season || prof.season.key >= p.season.key)) p.season = { key: prof.season.key, sp: Math.max(prof.season.sp, p.season?.key === prof.season.key ? p.season.sp : 0), got: [...new Set([...(prof.season.got || []), ...(p.season?.key === prof.season.key ? p.season.got || [] : [])])] };
+  p.bestWeek = Math.max(p.bestWeek || 0, prof.bestWeek || 0);
+}
+const syncToAccount = p => { if (p?.accountId) ACC.mergeProfile(p.accountId, { badges: p.badges, streak: p.streak, season: p.season, bestWeek: p.bestWeek }); };
+
 // ---------- GAME SOCKETS ----------
 io.on('connection', socket => {
   let street = null, me = null, lastAction = 0, lastMove = 0, pinFails = 0;
@@ -739,6 +768,13 @@ io.on('connection', socket => {
   const sync = () => syncRoom(street);
 
   socket.emit('seed', publicSeed());
+  socket.on('authSession', ({ token } = {}, cb) => {
+    const a = typeof token === 'string' && token.length === 64 ? ACC.fromToken(token) : null;
+    socket.data.accountId = a?.id || null;
+    if (a && me) { hydrateFromAccount(me, a.id); ensureQuests(street, me); profileSignal(); }
+    if (typeof cb === 'function') cb(a ? { ok: true, account: ACC.publicAcc(a) } : { ok: false });
+  });
+  const profileSignal = () => { if (street) syncRoom(street); };
 
   let traveling = null, myWorld = null; // traveling: { timer } while on the road (the player is in no room)
   function arrive(st) {
@@ -754,9 +790,10 @@ io.on('connection', socket => {
   }
   function enter(st, name) {
     street = st; myWorld = st.worldId;
-    me = { id: socket.id, name: clean(name, 20) || 'Anon-' + crypto.randomBytes(2).toString('hex'),
+    me = { id: socket.id, name: clean(name, 20) || (socket.data.accountId && ACC.nameOf(socket.data.accountId)) || 'Anon-' + crypto.randomBytes(2).toString('hex'),
       coins: SEED.startCoins, role: 'role.candidate', stats: newStats(),
       x: SPAWN_X, dir: 1, avatar: crypto.randomInt(0, 1000), busCard: 0, badges: {}, counters: {}, team: null, life: newLife(), resumeToken: crypto.randomBytes(16).toString('hex') };
+    if (socket.data.accountId) hydrateFromAccount(me, socket.data.accountId);
     ensureQuests(st, me);
     st.players[socket.id] = me; ensureFlat(st, me);
     if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
@@ -1745,6 +1782,7 @@ io.on('connection', socket => {
     if (!street) return;
     for (const c of Object.values(street.companies)) c.employees = c.employees.filter(id => id !== socket.id);
     if (me) { if (me.drive) { const dc = street?.companies[me.drive.cid]; if (dc?.vehicle) { dc.vehicle.x = me.x; dc.vehicle.park = 'street'; } me.drive = null; } me.loc = null; me.pitch = null; if (!me.afk) me.away = awayBaseline(street, me); me.afk = false; me.offlineSince = street.day || 0; }
+    syncToAccount(me);
     street.pastPlayers[socket.id] = me;
     delete street.players[socket.id];
     if (street.ownerId === socket.id) street.ownerId = Object.keys(street.players)[0] || null;
@@ -1895,7 +1933,7 @@ function economyTick(only) {
       if (r.suspended.length) addLog(st, 'log.toolsSuspended', { n: r.suspended.length, ...cParams(c) });
     }
     R.closeDay(st);
-    for (const p of Object.values(st.players)) checkLevel(p);
+    for (const p of Object.values(st.players)) { checkLevel(p); syncToAccount(p); }
     weekSettle(st);
     goalSettle(st);
     marketTick(st);

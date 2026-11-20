@@ -8,9 +8,9 @@ export const boardLabels = () => ({
   toyLabels: tt('toyLabels', { returnObjects: true }), bmc: Object.fromEntries(BMC_KEYS.map(k => [k, i18next.t('bmc.' + k)])), deck: tt('deckTitles', { returnObjects: true })
 });
 
-export function createBoardUi({ el, btn, toast, loadJSON, saveJSON }) {
+export function createBoardUi({ el, btn, toast, loadJSON, saveJSON, onChange }) {
   let board = cleanBoard(loadJSON('gamfedBoard', null)), share = loadJSON('gamfedShare', null), slideIdx = 0, saveTimer = null;
-  const persist = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => saveJSON('gamfedBoard', board), 300); };
+  const persist = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveJSON('gamfedBoard', board); onChange?.(); }, 300); };
   const U = k => tt('ui.' + k);
 
   // a textarea bound to a getter/setter with a char counter
@@ -38,7 +38,7 @@ export function createBoardUi({ el, btn, toast, loadJSON, saveJSON }) {
       if (!res || res.status === 403 || res.status === 404) res = await fetch('/api/boards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ board }) });
       if (res.status === 429) return toast(U('rate'));
       const j = await res.json(); if (!j.ok) return toast(U('failed'));
-      if (j.id) { share = { id: j.id, editKey: j.editKey }; saveJSON('gamfedShare', share); }
+      if (j.id) { share = { id: j.id, editKey: j.editKey }; saveJSON('gamfedShare', share); onChange?.(); }
       const url = `${location.origin}/b/${share.id}`; try { await navigator.clipboard?.writeText(url); toast(U('copied')); } catch { toast(U('published')); }
       renderBar(bar, bar._ctx);
     } catch { toast(U('failed')); }

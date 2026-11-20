@@ -8,6 +8,8 @@ import { renderTrMap } from './trmap.js';
 import { rankFaq, searchItems, tutorialState, FAQ_IDS } from './help.js';
 import { suggestions, companyActions, employeeCap, maxTenants, staffOf, floorsFor, floorsOfCompany, deptOpen } from './advisor.js';
 import { createBoardUi } from './gfboard.js';
+import { cleanBoard } from './board.js';
+import { createAccountUi } from './account.js';
 import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON, HOME_ROOMS, HOME_FLOORS } from './interior.js';
 
 const { i18next, io, Chart } = window;
@@ -1443,7 +1445,7 @@ socket.on('awaySummary', s => {
   });
 });
 // Network blip: the socket reconnects with a new id, so ask the server to put us back as the same player
-socket.on('connect', () => { if (reconnectResume) { reconnectResume = false; const r = loadJSON('resume', null); if (r?.token) socket.emit('resume', { roomId: r.roomId, token: r.token }); } });
+socket.on('connect', () => { acctUi.connect(); if (reconnectResume) { reconnectResume = false; const r = loadJSON('resume', null); if (r?.token) socket.emit('resume', { roomId: r.roomId, token: r.token }); } });
 // ---------- Team: walk to a teammate / call a teammate to you ----------
 function goToPlayer(id, hint) {
   const pl = state?.players[id]; if (!pl || id === myId()) return;
@@ -1602,7 +1604,7 @@ function openGrants() {
 }
 let gfUi = null;
 function openGamFed(startFloor = 1, startTab = 'floors') {
-  gfUi ||= createBoardUi({ el, btn, toast, loadJSON, saveJSON });
+  gfUi ||= createBoardUi({ el, btn, toast, loadJSON, saveJSON, onChange: () => acctUi?.pushBoard() });
   loadData('gamfed', g => openModal(body => {
     body.classList.add('wideBody'); body.append(el('h3', '🎮 ' + g.title[i18next.language?.startsWith('tr') ? 'tr' : 'en']), el('p', L10(g.intro), 'muted'));
     const seen = new Set(loadJSON('gamfedSeen', [])); let cur = startFloor;
@@ -1990,6 +1992,11 @@ $('modal').onclick = e => { if (e.target.id === 'modal' && modalClosable) closeM
 const btn = (label, onClick, { primary = false, isDefault = false } = {}) => {
   const b = el('button', label, primary ? 'primary' : ''); b.onclick = onClick; if (isDefault) b.dataset.default = '1'; return b;
 };
+const acctUi = createAccountUi({ el, btn, toast, openModal, closeModal, socket, loadJSON, saveJSON,
+  getBoard: () => ({ board: cleanBoard(loadJSON('gamfedBoard', null)), share: loadJSON('gamfedShare', null) }),
+  onBoardAdopted: (b, s) => { saveJSON('gamfedBoard', cleanBoard(b)); saveJSON('gamfedShare', s || null); gfUi = null; },
+  setLabel: txt => { const b = $('dwAccount'); if (b) b.lastChild.textContent = txt; } });
+$('dwAccount').onclick = () => { openDrawer(false); acctUi.open(); };
 
 // lot.rent / lot.price come from the server (city real-estate data converted to coins)
 const costLabel = (ws, lot) => {
