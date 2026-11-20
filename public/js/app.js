@@ -2,7 +2,7 @@
 // Finbuu client: scenes (street <-> zoom <-> company interior), input (keys, click, joystick), advisor (OK / Next / Auto),
 // HUD, status overlay (FPS / ping / sync), leaderboard layer, NPC dialogs with ID cards, department panels,
 // founding wizard, chat + polls, presentation (watch-only) mode. The server stays authoritative for every action.
-import { layout, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook } from './world.js';
+import { layout, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook, carX } from './world.js';
 import { paintAd, AD_SIZE } from './ads.js';
 import { renderTrMap } from './trmap.js';
 import { rankFaq, searchItems, tutorialState, FAQ_IDS } from './help.js';
@@ -407,6 +407,8 @@ addEventListener('keydown', e => {
   if (k === 'n') { nextSuggestion(); return; }
   if (k === 't' && (nearPlayer || nearNpc)) { e.preventDefault(); talkNearest(); return; }
   if (isPres() || ride) return; // watch-only / riding: no walking
+  if (driving && ['w', 'arrowup', 's', 'arrowdown'].includes(k)) { e.preventDefault(); exitCar(); return; }
+  if (!driving && (k === 's' || k === 'arrowdown')) { const c = nearOwnCar(); if (c) { e.preventDefault(); boardCar(c); return; } }
   if (KEYMAP[k]) { keys.add(KEYMAP[k]); manualInput(); e.preventDefault(); }
   if (['w', 'arrowup', 'e'].includes(k)) {
     e.preventDefault();
@@ -661,6 +663,7 @@ function morningRush(s) {
 // ---------- Bus: stops, card balance, rides ----------
 const stopName = i => t('bus.stop', { n: i + 1 });
 function openStop(i) {
+  if (carGuard()) return;
   const p = me(); if (!p) return;
   const fare = seed.economy.busFare, center = Object.values(state.companies).find(c => roleOf(c) === 'busCard');
   openModal(body => {
@@ -693,6 +696,33 @@ function updateRide(now) {
 }
 const roleOf = c => seed?.templates.find(tp => tp.key === c.nameKey)?.role || (c.nameKey === 'npc.busCard' ? 'busCard' : null);
 
+// ---------- Driving (Sprint 24): S / ↓ next to your company car to get in, W / ↑ to get out ----------
+const DRIVE_MULT = 1.5, DRIVE_BOOST = 2.0;   // x running speed; Shift = boost (≈ 2.6x / 3.5x walking)
+let driving = null;                          // { cid, fuel, tank, cond, odo }
+const myCars = () => Object.values(state?.companies || {}).filter(c => c.founders.includes(myId()) && c.vehicle);
+const carBusy = c => Object.values(state?.players || {}).some(p => p.drive === c.id);
+function nearOwnCar() { if (!state) return null; return myCars().find(c => !carBusy(c) && Math.abs((carX(state, c) ?? -1e9) - player.x) < 120) || null; }
+const driveCondMult = () => 0.6 + 0.4 * ((driving?.cond ?? 100) / 100);
+function boardCar(c) {
+  socket.emit('drive', { cid: c.id, on: true }, r => {
+    if (!r?.ok) return r?.key && toast(t(r.key));
+    const v = c.vehicle; driving = { cid: c.id, fuel: v.fuel ?? v.tank ?? 450, tank: v.tank ?? 450, cond: v.cond ?? 100, odo: v.odo ?? 0 };
+    player.x = r.x; player.target = null; player.onArrive = null; keys.clear(); toast(t('toast.driveOk')); updateCarHud();
+  });
+}
+function exitCar() { if (driving) socket.emit('drive', { on: false }); }
+function carGuard() { if (driving) { toast(t('veh.getOutFirst')); return true; } return false; }
+socket.on('driveInfo', d => { if (!driving) return; const low = driving.fuel > 40 && d.fuel <= 40; Object.assign(driving, d); updateCarHud(); if (low) toast('⛽ ' + t('veh.lowFuel')); });
+socket.on('driveStop', ({ reason }) => { driving = null; player.target = null; updateCarHud(); if (reason === 'fuel') toast('⛽ ' + t('toast.driveFuel')); else if (reason === 'broken') toast('🔧 ' + t('toast.driveBroken')); else if (reason === 'sold') toast(t('toast.driveSold')); });
+function updateCarHud() {
+  const box = $('carHud'); if (!box) return;
+  if (!driving) { box.hidden = true; return; }
+  box.hidden = false; box.replaceChildren();
+  const bar = (icon, label, pct, bad) => { const r = el('div', null, 'carRow'), b = el('div', null, 'bar'), f = el('i'); f.style.width = Math.max(0, Math.min(100, pct)) + '%'; if (bad) f.className = 'bad'; b.append(f); r.append(el('span', `${icon} ${label}`), b, el('b', Math.round(pct) + '%')); return r; };
+  const fp = (driving.fuel / driving.tank) * 100, cp = driving.cond;
+  box.append(el('b', '🚗 ' + t('veh.driving')), bar('⛽', t('veh.fuel'), fp, fp < 15), bar('🔧', t('veh.cond'), cp, cp < 25), el('small', t('veh.range', { km: Math.max(0, Math.round(driving.fuel)) }) + ' · ' + t('veh.hudHint'), 'muted'));
+}
+$('carBtn').onclick = () => { if (driving) exitCar(); else { const c = nearOwnCar(); if (c) boardCar(c); } };
 // ---------- Game loop ----------
 let lastT = performance.now();
 function frame(now) {
@@ -766,13 +796,13 @@ function updatePlayer(dt, now) {
   if (keys.has('left')) axis -= 1;
   if (keys.has('right')) axis += 1;
   if (joy.axis) axis = joy.axis;
-  const spd = SPEED * ((runKey() || joy.run) && axis ? RUN_MULT : 1);
+  const boost = !!(runKey() || joy.run), spd = driving ? SPEED * RUN_MULT * (boost ? DRIVE_BOOST : DRIVE_MULT) * driveCondMult() : SPEED * (boost && axis ? RUN_MULT : 1);
   let vx = axis * spd;
   if (axis) { player.target = null; player.onArrive = null; }
   else if (player.target != null) {
     const d = player.target - player.x;
     if (Math.abs(d) < 4) { player.target = null; const cb = player.onArrive; player.onArrive = null; if (cb) cb(); }
-    else vx = Math.sign(d) * SPEED;
+    else vx = Math.sign(d) * (driving ? SPEED * RUN_MULT * DRIVE_MULT * driveCondMult() : SPEED);
   }
   player.x = clamp(player.x + vx * dt, 10, wWidth() - 10);
   player.moving = vx !== 0; if (player.moving) tutFlag("moved");
@@ -783,6 +813,8 @@ function updatePlayer(dt, now) {
   const si = (seed?.busStops || []).findIndex(x => Math.abs(x - player.x) < 30);
   nearStop = state && si >= 0 ? si : null;
   $('actBtn').hidden = !(touch && (near || nearNpc || nearStop != null));
+  $('carBtn').hidden = !(touch && (driving || nearOwnCar()));
+  if (!$('carBtn').hidden) $('carBtn').textContent = driving ? '🚪 ' + t('veh.getOut') : '🚗 ' + t('veh.getIn');
   const canTalk = nearPlayer || nearNpc;
   $('talkBtn').hidden = !(touch && canTalk);
   if (!$('talkBtn').hidden) $('talkBtn').textContent = '💬 ' + t('ui.talk');
@@ -2009,6 +2041,7 @@ function companyBlock(body, c, isDefault) {
 }
 function openBuilding(b) {
   if (!state) return showModes();
+  if (carGuard()) return;
   tutFlag('entered');
   cancelPlan();
   const forThis = ranked.find(s => buildingOf(s.target)?.id === b.id);
@@ -2107,7 +2140,13 @@ function vehiclePanel(box, c, founder) {
   if (v) {
     const left = vehLeft(v);
     wrap.append(el('p', `${vehIcon(v.model)} ${v.type === 'rent' ? t('veh.has.rent') + (left != null ? ' · ' + t('veh.daysLeft', { n: left }) : '') : t('veh.has.own') + ' · ' + vehName(v.model) + ' · ' + t('veh.value', { amount: money(c.vehicleValue || 0) })}`));
-    wrap.append(el('p', '📍 ' + t(v.park === 'lot' ? 'veh.parkedLot' : 'veh.parkedDoor') + ' · ' + (v.park === 'lot' ? t('veh.parkFee', { amount: money(V.parkingPerDay) }) : t('veh.doorRisk', { pct: Math.round(V.damage.chancePerDay * 1000) / 10 })), 'muted'));
+    wrap.append(el('p', '📍 ' + t(v.park === 'lot' ? 'veh.parkedLot' : v.park === 'street' ? 'veh.parkedStreet' : 'veh.parkedDoor') + ' · ' + (v.park === 'lot' ? t('veh.parkFee', { amount: money(V.parkingPerDay) }) : t('veh.doorRisk', { pct: Math.round(V.damage.chancePerDay * 1000) / 10 })), 'muted'));
+    { const m = V.models[v.model] || V.models.sedan_new, tank = v.tank ?? 450, fuel = v.fuel ?? tank, cond = v.cond ?? 100;
+      wrap.append(el('p', `👤 ${t('veh.owner')}: ${v.by?.name || '—'} · 📏 ${Math.round(v.odo ?? m.km ?? 0).toLocaleString('tr-TR')} km`, 'muted'));
+      const k2 = el('div', null, 'mini'); k2.append(kpi('⛽ ' + t('veh.fuel'), `${Math.round(fuel)}/${tank} km`, fuel / tank < 0.15 ? '#dc2626' : undefined), kpi('🔧 ' + t('veh.cond'), Math.round(cond) + '%', cond < 25 ? '#dc2626' : undefined)); wrap.append(k2);
+      if (founder) { const r2 = el('div', null, 'others');
+        r2.append(btn('⛽ ' + t('veh.refuel', { amount: money(Math.max(1, Math.round((tank - fuel) * m.fuelPerKm))) }), () => socket.emit('vehicle', { cid: c.id, mode: 'refuel' })), btn('🔧 ' + t('veh.service', { amount: money(Math.max(1, Math.round((100 - cond) * m.price * 0.0002))) }), () => socket.emit('vehicle', { cid: c.id, mode: 'service' })));
+        wrap.append(r2); } }
   } else wrap.append(el('p', '🚗 ' + t('veh.none')));
   if (founder) {
     const row = el('div', null, 'others');
@@ -2677,6 +2716,7 @@ function idCard(w) {
   return card;
 }
 function openNpc(w) {
+  if (carGuard()) return;
   if (!state) return;
   w.talking = true;
   const p = w.profile, known = met.has(w.id);

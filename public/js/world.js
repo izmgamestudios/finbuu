@@ -513,6 +513,21 @@ function drawGamFed(ctx, b, env) {
   ctx.restore();
   ctx.strokeStyle = '#ffb703'; ctx.lineWidth = 3; ctx.strokeRect(ix, iy, iw, ih);
 }
+// Where a company car stands (mirrors server carX): parked on the street, in the car park, or at the company door
+export function carX(state, c) {
+  const v = c.vehicle; if (!v) return null;
+  if (v.park === 'street' && v.x != null) return v.x;
+  if (v.park === 'lot') { const i = Math.max(0, Object.values(state.companies).filter(o => o.vehicle?.park === 'lot').indexOf(c)); return lotX(state.lots.length || 12) + 2110 + 40 + Math.min(5, i) * 60; }
+  if (c.lotId == null) return PLAZA.x + PLAZA.w - 52;
+  const lot = state.lots[c.lotId], k = Math.max(0, lot.companyIds.filter(id => { const o = state.companies[id]; return o?.vehicle && o.vehicle.park !== 'lot' && o.vehicle.park !== 'street'; }).indexOf(c.id));
+  return lotX(c.lotId) + LOT_W - 52 - Math.min(1, k) * 78;
+}
+export const ownerOf = (state, c) => c.vehicle?.by?.name || state.players?.[c.founders?.[0]]?.name || '—';
+function carLabel(ctx, x, y, env, c, dirty) {   // owner name above the car (+ remaining rental days)
+  const v = c.vehicle, left = v.type === 'rent' && v.until != null ? Math.max(0, v.until - (env.state.day || 0)) : null;
+  pill(ctx, x, y - 36, `${v.type === 'rent' ? '🚗' : '🔑'} ${ownerOf(env.state, c)}${left != null ? ` · ${left}${env.t('veh.dayShort')}` : ''}`, 'rgba(35,40,55,.8)', '#fff', 10);
+  if (dirty) pill(ctx, x, y - 52, dirty, '#c0453f', '#fff', 9);
+}
 // A company car as a parked vehicle (colour from the company id; vans are bigger)
 const carOf = (c, x, y) => { const van = c.vehicle.model?.startsWith('van'); let h = 0; for (const ch of c.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return { kind: 'car', body: van ? 'van' : 'car', x, y, dir: 1, w: van ? 68 : 58, h: van ? 26 : 22, color: CAR_COLORS[h % CAR_COLORS.length] }; };
@@ -523,7 +538,7 @@ function drawParking(ctx, b, env) {
   ctx.fillStyle = '#1d70f5'; rr(ctx, b.x + 10, GROUND - 92, b.w - 20, 24, 6); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = '700 14px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🅿 ' + env.t('veh.parkingSign'), b.x + b.w / 2, GROUND - 75); ctx.textAlign = 'left';
   const parked = Object.values(env.state?.companies || {}).filter(c => c.vehicle?.park === 'lot');
-  parked.slice(0, 6).forEach((c, i) => drawVehicle(ctx, carOf(c, b.x + 40 + i * 60, GROUND + 18)));
+  parked.slice(0, 6).forEach((c, i) => { drawVehicle(ctx, carOf(c, b.x + 40 + i * 60, GROUND + 18)); carLabel(ctx, b.x + 40 + i * 60, GROUND + 18, env, c); });
   if (parked.length > 6) pill(ctx, b.x + b.w / 2, GROUND - 100, `+${parked.length - 6}`, 'rgba(35,40,55,.78)', '#fff', 11);
 }
 // Intercity bus terminal ("otogar") at the end of the street
@@ -818,26 +833,31 @@ export function draw(ctx, env) {
     bubble: env.nearNpc === n ? '💬' : null, label: env.met?.has(n.id) ? n.profile.name.split(' ')[0] : null } });
   for (const v of env.npcs.visitors) people.push({ x: v.x, y: v.lane, look: v.look, o: { dir: v.dir, moving: Math.abs(v.tx - v.x) > 3, phase: v.phase, bubble: v.emoji, scale: 0.92 } });
   for (const [id, o] of env.others) {
-    const p = env.state?.players[id]; if (!p || p.loc) continue;
+    const p = env.state?.players[id]; if (!p || p.loc || p.drive) continue;
     people.push({ x: o.x, y: FEET + 2, look: teamLook(lookFor(p.avatar ?? 0), env.state.teams?.[p.team]?.color), o: { dir: o.dir, moving: o.moving, phase: o.phase, label: (p.afk ? '💤 ' : '') + p.name, ...sayOf(env, id) } });
   }
   const meP = env.state?.players[env.myId];
   for (const d of env.traffic?.drops || []) people.push({ x: d.x, y: FEET - 4, look: d.look, o: { dir: Math.sign(d.tx - d.x) || 1, moving: Math.abs(d.tx - d.x) > 2, phase: d.t * 18, scale: 0.92 } });
-  if (meP && !env.hideMe && !env.riding) people.push({ x: env.player.x, y: FEET + 4, look: teamLook(lookFor(meP.avatar ?? 0), env.state.teams?.[meP.team]?.color), o: { dir: env.player.dir, moving: env.player.moving, phase: env.player.phase, label: (meP.afk ? '💤 ' : '') + meP.name, mine: true, ...sayOf(env, env.myId) } });
+  if (meP && !env.hideMe && !env.riding && !meP.drive) people.push({ x: env.player.x, y: FEET + 4, look: teamLook(lookFor(meP.avatar ?? 0), env.state.teams?.[meP.team]?.color), o: { dir: env.player.dir, moving: env.player.moving, phase: env.player.phase, label: (meP.afk ? '💤 ' : '') + meP.name, mine: true, ...sayOf(env, env.myId) } });
   people.sort((a, b) => a.y - b.y);
   for (const p of people) {
     if (p.x < camX - 40 || p.x > camX + viewWorldW + 40) continue;
     drawPerson(ctx, p.x, p.y, p.look, p.o);
   }
   if (env.traffic) { env.traffic.bus.ad = env.ads?.['bus:0']?.live || null; env.traffic.draw(ctx, camX, viewWorldW, env.riding); }
-  if (env.state) for (const b of env.buildings) { // company cars parked at the building door (free, but street parking can get damaged)
-    if (b.kind !== 'lot' || b.x > camX + viewWorldW + 80 || b.x + b.w < camX - 80) continue;
-    let k = 0;
-    for (const id of b.lot.companyIds) {
-      const c = env.state.companies[id]; if (!c?.vehicle || c.vehicle.park === 'lot' || k > 1) continue;
-      const x = b.x + b.w - 52 - k * 78, y = GROUND + 46; k++;
-      drawVehicle(ctx, carOf(c, x, y));
-      if (c.vehicle.type === 'rent' && c.vehicle.until != null) { const left = Math.max(0, c.vehicle.until - (env.state.day || 0)); pill(ctx, x, y - 38, `🚗 ${left}${env.t('veh.dayShort')}`, 'rgba(35,40,55,.75)', '#fff', 9); }
+  if (env.state) {   // company cars: parked at the door / on the street (free, but can get scratched), or being driven by a player
+    const driven = new Set(Object.values(env.state.players).map(p => p.drive).filter(Boolean));
+    for (const c of Object.values(env.state.companies)) {
+      const v = c.vehicle; if (!v || v.park === 'lot' || driven.has(c.id)) continue;
+      const x = carX(env.state, c); if (x == null || x < camX - 100 || x > camX + viewWorldW + 100) continue;
+      const y = GROUND + 46; drawVehicle(ctx, carOf(c, x, y)); carLabel(ctx, x, y, env, c, v.cond != null && v.cond < 25 ? '🔧 ' + env.t('veh.worn') : null);
+    }
+    for (const p of Object.values(env.state.players)) {
+      if (!p.drive || p.loc) continue; const c = env.state.companies[p.drive]; if (!c?.vehicle) continue;
+      const isMe = p.id === env.myId, o = isMe ? env.player : env.others.get(p.id); if (!o) continue;
+      const x = o.x, y = GROUND + 46; if (x < camX - 100 || x > camX + viewWorldW + 100) continue;
+      const car = carOf(c, x, y); car.dir = o.dir || 1; drawVehicle(ctx, car);
+      pill(ctx, x, y - 36, `🚗 ${p.name}`, isMe ? '#ffb703' : 'rgba(35,40,55,.8)', isMe ? '#1d2b53' : '#fff', 10);
     }
   }
   if (meP && env.keyHint && (env.near || env.nearNpc || env.nearStop != null) && !env.riding) pill(ctx, env.player.x, FEET - 70, env.keyHint, '#ffb703', '#1d2b53', 11);

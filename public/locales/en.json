@@ -347,7 +347,18 @@
     "toolFull": "You can install at most 12 tools.",
     "toolLevel": "You do not meet this tool's level requirement yet.",
     "toolSoon": "This tool's effect is not wired into the game yet (coming soon).",
-    "flatClosed": "This flat's door is closed."
+    "flatClosed": "This flat's door is closed.",
+    "carBusy": "Someone else is driving this car.",
+    "carBroken": "The car is broken: service it first (Sales dept → vehicle).",
+    "noFuel": "Tank is empty: refuel first (Sales dept → vehicle).",
+    "carFar": "You are too far from the car.",
+    "carInUse": "The car is in use.",
+    "tankFull": "The tank is already full.",
+    "carFine": "The car is fine, no service needed.",
+    "driveFuel": "Out of fuel! The car stopped.",
+    "driveBroken": "The car broke down! It needs service.",
+    "driveSold": "The car is no longer yours, you got out.",
+    "driveOk": "🚗 Driving (W/↑ to get out)"
   },
   "log": {
     "joined": "{{player}} entered the street.",
@@ -1136,7 +1147,9 @@
     "rent": "rented",
     "none": "released",
     "extend": "extended the rental of",
-    "park": "moved the parking spot of"
+    "park": "moved the parking spot of",
+    "refuel": "refueled",
+    "service": "serviced"
   },
   "pitch": {
     "template": "We are {{company}}. We offer {{product}} for {{segment}}. Our value proposition: {{value}}. So far we made {{sales}} sales in {{city}} with a team of {{staff}}. We are looking for investors to grow this market together."
@@ -1248,7 +1261,21 @@
     "dealerInfo": {
       "carDealer": "Car dealer: when companies buy a car ({{buy}}), the revenue comes here.",
       "rentACar": "Rent a car: daily fees ({{rent}}) of renting companies come here."
-    }
+    },
+    "worn": "Worn",
+    "fuel": "Fuel",
+    "cond": "Condition",
+    "refuel": "Refuel ({{amount}})",
+    "service": "Service ({{amount}})",
+    "owner": "Owner",
+    "driving": "Driving",
+    "hudHint": "W/↑: get out · Shift: boost",
+    "range": "Range {{km}} km",
+    "getIn": "Get in",
+    "getOut": "Get out",
+    "getOutFirst": "Get out of the car first (W / ↑).",
+    "lowFuel": "Fuel is running low!",
+    "parkedStreet": "Parked on the street"
   },
   "bmc": {
     "keyPartners": "Key Partners",

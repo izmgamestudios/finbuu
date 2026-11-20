@@ -347,7 +347,18 @@
     "toolFull": "En fazla 12 araç kurulabilir.",
     "toolLevel": "Bu aracın seviye şartını henüz karşılamıyorsun.",
     "toolSoon": "Bu aracın etkisi henüz oyuna bağlı değil (yakında).",
-    "flatClosed": "Bu dairenin kapısı kapalı."
+    "flatClosed": "Bu dairenin kapısı kapalı.",
+    "carBusy": "Bu aracı şu an başkası kullanıyor.",
+    "carBroken": "Araç bozuk: önce servise götür (Satış bölümü → araç).",
+    "noFuel": "Depo boş: önce benzin doldur (Satış bölümü → araç).",
+    "carFar": "Arabaya çok uzaksın.",
+    "carInUse": "Araç kullanımda.",
+    "tankFull": "Depo zaten dolu.",
+    "carFine": "Araç sağlam, servise gerek yok.",
+    "driveFuel": "Benzin bitti! Araç yolda kaldı.",
+    "driveBroken": "Araç bozuldu! Servis gerekiyor.",
+    "driveSold": "Araç artık senin değil, indin.",
+    "driveOk": "🚗 Sürüyorsun (W/↑ ile in)"
   },
   "log": {
     "joined": "{{player}} caddeye girdi.",
@@ -1136,7 +1147,9 @@
     "rent": "kiraladı",
     "none": "bıraktı",
     "extend": "kirayı uzattı",
-    "park": "park yerini değiştirdi"
+    "park": "park yerini değiştirdi",
+    "refuel": "depoyu doldurdu",
+    "service": "servise götürdü"
   },
   "pitch": {
     "template": "Biz {{company}}. {{segment}} için {{product}} sunuyoruz. Değer önerimiz: {{value}}. {{city}}'de şu ana kadar {{sales}} satış yaptık ve ekibimiz {{staff}} kişi. Büyümek için yatırımcı arıyoruz; birlikte bu pazarı büyütelim."
@@ -1248,7 +1261,21 @@
     "dealerInfo": {
       "carDealer": "Galeri: caddedeki şirketler araç alınca ({{buy}}) gelir buraya gelir.",
       "rentACar": "Rent a car: kiralık araç kullanan şirketlerin günlük ücreti ({{rent}}) buraya gelir."
-    }
+    },
+    "worn": "Eskidi",
+    "fuel": "Benzin",
+    "cond": "Kondisyon",
+    "refuel": "Depoyu doldur ({{amount}})",
+    "service": "Servis ({{amount}})",
+    "owner": "Sahibi",
+    "driving": "Sürüyorsun",
+    "hudHint": "W/↑: in · Shift: hızlan",
+    "range": "Menzil {{km}} km",
+    "getIn": "Bin",
+    "getOut": "İn",
+    "getOutFirst": "Önce arabadan in (W / ↑).",
+    "lowFuel": "Benzin azalıyor!",
+    "parkedStreet": "Sokakta park halinde"
   },
   "bmc": {
     "keyPartners": "Kilit Ortaklar",

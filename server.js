@@ -189,7 +189,7 @@ const publicPresentation = st => st.presentation && {
     options: st.presentation.poll.options.map(o => ({ text: o.text, votes: o.votes })), total: Object.keys(st.presentation.poll.voters).length }
 };
 const publicPlayer = p => ({ id: p.id, name: p.name, coins: p.coins, role: p.role, stats: p.stats, x: p.x, dir: p.dir, avatar: p.avatar,
-  team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {}, life: publicLife(p), loc: p.loc?.cid || null, afk: !!p.afk });
+  team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {}, life: publicLife(p), loc: p.loc?.cid || null, afk: !!p.afk, drive: p.drive?.cid || null });
 const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: st.day ? R.calendar(st.day) : null,
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
@@ -450,8 +450,31 @@ const vehicleBoost = c => (c.vehicle ? vehModel(c.vehicle).boost || 0 : 0);
 const vehicleValue = (st, c) => {
   const v = c.vehicle; if (v?.type !== 'own') return 0;
   const m = vehModel(v), months = Math.max(0, ((st.day || 0) - (v.since || 0)) / 30);
-  return Math.round(v.paid * Math.max(0.4, m.resaleBase - 0.01 * months));
+  return Math.round(v.paid * Math.max(0.4, m.resaleBase - 0.01 * months) * (0.55 + 0.45 * ((v.cond ?? 100) / 100)));
 };
+
+// ---------- Driving (Sprint 24): the company car can be driven along the street; fuel (km of range) and condition (wear / age) are real ----------
+const PX_PER_KM = 400, WEAR_PER_KM = 0.25, AGE_PER_DAY = { new: 0.05, used: 0.08 }, MIN_COND_TO_DRIVE = 5, MAX_STEP_PX = 260, BOARD_RANGE_PX = 170;
+const TANK_KM = { sedan: 450, van: 380 };
+function ensureVeh(st, c) {
+  const v = c.vehicle; if (!v) return null; const m = vehModel(v);
+  if (v.tank == null) v.tank = TANK_KM[m.body] || 420;
+  if (v.fuel == null) v.fuel = v.tank;
+  if (v.cond == null) v.cond = m.cond === 'new' ? 100 : 72;
+  if (v.odo == null) v.odo = m.km || 0;
+  if (!v.by) { const f = st.players[c.founders[0]] || st.pastPlayers?.[c.founders[0]]; v.by = { id: c.founders[0] || null, name: f?.name || c.name || '?' }; }
+  return v;
+}
+// where the car stands (mirrors the client): its own x when parked on the street, in the car park, or at the company door
+function carX(st, c) {
+  const v = c.vehicle; if (!v) return null;
+  if (v.park === 'street' && v.x != null) return v.x;
+  if (v.park === 'lot') { const i = Math.max(0, Object.values(st.companies).filter(o => o.vehicle?.park === 'lot').indexOf(c)); return 720 + 244 * st.lots.length + 2110 + 40 + Math.min(5, i) * 60; }
+  if (c.lotId == null) return 475 + 200 - 52;
+  const lot = st.lots[c.lotId], k = Math.max(0, lot.companyIds.filter(id => { const o = st.companies[id]; return o?.vehicle && o.vehicle.park !== 'lot' && o.vehicle.park !== 'street'; }).indexOf(c.id));
+  return 720 + 244 * c.lotId + 200 - 52 - Math.min(1, k) * 78;
+}
+const driverOf = (st, cid) => Object.values(st.players).find(p => p.drive?.cid === cid) || null;
 const roleCompany = (st, role) => Object.values(st.companies).find(x => SEED.templates.find(t => t.key === x.nameKey)?.role === role || SEED.npcCompanies.find(n => n.key === x.nameKey)?.role === role);
 // Every sale has a delivery distance (sector) -> fuel with a company vehicle, courier / taxi without one
 function addDelivery(st, c, units = 1) {
@@ -708,6 +731,25 @@ io.on('connection', socket => {
     enter(st, name);
   });
 
+  // leave the car where it stands (street parking) and tell the client why
+  function stopDriving(reason) {
+    if (!me?.drive || !street) return; const c = street.companies[me.drive.cid]; me.drive = null;
+    if (c?.vehicle) { c.vehicle.x = me.x; c.vehicle.park = 'street'; }
+    socket.emit('driveStop', { reason }); sync();
+  }
+  socket.on('drive', ({ cid, on } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r);
+    if (!street || !me || street.mode === 'presentation' || limited()) return reply({ ok: false });
+    if (on === false) { if (me.drive) stopDriving('park'); return reply({ ok: true }); }
+    const c = street.companies[cid]; if (!c || !c.vehicle || !c.founders.includes(me.id) || me.drive || me.loc || traveling) return reply({ ok: false });
+    const v = ensureVeh(street, c);
+    if (driverOf(street, cid)) return reply({ ok: false, key: 'toast.carBusy' });
+    if (v.cond < MIN_COND_TO_DRIVE) return reply({ ok: false, key: 'toast.carBroken' });
+    if (v.fuel < 1) return reply({ ok: false, key: 'toast.noFuel' });
+    const cx = carX(street, c); if (Math.abs((me.x ?? 0) - cx) > BOARD_RANGE_PX) return reply({ ok: false, key: 'toast.carFar' });
+    me.drive = { cid }; me.x = Math.round(cx); sync(); reply({ ok: true, x: me.x });
+  });
+
   // Character position: lightweight, volatile broadcast (no full state sync)
   socket.on('move', ({ x, dir } = {}) => {
     if (!street || !me || street.mode === 'presentation') return;
@@ -716,6 +758,19 @@ io.on('connection', socket => {
     lastMove = now;
     const nx = Number(x);
     if (!Number.isFinite(nx)) return;
+    if (me.drive) {   // driving: authoritative fuel burn and wear from the distance covered
+      const dc = street.companies[me.drive.cid], v = dc?.vehicle && ensureVeh(street, dc);
+      if (!v) me.drive = null;
+      else {
+        const step = Math.min(Math.abs(nx - me.x), MAX_STEP_PX), km = step / PX_PER_KM;
+        v.fuel = Math.max(0, v.fuel - km); v.odo += km; v.cond = Math.max(0, v.cond - km * WEAR_PER_KM);
+        if (v.fuel <= 0 || v.cond <= 0) { me.x = Math.max(0, Math.min(WORLD_MAX_X, Math.round(me.x + Math.sign(nx - me.x) * step))); stopDriving(v.fuel <= 0 ? 'fuel' : 'broken'); return; }
+        me.x = Math.max(0, Math.min(WORLD_MAX_X, Math.round(me.x + Math.sign(nx - me.x) * step))); me.dir = dir < 0 ? -1 : 1;
+        if (!posDirty.has(street.id)) posDirty.set(street.id, new Map()); posDirty.get(street.id).set(me.id, { x: me.x, dir: me.dir });
+        if (now - (me.driveInfoAt || 0) > 400) { me.driveInfoAt = now; socket.emit('driveInfo', { fuel: +v.fuel.toFixed(2), cond: +v.cond.toFixed(2), odo: +v.odo.toFixed(1), tank: v.tank }); }
+        return;
+      }
+    }
     me.x = Math.max(0, Math.min(WORLD_MAX_X, Math.round(nx)));
     me.dir = dir < 0 ? -1 : 1;
     if (!posDirty.has(street.id)) posDirty.set(street.id, new Map());
@@ -1055,7 +1110,7 @@ io.on('connection', socket => {
     if (by === 'bus') me.coins -= fare; else { car.cash -= fare; R.track(car, 'expenses', fare); R.track(car, 'fuel', fare); }
     // leave the street like a disconnect would (jobs end), but keep solo streets alive: the player's companies keep running
     for (const c of Object.values(from.companies)) c.employees = c.employees.filter(id => id !== socket.id);
-    me.loc = null; me.pitch = null; from.pastPlayers[socket.id] = me; delete from.players[socket.id];
+    stopDriving('park'); me.loc = null; me.pitch = null; from.pastPlayers[socket.id] = me; delete from.players[socket.id];
     if (from.ownerId === socket.id) from.ownerId = Object.keys(from.players)[0] || null;
     addLog(from, 'log.leftCity', { player: me.name });
     socket.leave(from.id); syncRoom(from); street = null;
@@ -1267,19 +1322,34 @@ io.on('connection', socket => {
       c.cash -= m.price; R.track(c, 'expenses', m.price);
       const dealer = roleCompany(street, 'carDealer');
       if (dealer && dealer !== c) { dealer.cash += m.price; dealer.sales++; R.track(dealer, 'revenue', m.price); }
-      c.vehicle = { type: 'own', model, paid: m.price, since: day, park: 'door' };
+      c.vehicle = { type: 'own', model, paid: m.price, since: day, park: 'door', by: { id: me.id, name: me.name } }; ensureVeh(street, c);
     } else if (mode === 'rent') {
       const d = Number(days); if (!V.rentDays.includes(d)) return;
       if (c.vehicle) return socket.emit('toast', 'toast.hasVehicle');
-      c.vehicle = { type: 'rent', model: 'sedan_new', since: day, until: day + d, days: d, park: 'door' };
+      c.vehicle = { type: 'rent', model: 'sedan_new', since: day, until: day + d, days: d, park: 'door', by: { id: me.id, name: me.name } }; ensureVeh(street, c);
     } else if (mode === 'extend') {
       const d = Number(days); if (!V.rentDays.includes(d) || c.vehicle?.type !== 'rent') return;
       if (c.vehicle.until - day + d > 60) return socket.emit('toast', 'toast.rentMax');
       c.vehicle.until += d; c.vehicle.days += d;
+    } else if (mode === 'refuel' || mode === 'service') {
+      const v = c.vehicle && ensureVeh(street, c); if (!v) return;
+      if (driverOf(street, cid)) return socket.emit('toast', 'toast.carInUse');
+      const m = vehModel(v);
+      if (mode === 'refuel') {
+        const need = v.tank - v.fuel; if (need < 1) return socket.emit('toast', 'toast.tankFull');
+        const cost = Math.max(1, Math.round(need * m.fuelPerKm)); if (c.cash < cost) return socket.emit('toast', 'toast.noCash');
+        c.cash -= cost; R.track(c, 'fuel', cost); R.track(c, 'expenses', cost); v.fuel = v.tank;
+      } else {
+        if (v.cond >= 98) return socket.emit('toast', 'toast.carFine');
+        const cost = Math.max(1, Math.round((100 - v.cond) * m.price * 0.0002)); if (c.cash < cost) return socket.emit('toast', 'toast.noCash');
+        c.cash -= cost; R.track(c, 'expenses', cost); v.cond = 100;
+      }
     } else if (mode === 'park') {
       if (!c.vehicle || !['door', 'lot'].includes(where)) return;
-      c.vehicle.park = where;
+      if (driverOf(street, cid)) return socket.emit('toast', 'toast.carInUse');
+      c.vehicle.park = where; c.vehicle.x = null;
     } else if (mode === 'none') {
+      { const dr = driverOf(street, cid); if (dr) { dr.drive = null; io.to(dr.id).emit('driveStop', { reason: 'sold' }); } }
       if (c.vehicle?.type === 'own') { const back = vehicleValue(street, c); c.cash += back; R.track(c, 'revenue', back); }
       c.vehicle = null;
     } else return;
@@ -1521,7 +1591,7 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     if (!street) return;
     for (const c of Object.values(street.companies)) c.employees = c.employees.filter(id => id !== socket.id);
-    if (me) { me.loc = null; me.pitch = null; if (!me.afk) me.away = awayBaseline(street, me); me.afk = false; me.offlineSince = street.day || 0; }
+    if (me) { if (me.drive) { const dc = street?.companies[me.drive.cid]; if (dc?.vehicle) { dc.vehicle.x = me.x; dc.vehicle.park = 'street'; } me.drive = null; } me.loc = null; me.pitch = null; if (!me.afk) me.away = awayBaseline(street, me); me.afk = false; me.offlineSince = street.day || 0; }
     street.pastPlayers[socket.id] = me;
     delete street.players[socket.id];
     if (street.ownerId === socket.id) street.ownerId = Object.keys(street.players)[0] || null;
@@ -1586,12 +1656,13 @@ function economyTick(only) {
       }
       let repair = 0;
       if (c.vehicle && !c.isNpc) {
+        { const v = ensureVeh(st, c); v.cond = Math.max(0, v.cond - AGE_PER_DAY[vehModel(v).cond === 'new' ? 'new' : 'used']); }
         // street parking can get a car scratched / hit; a paid car park cannot
         if (c.vehicle.park !== 'lot' && Math.random() < ECON.vehicle.damage.chancePerDay) {
           const base = c.vehicle.type === 'own' ? vehicleValue(st, c) : Math.round(ECON.vehicle.models.sedan_new.price * 0.5);
-          repair = Math.max(1, Math.round(base * ECON.vehicle.damage.share)); addLog(st, 'log.carDamaged', { amount: repair, ...cParams(c) });
+          repair = Math.max(1, Math.round(base * ECON.vehicle.damage.share)); c.vehicle.cond = Math.max(0, (c.vehicle.cond ?? 100) - 6); addLog(st, 'log.carDamaged', { amount: repair, ...cParams(c) });
         }
-        if (c.vehicle.type === 'rent' && c.vehicle.until != null && (st.day || 0) + 1 >= c.vehicle.until) { c.vehicle = null; addLog(st, 'log.rentEnded', cParams(c)); }
+        if (c.vehicle.type === 'rent' && c.vehicle.until != null && (st.day || 0) + 1 >= c.vehicle.until) { { const dr = driverOf(st, c.id); if (dr) { dr.drive = null; io.to(dr.id).emit('driveStop', { reason: 'sold' }); } } c.vehicle = null; addLog(st, 'log.rentEnded', cParams(c)); }
       }
       const cost = rentPart + ub.total + payroll + fuel + vehicle + stamp + acctFee + repair;
       c.cash -= cost;
