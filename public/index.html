@@ -15,6 +15,7 @@
   <span id="clockBox" title=""><canvas id="clock" width="80" height="80" aria-label="clock"></canvas><b id="clockTxt"></b></span>
   <button id="boardBtn" aria-label="Leaderboard">🏆</button>
   <button id="themeBtn" aria-label="Theme">🌓</button>
+  <button id="sideBtn" aria-label="Panels" class="deskOnly">▤</button>
   <button id="menuBtn" aria-label="Menu">☰</button>
 </header>
 <div id="roomBar"><b id="roomInfo"></b><button id="copyLink" data-i18n="ui.copyLink"></button></div>
@@ -53,7 +54,9 @@
       <button id="exitBtn" data-i18n="ui.exit"></button>
     </div>
     <div id="joy" hidden><div id="knob"></div></div>
+    <button id="talkBtn" hidden></button>
     <button id="actBtn" hidden></button>
+    <button id="hudBtn" aria-label="HUD">▾</button>
     <span id="hint"></span>
     <div id="status" aria-live="off"></div>
   </section>
@@ -62,6 +65,7 @@
       <h3 data-i18n="ui.chat"></h3>
       <div id="pollBox"></div>
       <ul id="chatList"></ul>
+      <div id="emojiBar" class="emojiBar" aria-label="Emoji"></div>
       <div class="row chatRow">
         <input id="chatInput" maxlength="200" data-i18n-ph="ui.chatPh" autocomplete="off">
         <button id="chatSend" class="primary" data-i18n="ui.sendText"></button>

@@ -1,6 +1,15 @@
 {
   "ui": {
     "title": "Finbuu",
+    "talk": "Talk",
+    "talkTo": "Talk to {{name}}",
+    "talkPh": "Your message...",
+    "talkSend": "Send",
+    "tooFar": "Too far away, get closer.",
+    "fromTo": "{{from}} → {{to}}",
+    "hidePanels": "Hide / show panels",
+    "hideHud": "Hide / show top indicators",
+    "collapse": "Expand / collapse",
     "slogan": "Idea Development & Value Proposition",
     "themeSystem": "Theme: System",
     "themeLight": "Theme: Light",
@@ -216,7 +225,9 @@
     "apartment": "Apartment",
     "skyscraper": "Skyscraper",
     "marketResearch": "Market Research",
-    "competitor": "Competitor Analysis"
+    "competitor": "Competitor Analysis",
+    "voiceChat": "Voice Chat (nearby) · coming soon",
+    "videoMeeting": "Voice/Video Meetings · coming soon"
   },
   "event": {
     "customer": "A bulk customer arrived!",
@@ -271,6 +282,7 @@
     "npcBoughtToday": "This person already bought today.",
     "npcBusy": "Fully booked today.",
     "npcTaken": "This person was already hired.",
+    "tooFar": "Too far away, get closer.",
     "slowDown": "Slow down a little.",
     "cannotBuy": "You must be the only tenant to buy.",
     "noBusCard": "Not enough card balance.",

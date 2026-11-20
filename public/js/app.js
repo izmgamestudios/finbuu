@@ -20,12 +20,15 @@ let seed = null, state = null, joined = null, buildings = layout(null), spawned 
 const view = { w: 0, h: 0, s: 1, ty: 0, camX: 0, dpr: 1 };
 const player = { x: 120, dir: 1, phase: 0, moving: false, target: null, onArrive: null, targetId: null };
 const others = new Map(); // id -> { x, tx, dir, phase, moving }
+const bubbles = new Map(); // playerId -> { text | emoji, until } (speech bubbles over heads)
+const TALK_RANGE = 320, TALK_NEAR = 150;
+const EMOJIS = ['👍', '👏', '😀', '😂', '❤️', '🔥', '🎉', '🤝', '🙏', '😮']; // must match the server allow-list
 const npcs = createNpcs(NPC_COUNT);
 const traffic = createTraffic();
 let ride = null, nearStop = null, clockOffset = 0, lastDay = null;
 const keys = new Set();
 const joy = { axis: 0, id: null, run: false };
-let near = null, nearNpc = null, plan = null, auto = false, advIdx = 0, ranked = [], modalOpen = false, modalOnClose = null;
+let near = null, nearNpc = null, nearPlayer = null, plan = null, auto = false, advIdx = 0, ranked = [], modalOpen = false, modalOnClose = null;
 let lastSent = { x: -1, at: 0 };
 const met = new Set(loadJSON('met', []));
 const votedPolls = new Set();
@@ -87,6 +90,7 @@ async function loadLang(lng) {
   $('recAudio').textContent = '☁🔒 ' + t('ui.recAudio');
   $('recVideo').textContent = '☁🔒 ' + t('ui.recVideo');
   updateControls(); renderSeed(); renderRoomBar(); render(); updateAutoBtn(); applyTheme();
+  document.querySelectorAll('#side .card > h3.fold').forEach(h => (h.title = t('ui.collapse')));
 }
 function renderSeed() {
   if (!seed || !i18next.isInitialized) return;
@@ -112,6 +116,25 @@ function applyTheme() {
 }
 $('themeBtn').onclick = () => { themeMode = THEMES[(THEMES.indexOf(themeMode) + 1) % 3]; try { localStorage.setItem('finbuu.theme', themeMode); } catch {} applyTheme(); };
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => themeMode === 'system' && applyTheme());
+
+// ---------- Collapsible panels (state remembered in the browser) ----------
+const ui = { ...(() => { try { return JSON.parse(localStorage.getItem('finbuu.ui') || '{}'); } catch { return {}; } })() };
+const saveUi = () => { try { localStorage.setItem('finbuu.ui', JSON.stringify(ui)); } catch {} };
+function applyUi() {
+  document.body.classList.toggle('noSide', !!ui.noSide);
+  document.body.classList.toggle('noHud', !!ui.noHud);
+  document.body.classList.toggle('noAdv', !!ui.noAdv);
+  document.querySelectorAll('#side .card[data-panel]').forEach(c => c.classList.toggle('collapsed', !!ui.cards?.[c.dataset.panel]));
+  $('hudBtn').textContent = ui.noHud ? '▸' : '▾';
+}
+document.querySelectorAll('#side .card[data-panel] > h3').forEach(h => {
+  h.classList.add('fold'); h.tabIndex = 0; h.title = t('ui.collapse');
+  const toggle = () => { const k = h.parentElement.dataset.panel; (ui.cards ||= {})[k] = !ui.cards[k]; saveUi(); applyUi(); };
+  h.onclick = toggle; h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } };
+});
+$('sideBtn').onclick = () => { ui.noSide = !ui.noSide; saveUi(); applyUi(); setTimeout(() => dispatchEvent(new Event('resize')), 50); };
+$('hudBtn').onclick = () => { ui.noHud = !ui.noHud; saveUi(); applyUi(); };
+renderEmojiBar(); applyUi();
 $('closeDrawer').onclick = $('scrim').onclick = () => openDrawer(false);
 $('openModes').onclick = () => { openDrawer(false); showModes(); };
 $('openIdeas').onclick = () => { openDrawer(false); showTab('ideas'); };
@@ -182,10 +205,11 @@ socket.on('joined', info => {
 socket.on('badge', ({ id }) => { toast(`🏅 ${t('badge.unlocked')}: ${t('badge.' + id)}`); profSig = ''; });
 socket.on('questDone', q => { toast(`✅ ${t('quest.' + q.id, { goal: '' })} · +${money(q.coins)} · +${q.xp} XP`); profSig = ''; });
 socket.on('chatHistory', list => { $('chatList').replaceChildren(); list.forEach(addChat); });
-socket.on('chat', addChat);
+socket.on('chat', m => { addChat(m); bubbles.set(m.pid, { text: m.text, until: performance.now() + 2500 + Math.min(4500, m.text.length * 90) }); });
+socket.on('emoji', ({ pid, e }) => bubbles.set(pid, { emoji: e, until: performance.now() + 3000 }));
 socket.on('chatDeleted', id => document.querySelector(`#chatList li[data-id="${CSS.escape(id)}"]`)?.remove());
 socket.on('disconnect', () => {
-  joined = null; state = null; spawned = false; others.clear(); setAuto(false); exitCompany(true);
+  joined = null; state = null; spawned = false; others.clear(); bubbles.clear(); setAuto(false); exitCompany(true);
   $('advisor').hidden = true; renderRoomBar(); render();
 });
 setInterval(() => { const t0 = performance.now(); socket.timeout(4000).emit('latency', err => { perf.ping = err ? null : Math.round(performance.now() - t0); }); }, 2000);
@@ -304,6 +328,7 @@ addEventListener('keydown', e => {
   if (scene.name !== 'street') return;
   if (k === 'enter') { acceptSuggestion(); e.preventDefault(); return; }
   if (k === 'n') { nextSuggestion(); return; }
+  if (k === 't' && (nearPlayer || nearNpc)) { e.preventDefault(); talkNearest(); return; }
   if (isPres() || ride) return; // watch-only / riding: no walking
   if (KEYMAP[k]) { keys.add(KEYMAP[k]); manualInput(); e.preventDefault(); }
   if (['w', 'arrowup', 'e'].includes(k)) {
@@ -573,7 +598,7 @@ function renderStreet(now) {
     }
   }
   draw(ctx, {
-    state, view: v, time: now, myId: myId(), player, others: isPres() ? new Map() : others, npcs, buildings,
+    state, view: v, time: now, bubbles, myId: myId(), player, others: isPres() ? new Map() : others, npcs, buildings,
     near: isPres() ? null : near, nearNpc: isPres() ? null : nearNpc, targetId: player.targetId, met, low: perf.low, npcLimit: npcLimit(), hideMe: isPres(),
     ranks: boardOpen ? lotRanks() : null, traffic, busStops: seed?.busStops, night: nightFactor(gameMinutes()), riding: ride,
     nearStop: isPres() ? null : nearStop, stopHint: touch ? null : `E 🚏 ${t('bus.board')}`, money,
@@ -585,8 +610,8 @@ function renderStreet(now) {
   if (white > 0) { ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0); ctx.fillStyle = `rgba(255,255,255,${white})`; ctx.fillRect(0, 0, view.w, view.h); }
 }
 function updatePlayer(dt, now) {
-  if (scene.name !== 'street' || isPres()) { near = nearNpc = nearStop = null; $('actBtn').hidden = true; return; }
-  if (updateRide(now)) { near = nearNpc = nearStop = null; return; }
+  if (scene.name !== 'street' || isPres()) { near = nearNpc = nearStop = nearPlayer = null; $('actBtn').hidden = true; $('talkBtn').hidden = true; return; }
+  if (updateRide(now)) { near = nearNpc = nearStop = nearPlayer = null; $('talkBtn').hidden = true; return; }
   let axis = 0;
   if (keys.has('left')) axis -= 1;
   if (keys.has('right')) axis += 1;
@@ -604,9 +629,13 @@ function updatePlayer(dt, now) {
   if (vx) { player.dir = Math.sign(vx); player.phase += dt * 16 * (Math.abs(vx) > SPEED * 1.2 ? 1.6 : 1); }
   near = state ? buildings.find(b => b.kind !== 'locked' && player.x >= b.x && player.x <= b.x + b.w) || null : null;
   nearNpc = state && !player.moving ? npcs.nearest(player.x) : null;
+  nearPlayer = state && !player.moving && joined?.mode === 'multiplayer' ? nearestPlayer() : null;
   const si = (seed?.busStops || []).findIndex(x => Math.abs(x - player.x) < 30);
   nearStop = state && si >= 0 ? si : null;
   $('actBtn').hidden = !(touch && (near || nearNpc || nearStop != null));
+  const canTalk = nearPlayer || nearNpc;
+  $('talkBtn').hidden = !(touch && canTalk);
+  if (!$('talkBtn').hidden) $('talkBtn').textContent = '💬 ' + t('ui.talk');
   if (state && Math.abs(player.x - lastSent.x) > 1 && now - lastSent.at > MOVE_SEND_MS) {
     lastSent = { x: player.x, at: now };
     socket.emit('move', { x: Math.round(player.x), dir: player.dir });
@@ -875,9 +904,24 @@ function pnlTable(months) {
 $('finCompany').onchange = e => { finSel = e.target.value; Object.values(charts).forEach(ch => ch.destroy()); for (const k in charts) delete charts[k]; renderFinance(true); };
 
 // ---------- Chat + polls ----------
+// Turkish suffix harmony for names: Ahmet'ten Ayşe'ye (digits / odd endings fall back to an arrow)
+const TR_VOWELS = 'aıoueiöü', TR_BACK = 'aıou', TR_HARD = 'çfhkpsşt';
+function trSuffix(name, kind) {
+  const n = String(name).trim(), last = n.slice(-1).toLowerCase();
+  const v = [...n.toLowerCase()].reverse().find(ch => TR_VOWELS.includes(ch));
+  if (!v || /\d/.test(last)) return null;
+  const back = TR_BACK.includes(v), vowelEnd = TR_VOWELS.includes(last);
+  if (kind === 'from') return `${n}'${TR_HARD.includes(last) ? 't' : 'd'}${back ? 'a' : 'e'}n`;
+  return `${n}'${vowelEnd ? 'y' : ''}${back ? 'a' : 'e'}`;
+}
+function chatLabel(m) {
+  if (!m.to) return m.by + ':';
+  if (isTR()) { const f = trSuffix(m.by, 'from'), d = trSuffix(m.toName, 'to'); if (f && d) return `${f} ${d} mesaj:`; }
+  return t('ui.fromTo', { from: m.by, to: m.toName }) + ':';
+}
 function addChat(m) {
-  const li = el('li'); li.dataset.id = m.id;
-  li.append(el('b', m.by + ':'), document.createTextNode(m.text));
+  const li = el('li', null, m.to ? 'dm' : ''); li.dataset.id = m.id;
+  li.append(el('b', chatLabel(m)), document.createTextNode(' ' + m.text));
   const list = $('chatList'); list.append(li);
   while (list.children.length > 60) list.firstChild.remove();
   list.scrollTop = list.scrollHeight;
@@ -904,6 +948,34 @@ function runCommand(text) {
     default: sysChat(t('cmd.help'));
   }
 }
+// ---------- Talk to a nearby player (shows in the room chat as "A'dan B'ye mesaj") ----------
+function nearestPlayer() {
+  let best = null, d = TALK_NEAR;
+  for (const [id, o] of others) { const dd = Math.abs(o.x - player.x); if (dd < d && state?.players[id]) { d = dd; best = id; } }
+  return best;
+}
+function sendEmoji(e) { if (state && joined?.mode === 'multiplayer') socket.emit('emoji', { e }); }
+function renderEmojiBar() {
+  const bar = $('emojiBar'); bar.replaceChildren();
+  EMOJIS.forEach(e => { const b = el('button', e, 'emojiBtn'); b.type = 'button'; b.onclick = () => sendEmoji(e); bar.append(b); });
+}
+function openTalkPlayer(id) {
+  const p = state?.players[id]; if (!p) return;
+  const o = others.get(id);
+  if (!o || Math.abs(o.x - player.x) > TALK_RANGE) return toast(t('toast.tooFar'));
+  openModal(body => {
+    body.append(el('h3', '💬 ' + t('ui.talkTo', { name: p.name })));
+    const input = el('input'); input.maxLength = 200; input.placeholder = t('ui.talkPh'); input.autocomplete = 'off';
+    const send = () => { const text = input.value.trim(); if (!text) return; socket.emit('chat', { text, to: id }); input.value = ''; closeModal(); };
+    input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); send(); } };
+    body.append(input, btn('➤ ' + t('ui.talkSend'), send, { primary: true, isDefault: true }));
+    const row = el('div', null, 'emojiBar'); EMOJIS.forEach(e => { const b = el('button', e, 'emojiBtn'); b.type = 'button'; b.onclick = () => { sendEmoji(e); }; row.append(b); });
+    body.append(row);
+    setTimeout(() => input.focus(), 30);
+  });
+}
+function talkNearest() { if (nearPlayer) openTalkPlayer(nearPlayer); else if (nearNpc) openNpc(nearNpc); }
+$('talkBtn').onclick = talkNearest;
 $('chatSend').onclick = sendChat;
 $('chatInput').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } };
 $('wizardBtn').onclick = () => openWizard();

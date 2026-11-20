@@ -104,6 +104,23 @@ function bubble(ctx, x, y, emoji) {
   ctx.fillText(emoji, x, y - 13); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
+// Speech bubble above a head: word-wrapped, max 3 lines
+function speech(ctx, x, y, text) {
+  ctx.font = '12px system-ui, sans-serif';
+  const words = String(text).split(/\s+/), lines = []; let cur = '';
+  for (const wd of words) { const next = cur ? cur + ' ' + wd : wd; if (ctx.measureText(next).width > 150 && cur) { lines.push(cur); cur = wd; } else cur = next; }
+  if (cur) lines.push(cur);
+  const shown = lines.slice(0, 3); if (lines.length > 3) shown[2] = shown[2].replace(/.{0,2}$/, '…');
+  const bw = Math.min(160, Math.max(...shown.map(l => ctx.measureText(l).width)) + 16), bh = shown.length * 15 + 10;
+  ctx.fillStyle = '#fff'; rr(ctx, x - bw / 2, y - bh, bw, bh, 9); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 5, y - 1); ctx.lineTo(x + 5, y - 1); ctx.lineTo(x, y + 6); ctx.fill();
+  ctx.fillStyle = '#222'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  shown.forEach((l, i) => ctx.fillText(l, x, y - bh + 5 + 7.5 + i * 15));
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+const sayOf = (env, id) => { const b = env.bubbles?.get(id); if (!b || b.until < env.time) return {}; return b.text ? { say: b.text } : { bubble: b.emoji }; };
+
 // ---------- people ----------
 export function drawPerson(ctx, x, feet, look, o = {}) {
   const s = o.scale || 1, dir = o.dir || 1, swing = o.moving ? Math.sin(o.phase || 0) * 3.5 : 0;
@@ -133,7 +150,8 @@ export function drawPerson(ctx, x, feet, look, o = {}) {
   ctx.restore();
   if (o.label) pill(ctx, x, feet - (look.npc ? 50 : 42) * s, o.label, look.team || (o.mine ? '#2f6fe4' : look.npc ? 'rgba(110,100,90,.75)' : 'rgba(35,40,55,.72)'));
   if (o.mine) { ctx.fillStyle = '#2f6fe4'; ctx.beginPath(); ctx.moveTo(x - 4, feet - 64 * s); ctx.lineTo(x + 4, feet - 64 * s); ctx.lineTo(x, feet - 59 * s); ctx.fill(); }
-  if (o.bubble) bubble(ctx, x, feet - (o.label ? 60 : 44) * s, o.bubble);
+  if (o.bubble && !o.say) bubble(ctx, x, feet - (o.label ? 60 : 44) * s, o.bubble);
+  if (o.say) speech(ctx, x, feet - (o.label ? 62 : 46) * s, o.say);
 }
 function silhouette(ctx, cx, bottom, look) {
   ctx.fillStyle = look.shirt; rr(ctx, cx - 8, bottom - 11, 16, 13, 5); ctx.fill();
@@ -605,11 +623,11 @@ export function draw(ctx, env) {
   for (const v of env.npcs.visitors) people.push({ x: v.x, y: v.lane, look: v.look, o: { dir: v.dir, moving: Math.abs(v.tx - v.x) > 3, phase: v.phase, bubble: v.emoji, scale: 0.92 } });
   for (const [id, o] of env.others) {
     const p = env.state?.players[id]; if (!p) continue;
-    people.push({ x: o.x, y: FEET + 2, look: teamLook(lookFor(p.avatar ?? 0), env.state.teams?.[p.team]?.color), o: { dir: o.dir, moving: o.moving, phase: o.phase, label: p.name } });
+    people.push({ x: o.x, y: FEET + 2, look: teamLook(lookFor(p.avatar ?? 0), env.state.teams?.[p.team]?.color), o: { dir: o.dir, moving: o.moving, phase: o.phase, label: p.name, ...sayOf(env, id) } });
   }
   const meP = env.state?.players[env.myId];
   for (const d of env.traffic?.drops || []) people.push({ x: d.x, y: FEET - 4, look: d.look, o: { dir: Math.sign(d.tx - d.x) || 1, moving: Math.abs(d.tx - d.x) > 2, phase: d.t * 18, scale: 0.92 } });
-  if (meP && !env.hideMe && !env.riding) people.push({ x: env.player.x, y: FEET + 4, look: teamLook(lookFor(meP.avatar ?? 0), env.state.teams?.[meP.team]?.color), o: { dir: env.player.dir, moving: env.player.moving, phase: env.player.phase, label: meP.name, mine: true } });
+  if (meP && !env.hideMe && !env.riding) people.push({ x: env.player.x, y: FEET + 4, look: teamLook(lookFor(meP.avatar ?? 0), env.state.teams?.[meP.team]?.color), o: { dir: env.player.dir, moving: env.player.moving, phase: env.player.phase, label: meP.name, mine: true, ...sayOf(env, env.myId) } });
   people.sort((a, b) => a.y - b.y);
   for (const p of people) {
     if (p.x < camX - 40 || p.x > camX + viewWorldW + 40) continue;

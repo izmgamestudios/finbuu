@@ -125,7 +125,8 @@ const SEED = {
   lockedFeatures: ['locked.onlineMode', 'locked.mediaIdeas', 'locked.ideathon', 'locked.hackathon', 'locked.gameJam', 'locked.bootcamp',
     'locked.accelerator', 'locked.center', 'locked.kosgeb', 'locked.tubitak', 'locked.angel',
     'locked.seed', 'locked.seriesA', 'locked.seriesB', 'locked.crowdfunding', 'locked.ipo',
-    'locked.apartment', 'locked.skyscraper', 'locked.marketResearch', 'locked.competitor']
+    'locked.apartment', 'locked.skyscraper', 'locked.marketResearch', 'locked.competitor',
+    'locked.voiceChat', 'locked.videoMeeting']
 };
 const NPC_EVENTS = {
   customer: { key: 'event.customer', effect: c => (c.cash += c.price * 20) },
@@ -521,7 +522,17 @@ io.on('connection', socket => {
 
   // ---------- Chat (multiplayer & presentation rooms), moderated by admin ----------
   let lastChat = 0;
-  socket.on('chat', ({ text } = {}) => {
+  const TALK_RANGE = 320; // world px (about one building width): who counts as "next to each other"
+  const EMOJIS = ['👍', '👏', '😀', '😂', '❤️', '🔥', '🎉', '🤝', '🙏', '😮'];
+  let lastEmoji = 0;
+  socket.on('emoji', ({ e } = {}) => {
+    if (!street || !me || street.mode !== 'multiplayer') return;
+    const now = Date.now();
+    if (now - lastEmoji < 800 || !EMOJIS.includes(e)) return;
+    lastEmoji = now;
+    io.to(street.id).volatile.emit('emoji', { pid: me.id, e });
+  });
+  socket.on('chat', ({ text, to } = {}) => {
     if (!street || !me || street.mode === 'solo') return;
     const now = Date.now();
     if (now - lastChat < 1500) return socket.emit('toast', 'toast.slowDown');
@@ -532,6 +543,12 @@ io.on('connection', socket => {
     if (!body) return;
     lastChat = now;
     const msg = { id: crypto.randomUUID(), pid: me.id, by: me.name, text: body, at: now };
+    if (to != null && street.mode === 'multiplayer') {
+      const target = street.players[String(to)];
+      if (!target || target.id === me.id) return;
+      if (Math.abs((target.x ?? 0) - (me.x ?? 0)) > TALK_RANGE) return socket.emit('toast', 'toast.tooFar');
+      msg.to = target.id; msg.toName = target.name;
+    }
     street.chat ||= [];
     street.chat.push(msg); if (street.chat.length > 50) street.chat.shift();
     io.to(street.id).emit('chat', msg);
