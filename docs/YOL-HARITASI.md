@@ -8,7 +8,7 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 |---|---|---|
 | **5** | Slogan, Shift ile koşma, mobil joystick'te 2 kademe (yürü / koş), tema (sistem · açık · koyu) | ✅ Tamam |
 | **6 — Sohbet & sosyal** | Yakınlık konuşması ("Ahmet'ten Ayşe'ye mesaj") herkese açık sohbete düşer · mobilde mavi "Gir" yanında yeşil "Konuş" (masaüstünde T) · kafa üstü konuşma baloncuğu · hızlı emoji · açılır/kapanır paneller (başlığa tıkla, ▤ yan panel, ▾ üst göstergeler) | ✅ Tamam |
-| **7 — Zaman & finans kontrolleri** | Oyun hızı 0.5x/1x/2x/3x · kâr payı yatır/çek ve tüm finans işlemlerinde 1–100 çubuk + elle rakam · Tamam/Sonraki alt menüsünün geliştirilmesi · timeline | ⬜ |
+| **7 — Zaman & finans kontrolleri** | Oyun hızı 0.5x/1x/2x/3x (oda sahibi değiştirir, odaya özel) · yatırım ve kâr payı çekmede 1–100 çubuk + elle rakam · pazarlama bütçe çubuğu (10–100, 50 = standart) · gün bazlı timeline (Cadde Olayları) · öneri çubuğunda ◀ önceki, sayaç, küçült | ✅ Tamam |
 | **8 — Şirket kurma & giderler** | Birden çok ürün/hizmet · ürün bazlı indirim · hızlı (2/4 adım) ve ayrıntılı (6–8 adım) sihirbaz · gelir vergisi, damga vergisi, muhasebe · dükkânda elektrik/su/doğalgaz/internet, sabit ve değişken giderler | ⬜ |
 | **9 — Reklam sistemi** | Billboard, otobüs durağı, otobüs giydirme, mobil meta reklam, bina duvarı/çatı · görsel URL veya metin (font boyutu, renk) · admin ve şirket sahibi yönetir · **her reklam yayına girmeden admin onayından geçer** | ⬜ |
 | **10 — Araç** | Galeriden sıfır/ikinci el araç · bina kapısında sabit park, otopark · kiralık aracın kalan süresi (üst bar) | ⬜ |
@@ -21,6 +21,12 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **17 — Mini SaaS** | ERP/CRM/KPI aracı · takvim yönetimi · Gantt şeması | ⬜ |
 | **18 — Sesli sohbet** *(en sonda, Premium · şimdilik "pek yakında")* | Bina boyu mesafede yakın sesli sohbet (mikrofona basınca kubbe, mute/ses ayarı) · sesli mesaj baloncuğu (oynat/duraklat/durdur) · fon müziği ve efektler | 🔒 Pek yakında |
 | **19 — Sesli/görüntülü toplantı** *(en sonda, Premium · şimdilik "pek yakında")* | Başka şehirdeki firma/NPC/oyuncuyla sesli veya videolu görüşme · anlaşma kesinleşirse yüz yüze görüşme randevusu roleplay'i | 🔒 Pek yakında |
+
+## Sprint 7 notları
+- Hız oda bazlıdır: bir oda 3x, diğeri 1x çalışabilir. Gün süresi `tickSeconds / hız`. Hız değişince saat sıçramaz.
+- Oda sahibi = odaya ilk giren oyuncu; ayrılırsa sıradaki oyuncuya geçer. Admin için `adminSetSpeed` olayı hazır (arayüzü Sprint 16'da).
+- Kâr payı çekme artık kasadan fazla olamaz; eski "%20" davranışı, tutar verilmeyen çağrılarda (Öneri/Tamam, `/cek`) aynen duruyor.
+- Muhasebe ve İT güvenlik seviyeli/sabit işlemlerdir, çubuk gerektirmez. Çubuk, tutarı serbest olan her işleme (yatırım, kâr payı, pazarlama) eklendi.
 
 ## Kararlar
 - **Veri saklama:** Şimdilik tarayıcıda (localStorage/çerez) yönetilir. SQLite/PostgreSQL daha sonra bağlanacak; bunun için durum okuma/yazma tek bir katmandan geçmeli (depolama arayüzü), böylece geçiş tek yerde yapılır.

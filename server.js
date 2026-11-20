@@ -157,7 +157,7 @@ const WORLD_MAX_X = 4600; // client street width is ~3800 world units
 const SPAWN_X = 120;     // in front of the guide building
 const clean = (s, max = 40) => String(s ?? '').replace(/[<>]/g, '').trim().slice(0, max);
 const cParams = c => (c.name ? { company: c.name } : { companyKey: c.nameKey });
-const addLog = (st, key, params = {}) => { st.log.unshift({ at: Date.now(), key, params }); st.log.length = Math.min(st.log.length, 30); };
+const addLog = (st, key, params = {}) => { st.log.unshift({ at: Date.now(), day: st.day || 0, key, params }); st.log.length = Math.min(st.log.length, 80); };
 // Compact company view for clients: last 30 days + last 12 months (full history stays on the server for reports)
 // Lite company view in every snapshot: only today / last day / this month. History is fetched on demand ('finHistory').
 const publicCompany = (c, monthKey) => {
@@ -183,7 +183,7 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, publicCompany(c, R.calendar((st.day || 0) + 1).monthKey)])),
   presentation: publicPresentation(st) || null,
-  city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, serverNow: Date.now(),
+  city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, serverNow: Date.now(),
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
   busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities });
@@ -259,7 +259,7 @@ function makeCompany({ id, name, nameKey, workspace, lotId, founders, cash, pric
 }
 function createStreet(id, mode, pin, city) {
   const lots = Array.from({ length: LOTS_PER_STREET }, (_, i) => ({ id: i, ...SEED.lotPattern[i % SEED.lotPattern.length], companyIds: [] }));
-  const st = { id, mode, pin: pin || null, city: ECON.cities[city] ? city : 'istanbul', teams: {}, tickAt: Date.now(),
+  const st = { id, mode, pin: pin || null, city: ECON.cities[city] ? city : 'istanbul', teams: {}, tickAt: Date.now(), speed: 1, ownerId: null,
     players: {}, pastPlayers: {}, companies: {}, lots, ideas: [], log: [], archive: [], day: 0, createdAt: Date.now() };
   SEED.npcCompanies.forEach((n, i) => {
     const lot = lots.find(l => l.type === n.lotType && l.size === n.size && l.companyIds.length === 0);
@@ -273,7 +273,7 @@ function createStreet(id, mode, pin, city) {
 }
 const crisisActive = (st, c) => c.crisis && c.crisis.until > (st.day || 0);
 const marketingActive = (st, c) => c.marketing && c.marketing.until > (st.day || 0);
-const incomeMult = (st, c) => (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? SEED.marketing.mult : 1);
+const incomeMult = (st, c) => (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
 // Mirrors the client: building height (floors) follows the lot's total cash. Virtual companies use their own cash.
 const floorsFor = cash => Math.max(1, Math.min(6, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
 function floorsOf(st, c) {
@@ -389,6 +389,7 @@ io.on('connection', socket => {
       x: SPAWN_X, dir: 1, avatar: crypto.randomInt(0, 1000), busCard: 0, badges: {}, counters: {}, team: null };
     ensureQuests(st, me);
     st.players[socket.id] = me;
+    if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
     socket.join(st.id);
     addLog(st, 'log.joined', { player: me.name });
     socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null });
@@ -440,12 +441,14 @@ io.on('connection', socket => {
   const founderOf = cid => { const c = street?.companies[cid]; return c && c.founders.includes(me.id) ? c : null; };
   const needDept = (c, key) => { if (deptUnlocked(street, c, key)) return true; socket.emit('toast', 'toast.deptLocked'); return false; };
 
-  socket.on('marketing', ({ cid } = {}) => {
+  socket.on('marketing', ({ cid, budget } = {}) => {
     const c = founderOf(cid); if (!c || limited() || !needDept(c, 'marketing')) return;
     if (marketingActive(street, c)) return socket.emit('toast', 'toast.campaignActive');
-    if (c.cash < SEED.marketing.cost) return socket.emit('toast', 'toast.noCash');
-    c.cash -= SEED.marketing.cost; R.track(c, 'expenses', SEED.marketing.cost);
-    c.marketing = { until: (street.day || 0) + SEED.marketing.days };
+    const pct = budget == null ? 50 : Math.max(10, Math.min(100, Math.floor(Number(budget)) || 50)), k = pct / 50; // 50% = standard campaign
+    const cost = Math.round(SEED.marketing.cost * k);
+    if (c.cash < cost) return socket.emit('toast', 'toast.noCash');
+    c.cash -= cost; R.track(c, 'expenses', cost);
+    c.marketing = { until: (street.day || 0) + SEED.marketing.days, k };
     progress(street, me, 'campaign'); award(street, me, 'marketer');
     addLog(street, 'log.campaign', { player: me.name, days: SEED.marketing.days, ...cParams(c) });
     sync();
@@ -522,6 +525,13 @@ io.on('connection', socket => {
 
   // ---------- Chat (multiplayer & presentation rooms), moderated by admin ----------
   let lastChat = 0;
+  socket.on('setSpeed', ({ speed } = {}) => {
+    if (!street || !me || street.mode === 'presentation') return;
+    if (street.ownerId !== me.id) return socket.emit('toast', 'toast.ownerOnly');
+    if (!setRoomSpeed(street, speed)) return;
+    addLog(street, 'log.speed', { player: me.name, speed: street.speed });
+    sync();
+  });
   const TALK_RANGE = 320; // world px (about one building width): who counts as "next to each other"
   const EMOJIS = ['👍', '👏', '😀', '😂', '❤️', '🔥', '🎉', '🤝', '🙏', '😮'];
   let lastEmoji = 0;
@@ -816,11 +826,14 @@ io.on('connection', socket => {
     sync();
   });
 
-  socket.on('withdraw', ({ cid } = {}) => {
+  socket.on('withdraw', ({ cid, amount } = {}) => {
     const c = street?.companies[cid];
     if (!c || !c.founders.includes(me.id) || c.cash <= 0) return;
     if (crisisActive(street, c) && CRISES[c.crisis.type].blocksWithdraw) return socket.emit('toast', 'toast.trusteeBlock');
-    const share = Math.floor((c.cash * 0.2) / c.founders.length);
+    // Without an amount: the classic 20% split. With an amount (slider / manual): any whole number up to the company's cash.
+    const asked = Math.floor(Number(amount));
+    const share = amount == null ? Math.floor((c.cash * 0.2) / c.founders.length) : Math.min(c.cash, asked);
+    if (!(share > 0)) return;
     c.cash -= share; me.coins += share;
     R.track(c, 'dividends', share);
     sync();
@@ -842,15 +855,27 @@ io.on('connection', socket => {
     for (const c of Object.values(street.companies)) c.employees = c.employees.filter(id => id !== socket.id);
     street.pastPlayers[socket.id] = me;
     delete street.players[socket.id];
+    if (street.ownerId === socket.id) street.ownerId = Object.keys(street.players)[0] || null;
     addLog(street, 'log.left', { player: me?.name });
     if (street.mode === 'solo') { delete rooms[street.id]; return; } // solo streets are disposable
     sync();
   });
 });
 
+// ---------- GAME SPEED (per room) ----------
+const SPEEDS = [0.5, 1, 2, 3];
+// Changing speed mid-day rescales tickAt so the clock does not jump
+function setRoomSpeed(st, speed) {
+  const next = SPEEDS.includes(Number(speed)) ? Number(speed) : null; if (!next) return false;
+  const prev = st.speed || 1, now = Date.now();
+  const p = Math.min(1, Math.max(0, (now - st.tickAt) / (SEED.tickSeconds * 1000 / prev)));
+  st.tickAt = Math.round(now - p * (SEED.tickSeconds * 1000 / next));
+  st.speed = next; return true;
+}
+
 // ---------- ECONOMY TICK (1 tick = 1 game day) ----------
-function economyTick() {
-  for (const st of Object.values(rooms)) {
+function economyTick(only) {
+  for (const st of only ? [only] : Object.values(rooms)) {
     for (const c of Object.values(st.companies)) {
       c.performance = performanceOf(c);
       c.benefitCost = benefitCostPerEmployee(c);
@@ -897,7 +922,11 @@ function economyTick() {
   }
 }
 let tickTimer = null;
-const scheduleTick = () => { clearInterval(tickTimer); tickTimer = setInterval(economyTick, SEED.tickSeconds * 1000); };
+// Each room advances on its own clock: a day lasts tickSeconds / speed
+const scheduleTick = () => { clearInterval(tickTimer); tickTimer = setInterval(() => {
+  const now = Date.now();
+  for (const st of Object.values(rooms)) if (now - (st.tickAt || 0) >= SEED.tickSeconds * 1000 / (st.speed || 1)) economyTick(st);
+}, 1000); };
 scheduleTick();
 
 // ---------- NPC BOT EVENTS ----------
@@ -1155,6 +1184,10 @@ admin.on('connection', socket => {
     delete st.teams[teamId];
     Object.values(st.players).forEach(p => { if (p.team === teamId) p.team = null; });
     audit('deleteTeam', `${st.id}: ${teamId}`); syncRoom(st); push();
+  });
+  socket.on('adminSetSpeed', ({ roomId, speed } = {}) => {
+    const st = room(roomId); if (!st || !setRoomSpeed(st, speed)) return;
+    audit('setSpeed', `${st.id}: ${st.speed}x`); syncRoom(st); push();
   });
   const pres = id => { const st = room(id); return st?.presentation ? st : null; };
   socket.on('setSpotlight', ({ roomId, target } = {}) => {

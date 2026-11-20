@@ -89,7 +89,7 @@ async function loadLang(lng) {
   document.querySelectorAll('[data-i18n-ph]').forEach(e => (e.placeholder = t(e.dataset.i18nPh)));
   $('recAudio').textContent = '☁🔒 ' + t('ui.recAudio');
   $('recVideo').textContent = '☁🔒 ' + t('ui.recVideo');
-  updateControls(); renderSeed(); renderRoomBar(); render(); updateAutoBtn(); applyTheme();
+  updateControls(); renderSeed(); renderRoomBar(); render(); updateAutoBtn(); applyTheme(); updateSpeedBtn();
   document.querySelectorAll('#side .card > h3.fold').forEach(h => (h.title = t('ui.collapse')));
 }
 function renderSeed() {
@@ -303,6 +303,7 @@ function updateControls() {
   $('actBtn').textContent = inside ? '⬆ ' + t('ui.open') : '⬆ ' + t('ui.enter');
   $('innerBar').hidden = !inside;
   $('advisor').hidden = !joined || scene.name !== 'street';
+  $('advChip').hidden = $('advisor').hidden;
 }
 
 // ---------- Input: keyboard ----------
@@ -403,9 +404,11 @@ function renderAdvisor() {
   const s = plan || currentSuggestion();
   $('advLabel').textContent = s ? (plan ? '🚶 ' : '💡 ') + t(s.labelKey, resolve(s.params)) : t('adv.none');
   $('advReason').textContent = s ? t(s.reasonKey, resolve(s.params)) : '';
-  $('advOk').disabled = !s; $('advNext').disabled = ranked.length < 2;
+  $('advOk').disabled = !s; $('advNext').disabled = $('advPrev').disabled = ranked.length < 2 || !!plan;
+  $('advCount').textContent = ranked.length > 1 && !plan ? `${(advIdx % ranked.length) + 1}/${ranked.length}` : '';
 }
 function acceptSuggestion() { const s = auto ? ranked.find(x => !x.action.ev.startsWith('__')) : currentSuggestion(); if (s) startPlan(s); }
+function prevSuggestion() { advIdx = (advIdx - 1 + Math.max(1, ranked.length)) % Math.max(1, ranked.length); renderAdvisor(); }
 function nextSuggestion() { advIdx = (advIdx + 1) % Math.max(1, ranked.length); renderAdvisor(); }
 function startPlan(s) {
   const b = buildingOf(s.target); if (!b) return;
@@ -426,6 +429,8 @@ function setAuto(v) { auto = v; updateAutoBtn(); if (v && !plan) acceptSuggestio
 function updateAutoBtn() { $('advAuto').textContent = t(auto ? 'ui.autoOn' : 'ui.auto'); $('advAuto').classList.toggle('on', auto); }
 $('advOk').onclick = acceptSuggestion;
 $('advNext').onclick = nextSuggestion;
+$('advPrev').onclick = prevSuggestion;
+$('advMin').onclick = $('advChip').onclick = () => { ui.noAdv = !ui.noAdv; saveUi(); applyUi(); };
 $('advAuto').onclick = () => setAuto(!auto);
 setInterval(() => { if (auto && state && !plan && !modalOpen && scene.name === 'street') acceptSuggestion(); }, AUTO_MS);
 
@@ -473,11 +478,21 @@ function openDeptHere() {
   if (d) openDept(c, d); else toast(t('ui.useElevator'));
 }
 
+// ---------- Game speed (room owner / admin): 0.5x 1x 2x 3x ----------
+const SPEEDS = [0.5, 1, 2, 3];
+function updateSpeedBtn() {
+  const b = $('speedBtn'), sp = state?.speed || 1, owner = !!state && state.ownerId === myId() && !isPres();
+  b.hidden = !state; b.textContent = '⏱ ' + sp + 'x';
+  b.disabled = !owner; b.title = owner ? t('ui.speedHint') : t('ui.speedOwner');
+  b.classList.toggle('fast', sp > 1); b.classList.toggle('slow', sp < 1);
+}
+$('speedBtn').onclick = () => { if (!state) return; const i = SPEEDS.indexOf(state.speed || 1); socket.emit('setSpeed', { speed: SPEEDS[(i + 1) % SPEEDS.length] }); };
+
 // ---------- Game clock (analog), day / night, morning shuttles ----------
 // One game day = tickSeconds of real time; the clock runs 06:00 -> 06:00 so a new day starts in the morning.
 function gameMinutes() {
   if (!state?.tickAt || !seed) return 9 * 60;
-  const p = clamp((Date.now() + clockOffset - state.tickAt) / (seed.tickSeconds * 1000), 0, 1);
+  const p = clamp((Date.now() + clockOffset - state.tickAt) / (seed.tickSeconds * 1000 / (state.speed || 1)), 0, 1);
   return (360 + p * 1440) % 1440;
 }
 function nightFactor(min) { const h = min / 60; return h >= 20 || h < 5 ? 1 : h >= 18 ? (h - 18) / 2 : h < 7 ? 1 - (h - 5) / 2 : 0; }
@@ -941,7 +956,7 @@ function runCommand(text) {
   switch (cmd.toLowerCase()) {
     case 'sat': case 'sell': if (need()) socket.emit('click', { cid: c.id }); break;
     case 'yatir': case 'invest': if (need()) socket.emit('invest', { cid: c.id, amount: Math.max(1, Math.floor(Number(args[0]) || 100)) }); break;
-    case 'cek': case 'withdraw': if (need()) socket.emit('withdraw', { cid: c.id }); break;
+    case 'cek': case 'withdraw': if (need()) socket.emit('withdraw', args[0] ? { cid: c.id, amount: Math.max(1, Math.floor(Number(args[0]) / (isTR() ? RATE() : 1)) || 1) } : { cid: c.id }); break;
     case 'kur': case 'found': openWizard(); break;
     case 'oneri': case 'ok': acceptSuggestion(); break;
     case 'sira': case 'top': toggleBoard(true); break;
@@ -1003,6 +1018,25 @@ function renderPoll() {
 
 // ---------- Render DOM ----------
 let logSig = '';
+// ---------- Timeline: events grouped by game day, newest first ----------
+const LOG_ICON = [['invest', '💸'], ['campaign', '📣'], ['found', '🏁'], ['hire', '🤝'], ['bankrupt', '💥'], ['crisis', '🔥'], ['speed', '⏱'], ['joined', '👋'], ['left', '🚪'], ['buy', '🔑'], ['team', '👥'], ['idea', '💡']];
+const logIcon = key => (LOG_ICON.find(([k]) => key.includes(k)) || [0, '•'])[1];
+function timelineItems(log, time) {
+  const out = []; let lastDay = null;
+  for (const l of log) {
+    const day = l.day ?? null;
+    if (day !== lastDay) {
+      lastDay = day;
+      const h = el('li', null, 'dayHdr');
+      const month = Math.floor(((day || 1) - 1) % 360 / 30) + 1;
+      h.textContent = day ? t('ui.day', { day, year: Math.floor((day - 1) / 360) + 1, quarter: Math.ceil(month / 3), month }) : t('ui.timelineStart');
+      out.push(h);
+    }
+    const li = el('li', null, 'tlItem'); li.append(el('span', null, 'tlDot'), el('span', `${time(l.at)} · ${t(l.key, resolve(l.params))}`));
+    out.push(li);
+  }
+  return out;
+}
 function render() {
   if (!i18next.isInitialized) return;
   $('day').textContent = state?.calendar ? t('ui.day', state.calendar) : '';
@@ -1012,12 +1046,13 @@ function render() {
   renderFinance();
   renderPoll();
   if (boardOpen) renderBoard();
+  updateSpeedBtn();
   if (state) {
     const sig = `${state.log[0]?.at}|${state.log.length}|${state.ideas.length}|${i18next.language}`;
     if (sig !== logSig) {
       logSig = sig;
       const time = ts => new Date(ts).toLocaleTimeString(i18next.language, { hour: '2-digit', minute: '2-digit' });
-      $('log').replaceChildren(...state.log.map(l => el('li', `${time(l.at)} · ${t(l.key, resolve(l.params))}`)));
+      $('log').replaceChildren(...timelineItems(state.log, time));
       $('ideas').replaceChildren(...state.ideas.map(i => el('li', `${i.by}: ${i.text}`)));
     }
   } else { logSig = ''; $('log').replaceChildren(); $('ideas').replaceChildren(); $('hud').replaceChildren(); hudSig = ''; }
@@ -1278,6 +1313,13 @@ function companyBlock(body, c, isDefault) {
   miniFinance(box, c);
   const { list, rec } = companyActions({ state, seed, myId: myId() }, c, ranked);
   const run = a => () => { socket.emit(a.ev, { cid: c.id, ...(a.payload || {}) }); closeModal(); };
+  const pick = a => {
+    if (a.ev === 'invest') return () => moneyPicker({ title: t('ui.investPick') + ' · ' + companyName(c), note: t('ui.investNote', { coins: money(me().coins) }), maxCoins: me().coins,
+      defCoins: Math.min(a.payload?.amount || 100, me().coins), confirmLabel: t('ui.confirm'), onConfirm: amount => socket.emit('invest', { cid: c.id, amount }) });
+    if (a.ev === 'withdraw') return () => moneyPicker({ title: t('ui.withdrawPick') + ' · ' + companyName(c), note: t('ui.withdrawNote', { cash: money(c.cash) }), maxCoins: c.cash,
+      defCoins: c.cash * 0.2 / Math.max(1, c.founders.length), confirmLabel: t('ui.confirm'), onConfirm: amount => socket.emit('withdraw', { cid: c.id, amount }) });
+    return run(a);
+  };
   const top = list.find(a => a.recommended);
   if (top) {
     const r = el('div', null, 'rec');
@@ -1294,7 +1336,7 @@ function companyBlock(body, c, isDefault) {
   if (role === 'carDealer' || role === 'rentACar') box.append(el('small', t('veh.dealerInfo.' + role, { buy: seed.economy.vehicle.buyPrice, rent: seed.economy.vehicle.rentPerDay }), 'muted'));
   const rest = list.filter(a => !a.recommended);
   const row = el('div', null, 'others');
-  rest.forEach(a => row.append(btn(t(a.key, a.payload), run(a))));
+  rest.forEach(a => row.append(btn((a.ev === 'invest' ? '🎚 ' + t('ui.investPick') : a.ev === 'withdraw' ? '🎚 ' + t('ui.withdrawPick') : t(a.key, a.payload)), pick(a))));
   if (!isPres()) row.append(btn('🚪 ' + t(isMember(c) ? 'ui.enterOffice' : 'ui.visit'), () => enterCompany(c)));
   if (row.children.length) { box.append(el('small', t('ui.otherOptions'), 'muted')); box.append(row); }
   body.append(box);
@@ -1409,6 +1451,57 @@ function collarPanel(box, c, emit) {
   Object.keys(cols).filter(k => k !== best).forEach(k => row.append(btn(t('hr.hire', { collar: t('collar.' + k), salary: cols[k].salary }), emit('hireNpc', { collar: k }))));
   box.append(row);
 }
+// ---------- Amount pickers: a 1-100 slider and a manual number stay in sync ----------
+// moneyPicker: choose an amount of coins up to maxCoins. TR players type ₺, others coins.
+function moneyPicker({ title, note, maxCoins, defCoins, confirmLabel, onConfirm }) {
+  maxCoins = Math.floor(maxCoins); if (!(maxCoins >= 1)) return toast(t('toast.noCash'));
+  const unit = isTR() ? RATE() : 1, clampC = v => Math.max(1, Math.min(maxCoins, Math.round(v)));
+  let coins = clampC(defCoins ?? maxCoins * 0.2);
+  openModal(body => {
+    body.append(el('h3', title)); if (note) body.append(el('p', note, 'muted'));
+    const big = el('div', null, 'pickBig'), sub = el('small', null, 'muted');
+    const slider = el('input'); slider.type = 'range'; slider.min = 1; slider.max = 100; slider.step = 1; slider.setAttribute('aria-label', '%');
+    const num = el('input'); num.type = 'number'; num.min = 1; num.step = 'any'; num.inputMode = 'decimal'; num.setAttribute('aria-label', t('ui.amount'));
+    const sync = from => {
+      const pct = Math.round(coins / maxCoins * 100);
+      big.textContent = money(coins); sub.textContent = t('ui.ofMax', { pct, max: money(maxCoins) });
+      if (from !== 'slider') slider.value = Math.max(1, pct);
+      if (from !== 'num') num.value = String(unit === 1 ? coins : Math.round(coins * unit));
+    };
+    slider.oninput = () => { coins = clampC(maxCoins * Number(slider.value) / 100); sync('slider'); };
+    num.oninput = () => { const v = Number(num.value); if (Number.isFinite(v) && v > 0) { coins = clampC(v / unit); sync('num'); } };
+    num.onblur = () => sync();
+    const chips = el('div', null, 'emojiBar');
+    [25, 50, 75, 100].forEach(p => chips.append(btn(p + '%', () => { coins = clampC(maxCoins * p / 100); sync(); })));
+    const go = () => { const v = coins; closeModal(); onConfirm(v); };
+    num.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+    body.append(big, sub, slider, chips, num, btn('✓ ' + confirmLabel, go, { primary: true, isDefault: true }));
+    sync();
+  });
+}
+// budgetPicker: marketing intensity 10-100 (50 = standard). Cost and bonus scale with it.
+function budgetPicker({ title, note, baseCost, baseBonusPct, maxCoins, confirmLabel, onConfirm }) {
+  let pct = 50;
+  openModal(body => {
+    body.append(el('h3', title)); if (note) body.append(el('p', note, 'muted'));
+    const big = el('div', null, 'pickBig'), sub = el('small', null, 'muted');
+    const slider = el('input'); slider.type = 'range'; slider.min = 10; slider.max = 100; slider.step = 1;
+    const num = el('input'); num.type = 'number'; num.min = 10; num.max = 100; num.step = 1; num.inputMode = 'numeric';
+    const sync = from => {
+      const cost = Math.round(baseCost * pct / 50), bonus = Math.round(baseBonusPct * pct / 50);
+      big.textContent = money(cost); sub.textContent = t('ui.budgetInfo', { pct, bonus, left: money(maxCoins - cost) });
+      if (from !== 'slider') slider.value = pct; if (from !== 'num') num.value = pct;
+      okBtn.disabled = cost > maxCoins;
+    };
+    const okBtn = btn('✓ ' + confirmLabel, () => { const p = pct; closeModal(); onConfirm(p); }, { primary: true, isDefault: true });
+    slider.oninput = () => { pct = Number(slider.value); sync('slider'); };
+    num.oninput = () => { const v = Math.floor(Number(num.value)); if (Number.isFinite(v)) { pct = Math.max(10, Math.min(100, v)); sync('num'); } };
+    num.onblur = () => sync();
+    const chips = el('div', null, 'emojiBar');
+    [25, 50, 75, 100].forEach(p => chips.append(btn(p + '%', () => { pct = p; sync(); })));
+    body.append(big, sub, slider, chips, num, okBtn); sync();
+  });
+}
 function openDept(c, d) {
   const founder = c.founders.includes(myId()), member = isMember(c);
   const emit = (ev, extra = {}) => () => { socket.emit(ev, { cid: c.id, ...extra }); closeModal(); };
@@ -1433,8 +1526,10 @@ function openDept(c, d) {
         const row = el('div', null, 'others');
         if (founder && c.cash < 0) rec(t('ui.invest'), emit('invest', { amount: 100 }), t('adv.rescueWhy'));
         else if (founder && c.cash >= 400) rec(t('ui.withdraw'), emit('withdraw'), t('adv.withdrawWhy'));
-        row.append(btn(t('ui.invest'), emit('invest', { amount: 100 })));
-        if (founder) row.append(btn(t('ui.withdraw'), emit('withdraw')));
+        row.append(btn('💸 ' + t('ui.investPick'), () => moneyPicker({ title: t('ui.investPick') + ' · ' + companyName(c), note: t('ui.investNote', { coins: money(me().coins) }),
+          maxCoins: me().coins, defCoins: Math.min(100, me().coins), confirmLabel: t('ui.confirm'), onConfirm: amount => socket.emit('invest', { cid: c.id, amount }) })));
+        if (founder) row.append(btn('🏦 ' + t('ui.withdrawPick'), () => moneyPicker({ title: t('ui.withdrawPick') + ' · ' + companyName(c), note: t('ui.withdrawNote', { cash: money(c.cash) }),
+          maxCoins: c.cash, defCoins: c.cash * 0.2 / c.founders.length, confirmLabel: t('ui.confirm'), onConfirm: amount => socket.emit('withdraw', { cid: c.id, amount }) })));
         if (!founder && !c.isNpc && c.founders.length < 3) row.append(btn(t('ui.cofound'), emit('cofound')));
         if (member) row.append(btn('📊 ' + t('dept.openFinance'), () => { closeModal(); finSel = c.id; renderFinance(true); showTab('finance'); }));
         box.append(row);
@@ -1455,7 +1550,11 @@ function openDept(c, d) {
       case 'marketing': {
         const m = seed.marketing, active = c.marketing && c.marketing.until > (state.day || 0);
         box.append(el('p', active ? t('dept.campaignLeft', { days: c.marketing.until - state.day }) : t('dept.campaignInfo', { cost: m.cost, days: m.days, pct: Math.round((m.mult - 1) * 100) })));
-        if (founder && !active) rec(t('dept.startCampaign', { cost: m.cost }), emit('marketing'), t('adv.marketingWhy', { days: m.days }));
+        if (founder && !active) {
+          rec(t('dept.startCampaign', { cost: m.cost }), emit('marketing'), t('adv.marketingWhy', { days: m.days }));
+          box.append(btn('🎚 ' + t('dept.campaignBudget'), () => budgetPicker({ title: t('dept.campaignBudget') + ' · ' + companyName(c), note: t('dept.campaignInfo', { cost: m.cost, days: m.days, pct: Math.round((m.mult - 1) * 100) }),
+            baseCost: m.cost, baseBonusPct: Math.round((m.mult - 1) * 100), maxCoins: c.cash, confirmLabel: t('dept.launch'), onConfirm: budget => socket.emit('marketing', { cid: c.id, budget }) })));
+        }
         else if (!founder) visitorNote();
         break;
       }

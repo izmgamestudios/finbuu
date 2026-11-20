@@ -12,6 +12,7 @@
 <header>
   <h1><span data-i18n="ui.title"></span><small id="slogan" data-i18n="ui.slogan"></small></h1>
   <span id="day"></span>
+  <button id="speedBtn" hidden aria-label="Speed">⏱ 1x</button>
   <span id="clockBox" title=""><canvas id="clock" width="80" height="80" aria-label="clock"></canvas><b id="clockTxt"></b></span>
   <button id="boardBtn" aria-label="Leaderboard">🏆</button>
   <button id="themeBtn" aria-label="Theme">🌓</button>
@@ -25,13 +26,16 @@
     <canvas id="cv"></canvas>
     <div id="hud" aria-live="polite"></div>
     <div id="advisor" hidden>
-      <div id="advText"><b id="advLabel"></b><small id="advReason"></small></div>
+      <div id="advText"><b id="advLabel"></b><small id="advReason"></small><small id="advCount" class="muted"></small></div>
       <div class="advBtns">
         <button id="advOk" class="primary" data-i18n="ui.ok"></button>
+        <button id="advPrev" aria-label="Previous">◀</button>
         <button id="advNext" data-i18n="ui.next"></button>
         <button id="advAuto" data-i18n="ui.auto"></button>
+        <button id="advMin" aria-label="Minimize">▾</button>
       </div>
     </div>
+    <button id="advChip" aria-label="Suggestion">💡</button>
     <div id="board" hidden>
       <div class="boardHead">
         <h3 data-i18n="board.title"></h3>
