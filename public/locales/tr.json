@@ -138,7 +138,18 @@
     "useElevator": "Asansördesin. W/S ile kat değiştir.",
     "enterOffice": "Ofise gir",
     "visit": "İçeriyi gez",
-    "helpBtn": "❓"
+    "helpBtn": "❓",
+    "dwMap": "Harita",
+    "dwBoard": "Sıralama",
+    "dwHelp": "Yardım",
+    "dwMode": "Oyun modu",
+    "dwTheme": "Tema",
+    "dwThemeVal": {
+      "system": "🌓 Sistem",
+      "light": "☀️ Açık",
+      "dark": "🌙 Koyu"
+    },
+    "dwDay": "Gün {{d}}"
   },
   "tutorial": {
     "welcome": "Kılavuz Binası: Hoş geldin! Başlangıç sermayen hazır; Türkçede tutarlar gerçek 2026 ₺ değerleriyle gösterilir.",

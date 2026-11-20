@@ -138,7 +138,18 @@
     "useElevator": "You are at the elevator. Use W/S to change floors.",
     "enterOffice": "Enter office",
     "visit": "Look inside",
-    "helpBtn": "❓"
+    "helpBtn": "❓",
+    "dwMap": "Map",
+    "dwBoard": "Ranking",
+    "dwHelp": "Help",
+    "dwMode": "Game mode",
+    "dwTheme": "Theme",
+    "dwThemeVal": {
+      "system": "🌓 System",
+      "light": "☀️ Light",
+      "dark": "🌙 Dark"
+    },
+    "dwDay": "Day {{d}}"
   },
   "tutorial": {
     "welcome": "Guide Building: Welcome! Your starting capital is ready.",

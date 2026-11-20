@@ -15,6 +15,7 @@
 <header>
   <h1><span data-i18n="ui.title"></span><small id="slogan" data-i18n="ui.slogan"></small></h1>
   <span id="day"></span>
+  <div id="hdrStats" hidden><span class="hpill" id="hdrCoins"></span><span class="hpill" id="hdrLvl"></span></div>
   <button id="speedBtn" hidden aria-label="Speed">⏱ 1x</button>
   <span id="clockBox" title=""><canvas id="clock" width="80" height="80" aria-label="clock"></canvas><b id="clockTxt"></b></span>
   <button id="helpBtn" aria-label="Help" title="F1">❓</button>
@@ -132,20 +133,27 @@
 
 <div id="scrim"></div>
 <div id="drawer">
+  <div id="dwProfile"></div>
+  <div class="dwGrid">
+    <button id="dwMap"><span>🗺</span><b data-i18n="ui.dwMap"></b></button>
+    <button id="dwBoard"><span>🏆</span><b data-i18n="ui.dwBoard"></b></button>
+    <button id="dwHelp"><span>❓</span><b data-i18n="ui.dwHelp"></b></button>
+    <button id="openIdeas"><span>💡</span><b data-i18n="ui.ideaBox"></b></button>
+    <button id="openGuide"><span>📘</span><b data-i18n="ui.guide"></b></button>
+    <button id="openModes"><span>🎮</span><b data-i18n="ui.dwMode"></b></button>
+  </div>
   <h3 data-i18n="ui.settings"></h3>
-  <label data-i18n="ui.language"></label>
-  <select id="lang"><option value="tr">Türkçe</option><option value="en">English</option></select>
-  <label data-i18n="ui.quality"></label>
-  <select id="quality">
-    <option value="auto" data-i18n="ui.qAuto"></option>
-    <option value="high" data-i18n="ui.qHigh"></option>
-    <option value="low" data-i18n="ui.qLow"></option>
-  </select>
+  <div class="dwRow"><label data-i18n="ui.language"></label>
+    <select id="lang"><option value="tr">Türkçe</option><option value="en">English</option></select></div>
+  <div class="dwRow"><label data-i18n="ui.dwTheme"></label><button id="dwTheme"></button></div>
+  <div class="dwRow"><label data-i18n="ui.quality"></label>
+    <select id="quality">
+      <option value="auto" data-i18n="ui.qAuto"></option>
+      <option value="high" data-i18n="ui.qHigh"></option>
+      <option value="low" data-i18n="ui.qLow"></option>
+    </select></div>
   <button id="toggleStatus" data-i18n="ui.toggleStatus"></button>
-  <button id="openGuide" data-i18n="ui.guide"></button>
-  <button id="openIdeas" data-i18n="ui.ideaBox"></button>
-  <button id="openModes" class="primary" data-i18n="ui.modeTitle"></button>
-  <button id="closeDrawer" data-i18n="ui.close"></button>
+  <button id="closeDrawer" class="primary" data-i18n="ui.close"></button>
 </div>
 
 <div id="modal"><div class="card" id="modalBody" role="dialog" aria-modal="true"></div></div>

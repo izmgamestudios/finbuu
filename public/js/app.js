@@ -115,6 +115,7 @@ function applyTheme() {
   const dark = themeMode === 'dark' || (themeMode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0a1029' : '#1d2b53');
   const b = $('themeBtn'); b.textContent = THEME_ICON[themeMode];
+  $('dwTheme').textContent = t('ui.dwThemeVal.' + themeMode);
   b.title = b.ariaLabel = t('ui.theme' + themeMode[0].toUpperCase() + themeMode.slice(1));
 }
 $('themeBtn').onclick = () => { themeMode = THEMES[(THEMES.indexOf(themeMode) + 1) % 3]; try { localStorage.setItem('finbuu.theme', themeMode); } catch {} applyTheme(); };
@@ -140,12 +141,17 @@ $('hudBtn').onclick = () => { ui.noHud = !ui.noHud; saveUi(); applyUi(); };
 renderEmojiBar(); applyUi();
 $('closeDrawer').onclick = $('scrim').onclick = () => openDrawer(false);
 $('openModes').onclick = () => { openDrawer(false); showModes(); };
+$('dwMap').onclick = () => { openDrawer(false); if (state) toggleMinimap(true); };
+$('dwBoard').onclick = () => { openDrawer(false); if (state) toggleBoard(true); };
+$('dwHelp').onclick = () => { openDrawer(false); $('helpBtn').click(); };
+$('dwTheme').onclick = () => $('themeBtn').click();
 $('openIdeas').onclick = () => { openDrawer(false); showTab('ideas'); };
 $('openGuide').onclick = () => { openDrawer(false); showTab('guide'); };
 $('toggleStatus').onclick = () => { showStatus = !showStatus; saveJSON('status', showStatus); $('status').hidden = !showStatus; };
 $('quality').value = perf.quality;
 $('quality').onchange = e => { perf.quality = e.target.value; perf.low = perf.quality === 'low'; resize(); };
 function showTab(tab) {
+  if (tab === 'chat') document.querySelector('nav button[data-tab="chat"]')?.classList.remove('unread');
   if (tab === 'finance') tutFlag('finance');
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
   $('side').classList.toggle('open', tab !== 'street');
@@ -849,9 +855,24 @@ function chip(icon, label, value, pct, color, onClick) {
 }
 const signed = (n, cls) => { const v = Math.abs(n) < 0.5 ? 0 : n; return el('span', (v >= 0 ? '+' : '') + fmt(v), cls || (v >= 0 ? 'pos' : 'neg')); };
 let hudSig = '';
+// ---- UI-2: compact header stats (mobile) + drawer profile card ----
+function updateHdrStats(p, s, prevXp, nextXp) {
+  const box = $('hdrStats'); box.hidden = !p;
+  if (!p) return $('dwProfile').replaceChildren();
+  const pct = Math.max(0, Math.min(100, ((s.xp - prevXp) / Math.max(1, nextXp - prevXp)) * 100));
+  $('hdrCoins').replaceChildren(el('span', '🪙'), el('b', fmt(p.coins)));
+  const lv = $('hdrLvl'); lv.replaceChildren(el('span', '⭐'), el('b', String(s.level)));
+  const xp = el('i', null, 'hxp'), fill = el('u'); fill.style.width = pct + '%'; xp.append(fill); lv.append(xp);
+  const card = $('dwProfile'), head = el('div', null, 'dwHead');
+  head.append(el('b', p.name || '—'), el('small', [state?.city && seed?.economy?.cityMap ? cityName(state.city) : '', state?.calendar ? t('ui.dwDay', { d: state.day || state.calendar.day }) : '', $('clockTxt').textContent].filter(Boolean).join(' · '), 'muted'));
+  const bar = el('div', null, 'bar'), f2 = el('i'); f2.style.width = pct + '%'; bar.append(f2);
+  const row = el('div', null, 'dwStats');
+  row.append(el('span', `⭐ ${t('ui.level')} ${s.level} · ${Math.round(s.xp)} XP`), el('span', '🪙 ' + fmt(p.coins)));
+  card.replaceChildren(head, bar, row);
+}
 function renderHud() {
   const p = me(), hud = $('hud');
-  if (!p) { hudSig = ''; return hud.replaceChildren(); }
+  if (!p) { hudSig = ''; updateHdrStats(null); return hud.replaceChildren(); }
   const owned = Object.values(state.companies).filter(c => c.founders.includes(myId()));
   const f = finOf(myCompanies()), fo = finOf(owned);
   const floors = floorsFor(fo.cash), next = 250 * 2 ** floors, prev = floors > 1 ? 250 * 2 ** (floors - 1) : 0;
@@ -860,6 +881,7 @@ function renderHud() {
   const sig = [p.coins, fo.cash, f.units, f.todayUnits, f.employees, f.cap, f.todayRev, f.dayExp, f.monthRev, f.monthExp, Math.round(s.xp), rank, i18next.language].join('|');
   if (sig === hudSig) return;
   hudSig = sig;
+  updateHdrStats(p, s, prevXp, nextXp);
   hud.replaceChildren(
     chip('💰', t('hud.coins'), fmt(p.coins), p.coins / 2000),
     chip('🏦', t('hud.cash'), owned.length ? fmt(fo.cash) : '—', owned.length ? (floors >= MAX_FLOORS ? 1 : (fo.cash - prev) / (next - prev)) : 0, fo.cash < 0 ? 'var(--bad)' : null),
@@ -1084,6 +1106,7 @@ function addChat(m) {
   const li = el('li', null, m.to ? 'dm' : ''); li.dataset.id = m.id;
   li.append(el('b', chatLabel(m)), document.createTextNode(' ' + m.text));
   const list = $('chatList'); list.append(li);
+  if (m.pid !== myId() && document.querySelector('nav button.active')?.dataset.tab !== 'chat') document.querySelector('nav button[data-tab="chat"]')?.classList.add('unread');
   while (list.children.length > 60) list.firstChild.remove();
   list.scrollTop = list.scrollHeight;
 }
