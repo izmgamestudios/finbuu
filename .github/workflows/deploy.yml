@@ -81,10 +81,22 @@ jobs:
 
       - name: Smoke test
         run: |
-          sleep 3
+          sleep 4
           ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
-            "PM2_APP='${PM2_APP:-finbuu}' bash -l -s" <<'REMOTE'
+            "DEPLOY_PATH='$DEPLOY_PATH' PM2_APP='${PM2_APP:-finbuu}' bash -l -s" <<'REMOTE'
           export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          export PATH="$HOME/.local/share/fnm:$HOME/.volta/bin:$HOME/.npm-global/bin:$PATH"
+          cd "$DEPLOY_PATH"
+          PORT_N=$(grep -E '^PORT=' .env 2>/dev/null | tail -1 | cut -d= -f2 | tr -d '"' | tr -d "'")
+          PORT_N=${PORT_N:-3000}
           pm2 describe "$PM2_APP" | grep -E 'status|restarts'
+          fail() { echo "::error::$1"; pm2 logs "$PM2_APP" --lines 40 --nostream || true; exit 1; }
+          # the app must actually answer HTTP (a crash-looping pm2 process can still look "online"), and serve committed game data
+          for path in / /data/open-source-tools.json /fonts/nunito-latin-wght-normal.woff2; do
+            curl -fsS -o /dev/null --retry 6 --retry-delay 2 --retry-connrefused "http://127.0.0.1:$PORT_N$path" || fail "smoke test failed: $path on port $PORT_N"
+          done
+          sleep 5
+          curl -fsS -o /dev/null "http://127.0.0.1:$PORT_N/" || fail "app stopped answering after 5s (crash loop?)"
+          echo "smoke test ok on port $PORT_N"
           REMOTE
