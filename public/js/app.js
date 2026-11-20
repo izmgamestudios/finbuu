@@ -1238,8 +1238,53 @@ socket.on('teamCall', c => {
   openModal(body => { body.append(el('h3', '📣 ' + msg), btn('🏃 ' + t('team.goTo'), () => goToPlayer(c.from, c), { primary: true, isDefault: true })); });
 });
 // ---------- Quests, teams, badges (profile card) ----------
+// ---- Sprint 14: sales roleplay (customer conversation) ----
+let pitchCtx = null; // { cid, pid }
+function pitchStart(c, pid) { pitchCtx = { cid: c.id, pid }; socket.emit('pitchStart', { cid: c.id, pid }); }
+function pitchFrame(fill) {
+  openModal(body => { body.append(el('h3', '🗣 ' + t('sell.title'))); fill(body); }, { closable: false });
+}
+function pitchHeader(body, d, extra) {
+  const head = el('div', null, 'pitchHead');
+  head.append(el('span', { positive: '😀', neutral: '😐', negative: '😒' }[d.mood] || '🙂', 'pitchFace'), el('div', null, '')); 
+  head.lastChild.append(el('b', t('sell.persona.' + d.persona)), el('small', t('sell.mood.' + d.mood) + (extra ? ' · ' + extra : ''), 'muted'));
+  body.append(head);
+  const bar = el('div', null, 'bar'), fill = el('i'); fill.style.width = Math.max(0, Math.min(100, d.interest)) + '%';
+  fill.className = d.interest < 35 ? 'bad' : d.interest >= 70 ? 'good' : ''; bar.append(fill);
+  const lab = el('small', `${t('sell.interest')}: ${Math.round(d.interest)}%`, 'muted');
+  body.append(lab, bar);
+}
+socket.on('pitchStep', d => {
+  const prod = d.product || (d.productKey ? t(d.productKey) : '');
+  const key = `sell.${d.persona}.r${d.round + 1}`;
+  pitchFrame(body => {
+    pitchHeader(body, d, t('sell.round', { n: d.round + 1, total: d.total }));
+    if (d.last) body.append(el('p', (d.last.delta > 0 ? '▲ ' : '▼ ') + t('sell.react.' + d.last.quality), 'pitchReact ' + d.last.quality));
+    body.append(el('p', '“' + t(key + '.line', { product: prod, price: money(d.price) }) + '”', 'pitchLine'));
+    const list = el('div', null, 'prodList');
+    d.options.forEach(o => list.append(btn(t(`${key}.o${o}`, { product: prod, price: money(d.price) }), () => socket.emit('pitchAnswer', { o }))));
+    body.append(list);
+    body.append(el('small', t('sell.tip'), 'muted'));
+    const g = btn(t('sell.giveUp'), () => { socket.emit('pitchCancel'); pitchCtx = null; closeModal(); }); body.append(g);
+  });
+});
+socket.on('pitchResult', d => {
+  const ctx = pitchCtx; pitchCtx = null;
+  pitchFrame(body => {
+    pitchHeader(body, { persona: d.persona, mood: PITCH_MOOD[d.persona] || 'neutral', interest: d.interest });
+    body.append(el('h3', { big: '🎉 ', normal: '✅ ', partial: '😐 ', lost: '💨 ' }[d.outcome] + t(`sell.outcome.${d.outcome}.title`)));
+    body.append(el('p', t(`sell.outcome.${d.outcome}.desc`)));
+    if (d.revenue > 0) body.append(el('p', `${t('sell.reward')}: +${money(d.revenue)} · ${d.units}× · +${d.xp} XP`, 'pitchReward'));
+    const row = el('div', null, 'others');
+    if (ctx) row.append(btn('🗣 ' + t('sell.again'), () => { const c = state.companies[ctx.cid]; if (c) pitchStart(c, ctx.pid); else closeModal(); }, { primary: true, isDefault: true }));
+    row.append(btn(t('ui.close'), () => closeModal()));
+    body.append(row);
+  });
+});
+const PITCH_MOOD = { friendly: 'positive', impatient: 'neutral', thrifty: 'negative', skeptical: 'negative' };
+
 const BADGE_ICON = { hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
-  social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗' };
+  social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗', closer: '🤝' };
 let extraSig = '';
 function renderExtras(p) {
   const teams = state?.teams || {};
@@ -2092,6 +2137,7 @@ function openDept(c, d) {
       case 'sales': {
         box.append(el('p', t('dept.salesInfo', { product: c.product || t(c.nameKey), price: c.price, units: c.fin?.today?.units || 0 })));
         if (member) rec(t('ui.clickSell'), () => socket.emit('click', { cid: c.id }), t('adv.sellWhy'));
+        if (member && !c.isNpc) box.append(btn('🗣 ' + t('sell.start'), () => pitchStart(c, null)));
         else if (!founder) rec(t('ui.buy'), emit('buy'), t('adv.buyWhy'));
         productList(box, c, member, founder);
         vehiclePanel(box, c, founder);

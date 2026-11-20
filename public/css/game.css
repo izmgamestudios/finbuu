@@ -374,3 +374,13 @@ header h1 small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis
 /* ---- Sprint 13b: resume + away summary ---- */
 .resumeBox { border: 2px solid var(--accent) !important }
 .awayDelta { font-variant-numeric: tabular-nums; color: var(--good) } .awayDelta.neg { color: var(--bad) }
+
+/* Sprint 14: sales roleplay */
+.pitchHead { display: flex; align-items: center; gap: 10px; margin: 6px 0 }
+.pitchFace { font-size: 34px }
+.pitchLine { font-style: italic; margin: 10px 0; padding: 10px 12px; background: rgba(255,255,255,.07); border-radius: 10px }
+.pitchReact { margin: 4px 0; font-weight: 600 }
+.pitchReact.best { color: #4ade80 } .pitchReact.ok { color: #facc15 } .pitchReact.poor { color: #f87171 }
+.pitchReward { font-weight: 700; color: #4ade80 }
+#modalBody .prodList button { text-align: left; white-space: normal }
+.pitchHead small { display: block }

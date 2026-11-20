@@ -18,6 +18,7 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **12 — Ev** | Sokağın başında (kılavuzun solunda) ev · dışarıdan kişisel harcamalar (market, restoran, sinema, giyim, hediye, doktor, tatil, yürüyüş) · içeri girince 3 katlı ev: mutfak, salon (ev kirası ve kişisel faturalar), çalışma odası (kitap/kurs/mentor/sertifika), hobi odası (7 hobi, seviyeler), yatak odası, teras · mutluluk ve sağlık gelire etki eder | ✅ Tamam |
 | **13a — Çok oyunculu iç sahne** | Aynı binaya giren oyuncular iç sahnede birbirini görür (konum, hareket, konuşma baloncuğu), sokakta içeridekiler gizlenir · takım arkadaşını çağır (📣, 15 sn bekleme) / yanına git (🏃, içerideyse binaya da girer) · lobide açık odalar listesi (şifre gerekir, PIN sızmaz, oda kurarken gizlenebilir) | ✅ Tamam |
 | **13b — AFK & offline devam** | 90 sn girdisiz kalınca 💤 AFK (başkaları görür) · AFK/çevrimdışıyken şirket günde 6 "tıklama" değerinde yarı hızla kendi kendine satar (en fazla 30 oyun günü) · geri dönünce "Sen yokken" özeti · tarayıcıda saklanan gizli jetonla aynı oyuncu olarak devam (ağ kopmasında otomatik) · sunucu yeniden başlasa da odalar `data/rooms.json` dosyasından geri yüklenir | ✅ Tamam |
+| **14 — Satış roleplay** | Satış bölümünde 🗣 "Müşteriyle konuş": 4 müşteri tipi (güler yüzlü/aceleci/tutumlu/şüpheci, olumlu-kararsız-olumsuz) × 3 tur soru-cevap · her cevap ilgi barını artırır/düşürür · sonuç: büyük satış (5 adet) / normal / yarım kaldı / müşteri gitti · kazanç, XP, bilgi · 3 büyük satış → 🤝 Satış Ustası rozeti · 12 sn bekleme | ✅ Tamam |
 | **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ⬜ |
 | **15 — Başlangıç & yardım** | İlk girişte atlanabilir tutorial · chatbot · yardım penceresi · oyun içi ayrıntılı arama (işletme, üye, görev, özellik) | ⬜ |
 | **16 — Premium yönetimi** | Admin Premium'u aç/kapa, şehir ve özellik kilitlerini yönet | ⬜ |
@@ -98,3 +99,9 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - **Gerçek zamanlı oyun hızı (Sprint 7):** Hız oda genelinde tek olmalı (sunucu saati). Sadece oda sahibi veya admin değiştirebilsin, aksi halde oyuncular birbirinin saatini bozar.
 - **Şehirler arası seyahat (Sprint 11):** Her şehir ayrı bir cadde olduğundan, sunucu durumu (oyuncu konumu, şirket, NPC) şehir bazlı bölünmeli. Önce 2–3 şehirle başla.
 - **Offline/AFK devam (Sprint 13):** Veriler tarayıcıda saklandığı sürece oyuncu başka cihazdan devam edemez ve sunucu yeniden başlayınca oda durumu kaybolur. Bu bilinçli bir MVP kararı; veritabanı bağlanınca düzelir.
+
+## Sprint 14 notları
+- Mantık sunucuda (`pitch.js` + `server.js`: `pitchStart/pitchAnswer/pitchCancel`); istemci yalnızca seçenek sırası gösterir, doğru cevabı bilmez (seçenekler her turda karıştırılır).
+- Puan: iyi +20, orta +8, kötü −12; başlangıç ilgisi müşteri tipine, seviye/bilgi/indirime göre ayarlanır. Sonuç eşikleri: ≥80 büyük, ≥55 normal, ≥35 yarım, altı kayıp.
+- Kazanç = tıklama geliri × çarpan (60/30/12/0) — mevcut satış formülünü (seviye, performans, yaşam kalitesi) kullanır.
+- Metinler `public/locales/*.json` → `sell.*` (TR+EN). Yeni müşteri/soru eklemek için `pitch.js` PERSONAS + locale anahtarları.

@@ -13,6 +13,7 @@ const fs = require('fs');
 try { if (typeof process.loadEnvFile === 'function') process.loadEnvFile(path.join(__dirname, '.env')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
 const R = require('./reports');
 const ADS = require('./ads');
+const PITCH = require('./pitch');
 const { createAuth } = require('./auth');
 const ECON = require('./economy').build(25); // 25 coins = blue-collar daily employer cost (2026 minimum wage)
 
@@ -115,7 +116,7 @@ const SEED = {
     { id: 'chat', metric: 'chat', goal: 1, xp: 5, coins: 10, shared: true }
   ],
   badges: ['firstCompany', 'sales10', 'sales100', 'sales1000', 'floor3', 'floor6', 'firstHire', 'marketer', 'secure', 'social',
-    'commuter', 'teamPlayer', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar'],
+    'commuter', 'teamPlayer', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer'],
   demoDay: { canvasMax: 300, pitchMax: 900, demoCooldown: 30, angelCooldown: 15, offerDays: 3, grantAmount: 2000, grantMinDays: 10, grantMinBlocks: 7, demoMin: 60, angelMin: 45 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3, sector: 'sector.food' },
@@ -915,7 +916,7 @@ io.on('connection', socket => {
     if (by === 'bus') me.coins -= fare; else { car.cash -= fare; R.track(car, 'expenses', fare); R.track(car, 'fuel', fare); }
     // leave the street like a disconnect would (jobs end), but keep solo streets alive: the player's companies keep running
     for (const c of Object.values(from.companies)) c.employees = c.employees.filter(id => id !== socket.id);
-    me.loc = null; from.pastPlayers[socket.id] = me; delete from.players[socket.id];
+    me.loc = null; me.pitch = null; from.pastPlayers[socket.id] = me; delete from.players[socket.id];
     if (from.ownerId === socket.id) from.ownerId = Object.keys(from.players)[0] || null;
     addLog(from, 'log.leftCity', { player: me.name });
     socket.leave(from.id); syncRoom(from); street = null;
@@ -923,6 +924,43 @@ io.on('connection', socket => {
     traveling = { timer: setTimeout(() => arrive(target), seconds * 1000) };
   });
   socket.on('disconnect', () => { if (traveling) { clearTimeout(traveling.timer); traveling = null; if (me && me.offlineSince == null) me.offlineSince = Math.min(...Object.values(rooms).filter(r => r.worldId === myWorld).map(r => r.day || 0)); parkWorld(myWorld); } });
+  // ----- Sales roleplay: a 3-round conversation with a customer; the server scores every answer -----
+  let lastPitch = 0;
+  const pitchStep = (pt, last) => socket.emit('pitchStep', { persona: pt.persona, mood: PITCH.PERSONAS[pt.persona].mood, round: pt.round, total: PITCH.ROUNDS, interest: pt.interest, options: pt.options, last: last || null,
+    product: pt.product, productKey: pt.productKey, price: pt.price });
+  const shuffle = a => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = crypto.randomInt(0, i + 1); [x[i], x[j]] = [x[j], x[i]]; } return x; };
+  socket.on('pitchStart', ({ cid, pid } = {}) => {
+    if (!street || !me || limited() || !['solo', 'multiplayer'].includes(street.mode)) return;
+    const c = street.companies[cid]; if (!c || c.isNpc || !(c.founders.includes(me.id) || c.employees.includes(me.id))) return;
+    if (Date.now() - lastPitch < 12000) return socket.emit('toast', 'toast.pitchCooldown');
+    const personas = Object.keys(PITCH.PERSONAS), persona = personas[crypto.randomInt(0, personas.length)];
+    const prod = ensureProducts(c).find(p => p.id === pid) || ensureProducts(c)[0];
+    me.pitch = { cid, pid: prod.id, persona, round: 0, interest: PITCH.startInterest(persona, { level: me.stats.level, knowledge: me.stats.knowledge, discount: prod.discount || 0 }),
+      options: shuffle([1, 2, 3]), product: prod.name || null, productKey: prod.nameKey || null, price: unitPrice(c, prod.id) };
+    pitchStep(me.pitch);
+  });
+  socket.on('pitchAnswer', ({ o } = {}) => {
+    const pt = me?.pitch; if (!street || !pt || limited()) return;
+    const idx = Number(o); if (!pt.options.includes(idx)) return;
+    const quality = PITCH.qualityOf(pt.persona, pt.round, idx), delta = PITCH.SCORE[quality];
+    pt.interest = Math.max(0, Math.min(100, pt.interest + delta)); pt.round++;
+    if (pt.round < PITCH.ROUNDS && pt.interest > 0) { pt.options = shuffle([1, 2, 3]); return pitchStep(pt, { delta, quality }); }
+    // the conversation is over: pay out
+    const c = street.companies[pt.cid]; me.pitch = null; lastPitch = Date.now();
+    const outcome = pt.interest <= 0 ? 'lost' : PITCH.outcomeOf(pt.interest), R_ = PITCH.REWARD[outcome];
+    let revenue = 0;
+    if (c && c.status === 'active') {
+      const perf = c.employees.includes(me.id) ? c.performance : 1, levelBonus = 1 + (me.stats.level - 1) * 0.05;
+      const click = Math.max(1, Math.round(unitPrice(c, pt.pid) * WS[c.workspace].salesMult * perf * levelBonus * incomeMult(street, c) * lifeMult(me) * knowBonus(me)));
+      revenue = Math.round(click * R_.mult);
+      if (revenue > 0) { c.cash += revenue; c.sales += R_.units; R.track(c, 'revenue', revenue); R.track(c, 'units', R_.units); addDelivery(street, c, R_.units); progress(street, me, 'sales', R_.units); progress(street, me, 'revenue', revenue); }
+    }
+    me.stats.xp += R_.xp * SEED.progression.xpPerClick; me.stats.knowledge = +(me.stats.knowledge + R_.k).toFixed(1); me.stats.level = levelOf(me.stats.xp);
+    if (outcome === 'big') { progress(street, me, 'bigDeals'); if ((me.counters.bigDeals || 0) >= 3) award(street, me, 'closer'); }
+    socket.emit('pitchResult', { outcome, interest: pt.interest, revenue, xp: R_.xp, last: { delta, quality }, persona: pt.persona, units: R_.units });
+    sync();
+  });
+  socket.on('pitchCancel', () => { if (me?.pitch) { me.pitch = null; lastPitch = Date.now(); } });
   // ----- AFK: the client reports inactivity; coming back shows a summary -----
   socket.on('afk', ({ on } = {}) => {
     if (!street || !me || street.mode === 'presentation') return;
@@ -1323,7 +1361,7 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     if (!street) return;
     for (const c of Object.values(street.companies)) c.employees = c.employees.filter(id => id !== socket.id);
-    if (me) { me.loc = null; if (!me.afk) me.away = awayBaseline(street, me); me.afk = false; me.offlineSince = street.day || 0; }
+    if (me) { me.loc = null; me.pitch = null; if (!me.afk) me.away = awayBaseline(street, me); me.afk = false; me.offlineSince = street.day || 0; }
     street.pastPlayers[socket.id] = me;
     delete street.players[socket.id];
     if (street.ownerId === socket.id) street.ownerId = Object.keys(street.players)[0] || null;

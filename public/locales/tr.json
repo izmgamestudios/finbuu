@@ -314,6 +314,7 @@
     "callSent": "Çağrı gönderildi.",
     "resumeFailed": "Bu oyuna devam edilemedi (oda kapanmış ya da kayıt geçersiz).",
     "alreadyOnline": "Bu oyun zaten başka bir sekmede açık.",
+    "pitchCooldown": "Yeni müşteri birkaç saniye sonra gelir.",
     "ownerOnly": "Bunu sadece oda sahibi yapabilir.",
     "slowDown": "Biraz yavaş, çok hızlı yazıyorsun.",
     "cannotBuy": "Satın almak için dükkânın tek kiracısı olmalısın.",
@@ -690,6 +691,131 @@
     "go": "Devam et",
     "forget": "Unut"
   },
+  "sell": {
+    "title": "Müşteri görüşmesi",
+    "start": "Müşteriyle konuş",
+    "round": "Tur {{n}}/{{total}}",
+    "interest": "İlgi",
+    "giveUp": "Vazgeç",
+    "again": "Yeni müşteri",
+    "wait": "{{n}} sn",
+    "reward": "Kazanç",
+    "tip": "Müşteriyi dinle, ihtiyacına göre cevap ver. İyi cevaplar ilgiyi artırır; baskıcı ya da ilgisiz cevaplar müşteriyi kaçırır.",
+    "mood": {
+      "positive": "Olumlu müşteri",
+      "neutral": "Kararsız müşteri",
+      "negative": "Olumsuz müşteri"
+    },
+    "persona": {
+      "friendly": "Güler yüzlü müşteri",
+      "impatient": "Aceleci müşteri",
+      "thrifty": "Tutumlu müşteri",
+      "skeptical": "Şüpheci müşteri"
+    },
+    "react": {
+      "best": "Harika cevap!",
+      "ok": "Fena değil.",
+      "poor": "Müşteri bu cevaptan hoşlanmadı."
+    },
+    "outcome": {
+      "big": {
+        "title": "Büyük satış!",
+        "desc": "Müşteri çok memnun kaldı ve birden fazla ürün aldı."
+      },
+      "normal": {
+        "title": "Satış tamam",
+        "desc": "Müşteri alışverişini tamamladı."
+      },
+      "partial": {
+        "title": "Yarım kaldı",
+        "desc": "Müşteri küçük bir parça aldı ve \"sonra bakarız\" dedi."
+      },
+      "lost": {
+        "title": "Müşteri gitti",
+        "desc": "Bu sefer olmadı. Müşteriyi daha iyi dinlemeyi dene."
+      }
+    },
+    "friendly": {
+      "r1": {
+        "line": "Merhaba! {{product}} hakkında çok iyi şeyler duydum. Beni neden tercih etmelisiniz?",
+        "o1": "Hoş geldiniz! Önce ihtiyacınızı dinleyeyim, sonra size en uygun olanı birlikte seçelim.",
+        "o2": "Çünkü kaliteli ve herkes beğeniyor, bence tam size göre.",
+        "o3": "Aslında bugün hedefimi tutturmam gerek, şimdi alırsanız işime çok yarar."
+      },
+      "r2": {
+        "line": "Yanında tamamlayıcı bir şey önerir misiniz? Bütçem de fena değil.",
+        "o1": "Elbette, tamamlayıcı ürünlerimiz var, listeyi göstereyim.",
+        "o2": "Bu kadarı yeter, fazlasını almanıza gerek yok.",
+        "o3": "Kullanım amacınıza göre iki tamamlayıcı öneriyorum; ihtiyacınız olmayanı zorla satmam."
+      },
+      "r3": {
+        "line": "Harika görünüyor. Peki teslimat ve satış sonrası destek nasıl?",
+        "o1": "Teslimat konusunu şu an bilmiyorum, sonra bakarız.",
+        "o2": "Hızlı teslim ediyoruz ve her sorunuzda ulaşabileceğiniz bir hattımız var; siz arayın, ben ilgilenirim.",
+        "o3": "Teslimat da var, destek de var, merak etmeyin."
+      }
+    },
+    "impatient": {
+      "r1": {
+        "line": "Çok vaktim yok! {{product}} işimi görür mü? Çabuk söyle.",
+        "o1": "Kısaca anlatayım: kaliteli ve sağlam bir ürün.",
+        "o2": "Üç cümleyle: hızlı, sağlam, hemen teslim. İhtiyacınızı söyleyin, doğrusunu seçelim.",
+        "o3": "Acele etmeyin, bütün özellikleri baştan tek tek anlatacağım."
+      },
+      "r2": {
+        "line": "Fiyat ne? Net bir rakam ver, uzatma.",
+        "o1": "{{price}}, net fiyat. İsterseniz tek kalemde hemen halledelim.",
+        "o2": "Fiyatlar duruma göre değişiyor, bir bakayım...",
+        "o3": "Fiyat listesinde var, yaklaşık {{price}} civarı."
+      },
+      "r3": {
+        "line": "Tamam, nasıl ödeyeceğim, ürünü ne zaman alırım?",
+        "o1": "Önce birkaç form doldurmanız gerekiyor, biraz zaman alır.",
+        "o2": "Ödemeyi kasadan yapabilirsiniz.",
+        "o3": "Kartla anında ödeyin, ürün elinize hemen verilir; iki dakikada çıkıyorsunuz."
+      }
+    },
+    "thrifty": {
+      "r1": {
+        "line": "{{product}} için {{price}} biraz pahalı değil mi? Başka yerde daha ucuzunu gördüm.",
+        "o1": "Fiyat bu, pazarlık yok. Alırsanız alın.",
+        "o2": "Haklısınız, ama kalitesi sayesinde uzun vadede daha ucuza geliyor. Neden değdiğini göstereyim.",
+        "o3": "Haklısınız, fiyat önemli. Ama ürünümüz güvenilir."
+      },
+      "r2": {
+        "line": "Garanti ya da iade hakkı var mı? Paramı boşa harcamak istemem.",
+        "o1": "Genelde sorun çıkmıyor, endişelenmeyin.",
+        "o2": "Garanti ayrıntılarını bilmiyorum, bakmak lazım.",
+        "o3": "Evet, memnun kalmazsanız iade edebilirsiniz; riski ben üstleniyorum."
+      },
+      "r3": {
+        "line": "Düşünüyorum... Almam için beni ikna edecek bir şey söyle.",
+        "o1": "İhtiyacınıza en uygun seçeneği önerdim; kararı siz verin, ben yanınızdayım.",
+        "o2": "Stoklar sınırlı, bugün almanızı öneririm.",
+        "o3": "Başka müşteriler bekliyor, karar verince haber verin."
+      }
+    },
+    "skeptical": {
+      "r1": {
+        "line": "Herkes böyle söylüyor. {{product}} gerçekten işe yarıyor mu?",
+        "o1": "Tabii yarıyor, güvenin bana.",
+        "o2": "Beğenmezseniz almayın, zorlayan yok.",
+        "o3": "Şüphelenmekte haklısınız. Müşterilerimizin yorumlarını ve kullanım örneklerini göstereyim, kendiniz karar verin."
+      },
+      "r2": {
+        "line": "Peki bunun dezavantajı ne? Her ürünün bir kusuru vardır.",
+        "o1": "Hiçbir kusuru yok, kusursuz bir ürün.",
+        "o2": "Dürüst olayım: bazı durumlarda sınırları var; ama sizin kullanımınızda bu sorun olmaz.",
+        "o3": "Küçük şeyler olabilir ama önemli değil."
+      },
+      "r3": {
+        "line": "Referans var mı? Daha önce alanlarla konuşabilir miyim?",
+        "o1": "Evet, memnun müşterilerimizden ikisinin görüşünü paylaşabilirim; sonra karar verin.",
+        "o2": "Referans vermek şirket politikamıza aykırı.",
+        "o3": "Çevremizde çok kişi kullanıyor, sorabilirsiniz."
+      }
+    }
+  },
   "badge": {
     "title": "🏅 Rozetler",
     "unlocked": "Yeni rozet",
@@ -712,6 +838,7 @@
     "landlord": "Mülk Sahibi",
     "driver": "Şirket Aracı",
     "hobbyist": "Hobi Ustası",
+    "closer": "Satış Ustası",
     "scholar": "Kitap Kurdu",
     "pitcher": "Sahneye Çıktı",
     "funded": "Yatırım Aldı",
@@ -737,6 +864,7 @@
     "landlord": "Bir dükkân satın al",
     "driver": "Şirket aracı edin",
     "hobbyist": "Bir hobide 5. seviyeye ulaş",
+    "closer": "Müşteri görüşmesinde 3 büyük satış yap",
     "scholar": "5 kurs / kitap tamamla",
     "pitcher": "Demo Day'de ya da melek yatırımcıya sun",
     "funded": "Bir yatırım teklifini kabul et",

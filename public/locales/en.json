@@ -314,6 +314,7 @@
     "callSent": "Call sent.",
     "resumeFailed": "Could not continue this game (the room is gone or the save is invalid).",
     "alreadyOnline": "This game is already open in another tab.",
+    "pitchCooldown": "The next customer arrives in a few seconds.",
     "ownerOnly": "Only the room owner can do this.",
     "slowDown": "Slow down a little.",
     "cannotBuy": "You must be the only tenant to buy.",
@@ -690,6 +691,131 @@
     "go": "Continue",
     "forget": "Forget"
   },
+  "sell": {
+    "title": "Customer conversation",
+    "start": "Talk to a customer",
+    "round": "Round {{n}}/{{total}}",
+    "interest": "Interest",
+    "giveUp": "Give up",
+    "again": "New customer",
+    "wait": "{{n}} s",
+    "reward": "Earned",
+    "tip": "Listen to the customer and answer what they need. Good answers raise interest; pushy or careless ones scare them off.",
+    "mood": {
+      "positive": "Friendly customer",
+      "neutral": "Undecided customer",
+      "negative": "Difficult customer"
+    },
+    "persona": {
+      "friendly": "Cheerful customer",
+      "impatient": "Impatient customer",
+      "thrifty": "Thrifty customer",
+      "skeptical": "Skeptical customer"
+    },
+    "react": {
+      "best": "Great answer!",
+      "ok": "Not bad.",
+      "poor": "The customer did not like that."
+    },
+    "outcome": {
+      "big": {
+        "title": "Big sale!",
+        "desc": "The customer was delighted and bought several items."
+      },
+      "normal": {
+        "title": "Deal done",
+        "desc": "The customer completed the purchase."
+      },
+      "partial": {
+        "title": "Half a sale",
+        "desc": "The customer took a small item and said \"maybe later\"."
+      },
+      "lost": {
+        "title": "Customer left",
+        "desc": "Not this time. Try listening more closely."
+      }
+    },
+    "friendly": {
+      "r1": {
+        "line": "Hi! I've heard great things about {{product}}. Why should I choose you?",
+        "o1": "Welcome! Let me hear what you need first, then we'll pick the best fit together.",
+        "o2": "Because it's good quality and everyone likes it; I think it's right for you.",
+        "o3": "Honestly I need to hit my target today, so buying now would really help me."
+      },
+      "r2": {
+        "line": "Could you suggest something to go with it? My budget is fine.",
+        "o1": "Sure, we have matching items, let me show you the list.",
+        "o2": "That's enough, you don't need anything more.",
+        "o3": "Depending on how you'll use it I'd suggest two add-ons, and I won't push what you don't need."
+      },
+      "r3": {
+        "line": "Looks great. What about delivery and after-sales support?",
+        "o1": "I don't know about delivery right now, we'll look into it later.",
+        "o2": "We deliver fast and have a line you can call anytime; call me and I'll handle it.",
+        "o3": "There's delivery and there's support, don't worry."
+      }
+    },
+    "impatient": {
+      "r1": {
+        "line": "I have no time! Will {{product}} do the job? Be quick.",
+        "o1": "In short: it's a good, solid product.",
+        "o2": "Three sentences: fast, sturdy, delivered right away. Tell me what you need and we'll pick the right one.",
+        "o3": "Don't rush, I'll walk you through every feature from the start."
+      },
+      "r2": {
+        "line": "What's the price? Give me one number, don't drag it out.",
+        "o1": "{{price}}, fixed. If you like, we can sort it out in one go.",
+        "o2": "Prices vary by case, let me check...",
+        "o3": "It's on the price list, around {{price}}."
+      },
+      "r3": {
+        "line": "Okay, how do I pay and when do I get it?",
+        "o1": "You need to fill in a few forms first, it takes a while.",
+        "o2": "You can pay at the till.",
+        "o3": "Pay by card right now and take it with you; you're out in two minutes."
+      }
+    },
+    "thrifty": {
+      "r1": {
+        "line": "{{price}} for {{product}} is a bit expensive, isn't it? I saw it cheaper elsewhere.",
+        "o1": "That's the price, no bargaining. Take it or leave it.",
+        "o2": "You're right, but its quality makes it cheaper in the long run. Let me show you why it's worth it.",
+        "o3": "You're right, price matters. But our product is reliable."
+      },
+      "r2": {
+        "line": "Is there a warranty or a return policy? I don't want to waste my money.",
+        "o1": "There's usually no problem, don't worry.",
+        "o2": "I don't know the warranty details, I'd have to check.",
+        "o3": "Yes, if you're not happy you can return it; I take the risk."
+      },
+      "r3": {
+        "line": "I'm thinking... tell me something that convinces me to buy.",
+        "o1": "I've suggested the best option for your needs; the decision is yours and I'm here for you.",
+        "o2": "Stock is limited, I'd buy today.",
+        "o3": "Other customers are waiting, let me know when you decide."
+      }
+    },
+    "skeptical": {
+      "r1": {
+        "line": "Everyone says that. Does {{product}} really work?",
+        "o1": "Of course it works, trust me.",
+        "o2": "If you don't like it, don't buy it, nobody is forcing you.",
+        "o3": "You're right to doubt. Let me show you customer reviews and examples of use, and you decide."
+      },
+      "r2": {
+        "line": "So what's the downside? Every product has a flaw.",
+        "o1": "It has no flaws, it's a perfect product.",
+        "o2": "To be honest: it has limits in some cases, but not for the way you'd use it.",
+        "o3": "There may be small things, but they don't matter."
+      },
+      "r3": {
+        "line": "Do you have references? Can I talk to people who bought it?",
+        "o1": "Yes, I can share the views of two happy customers; then you decide.",
+        "o2": "Giving references is against company policy.",
+        "o3": "Lots of people around here use it, you can ask."
+      }
+    }
+  },
   "badge": {
     "title": "🏅 Badges",
     "unlocked": "New badge",
@@ -712,6 +838,7 @@
     "landlord": "Landlord",
     "driver": "Company Car",
     "hobbyist": "Hobby Master",
+    "closer": "Closer",
     "scholar": "Bookworm",
     "pitcher": "On Stage",
     "funded": "Funded",
@@ -737,6 +864,7 @@
     "landlord": "Buy a shop",
     "driver": "Get a company car",
     "hobbyist": "Reach level 5 in a hobby",
+    "closer": "Make 3 big sales in customer conversations",
     "scholar": "Complete 5 courses / books",
     "pitcher": "Pitch at Demo Day or to an angel",
     "funded": "Accept an investment offer",
