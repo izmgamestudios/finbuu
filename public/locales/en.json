@@ -1490,7 +1490,8 @@
     "next": "Floor above",
     "visited": "{{n}}/10 floors visited",
     "done": "Congrats, you visited all 10 floors! 🎓",
-    "sources": "Sources",
-    "step": "Step {{n}}"
+    "sources": "References",
+    "step": "Step {{n}}",
+    "ref": "Source: oyunlastirma.co · TOY Gamification Model"
   }
 }

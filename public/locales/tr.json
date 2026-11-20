@@ -1490,7 +1490,8 @@
     "next": "Üst kat",
     "visited": "{{n}}/10 kat gezildi",
     "done": "Tebrikler, 10 katı da gezdin! 🎓",
-    "sources": "Kaynaklar",
-    "step": "Adım {{n}}"
+    "sources": "Kaynakça",
+    "step": "Adım {{n}}",
+    "ref": "Kaynak: oyunlastirma.co · TOY Oyunlaştırma Modeli"
   }
 }

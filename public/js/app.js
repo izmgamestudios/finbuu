@@ -1365,14 +1365,14 @@ function openGamFed(startFloor = 1) {
       cur = n; seen.add(n); saveJSON('gamfedSeen', [...seen]);
       const f = g.floors[n - 1];
       tower.replaceChildren(...[...g.floors].reverse().map(x => { const b = el('button', null, 'gfFloor' + (x.n === cur ? ' on' : '') + (seen.has(x.n) ? ' seen' : '')); b.type = 'button'; b.append(el('i', String(x.n)), el('span', `${x.icon} ${L10(x.title)}`)); b.onclick = () => show(x.n); return b; }));
-      panel.replaceChildren(el('small', t('gamfed.step', { n: f.n }), 'muted'), el('h3', `${f.icon} ${L10(f.title)}`), el('p', L10(f.desc)), el('h4', '🎮 ' + t('gamfed.inFinbuu')), el('p', L10(f.game)));
+      panel.replaceChildren(el('small', t('gamfed.step', { n: f.n }), 'muted'), el('h3', `${f.icon} ${L10(f.title)}`), el('p', L10(f.desc)), el('h4', '🎮 ' + t('gamfed.inFinbuu')), el('p', L10(f.game)), el('small', '📚 ' + t('gamfed.ref'), 'muted'));
       const nav = el('div', null, 'row'); const dn = btn('▼ ' + t('gamfed.prev'), () => show(cur - 1)), up = btn('▲ ' + t('gamfed.next'), () => show(cur + 1), { primary: true });
       dn.disabled = cur <= 1; up.disabled = cur >= g.floors.length; nav.append(dn, up); panel.append(nav);
       prog.textContent = t('gamfed.visited', { n: seen.size });
       if (seen.size === g.floors.length && !loadJSON('gamfedDone', false)) { saveJSON('gamfedDone', true); toast(t('gamfed.done')); }
     };
     wrap.append(tower, panel); body.append(wrap, prog);
-    const src = el('div', null, 'row'); src.append(el('small', t('gamfed.sources') + ':', 'muted')); g.sources.forEach(x => { const u = safeUrl(x.url); if (u) src.append(extLink(x.label, u)); }); body.append(src);
+    const src = el('div', null, 'row'); src.append(el('small', '📚 ' + t('gamfed.sources') + ':', 'muted')); g.sources.forEach(x => { const u = safeUrl(x.url); if (u) src.append(extLink(x.label, u)); }); body.append(src);
     show(startFloor);
   }));
 }
