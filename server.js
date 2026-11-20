@@ -146,7 +146,7 @@ const SEED = {
     { id: 'chat', metric: 'chat', goal: 1, xp: 5, coins: 10, shared: true }
   ],
   badges: ['firstCompany', 'sales10', 'sales100', 'sales1000', 'floor3', 'floor6', 'firstHire', 'marketer', 'secure', 'social',
-    'commuter', 'teamPlayer', 'teamGoal', 'streak7', 'seasonStar', 'trader', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
+    'commuter', 'teamPlayer', 'teamGoal', 'streak7', 'seasonStar', 'trader', 'partner', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
   demoDay: { canvasMax: 300, pitchMax: 900, demoCooldown: 30, angelCooldown: 15, offerDays: 3, grantAmount: 2000, grantMinDays: 10, grantMinBlocks: 7, demoMin: 60, angelMin: 45 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3, sector: 'sector.food' },
@@ -419,6 +419,8 @@ function remapPlayerId(worldId, oldId, newId) {
     for (const c of [...Object.values(r.companies), ...(r.archive || [])]) {
       c.founders = swap(c.founders); c.employees = swap(c.employees);
       if (c.investors && Object.hasOwn(c.investors, oldId)) { c.investors[newId] = c.investors[oldId]; delete c.investors[oldId]; }
+      if (c.partners && Object.hasOwn(c.partners, oldId)) { c.partners[newId] = c.partners[oldId]; delete c.partners[oldId]; }
+      if (c.pOffers) c.pOffers.forEach(o => { if (o.to === oldId) o.to = newId; });
     }
     if (r.ownerId === oldId) r.ownerId = newId;
     for (const f of r.flats || []) if (f.id === oldId) f.id = newId;
@@ -1134,6 +1136,50 @@ io.on('connection', socket => {
     const label = prod.name || (prod.nameKey ? prod.nameKey.split('.').pop() : 'x');
     PLAN.add(c, street.day || 0, { name: `📦 ${label} x${r.order.qty}`, start: street.day || 0, dur: r.order.due - (street.day || 0) });
     sync(); reply(erpReply(c));
+  });
+
+  // ---- Sprint 29a: player partnerships (offer / accept / buy back) ----
+  const pfair = (c, pct) => Math.round(readiness(street, c).valuation * pct / 100);
+  socket.on('partnerOffer', ({ cid, to, pct, amount } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = founderOf(cid);
+    if (!c || limited() || !BAL.CFG.partnerOn || c.isNpc || c.status !== 'active') return reply({ ok: false, key: 'partner.off' });
+    const target = street.players[to], p = Math.floor(Number(pct)), amt = Math.floor(Number(amount));
+    if (!target || c.founders.includes(to) || to === me.id) return reply({ ok: false, key: 'partner.badTarget' });
+    if (!(p >= 1 && p <= BAL.CFG.partnerMaxPct)) return reply({ ok: false, key: 'partner.badPct' });
+    if (!(amt >= 10 && amt <= 20000)) return reply({ ok: false, key: 'partner.badAmount' });
+    if (outsidePct(c) + p > BAL.CFG.partnerMaxPct) return reply({ ok: false, key: 'partner.capReached', params: { max: BAL.CFG.partnerMaxPct } });
+    if (!c.partners?.[to] && Object.keys(c.partners || {}).length >= 3) return reply({ ok: false, key: 'partner.tooMany' });
+    c.pOffers ||= []; if (c.pOffers.some(o => o.to === to)) return reply({ ok: false, key: 'partner.pending' });
+    if (c.pOffers.length >= 5) return reply({ ok: false, key: 'partner.pending' });
+    const o = { id: crypto.randomBytes(4).toString('hex'), to, toName: target.name, from: me.name, pct: p, amount: amt, fair: pfair(c, p), until: (street.day || 0) + 3 };
+    c.pOffers.push(o); io.to(to).emit('partnerOffer', { company: c.name || null, companyKey: c.nameKey || null, from: me.name, pct: p, amount: amt });
+    sync(); reply({ ok: true });
+  });
+  socket.on('partnerAnswer', ({ cid, id, accept } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = street?.companies[cid], o = c?.pOffers?.find(x => x.id === id);
+    if (!o || o.to !== me.id || limited()) return reply({ ok: false, key: 'partner.gone' });
+    c.pOffers = c.pOffers.filter(x => x !== o);
+    if (!accept) { sync(); return reply({ ok: true, declined: true }); }
+    if (c.status !== 'active' || !BAL.CFG.partnerOn) return reply({ ok: false, key: 'partner.gone' });
+    if (me.coins < o.amount) return reply({ ok: false, key: 'toast.noCoins' });
+    if (outsidePct(c) + o.pct > BAL.CFG.partnerMaxPct) return reply({ ok: false, key: 'partner.capReached', params: { max: BAL.CFG.partnerMaxPct } });
+    me.coins -= o.amount; c.cash += o.amount; R.track(c, 'investment', o.amount);
+    c.partners ||= {}; c.partners[me.id] = (c.partners[me.id] || 0) + o.pct;
+    progress(street, me, 'invest'); award(street, me, 'investor'); award(street, me, 'partner');
+    c.founders.forEach(f => award(street, street.players[f], 'partner'));
+    addLog(street, 'log.partnerJoined', { player: me.name, pct: o.pct, amount: o.amount, ...cParams(c) });
+    audit('partner', `${street.id}: ${me.id}->${c.id} ${o.pct}% for ${o.amount}`);
+    sync(); reply({ ok: true, accepted: true });
+  });
+  socket.on('partnerBuyback', ({ cid, pid } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = founderOf(cid), pct = c?.partners?.[pid];
+    if (!c || !pct || limited()) return reply({ ok: false });
+    const price = pfair(c, pct); if (c.cash < price) return reply({ ok: false, key: 'toast.noCash' });
+    const pl = street.players[pid] || street.pastPlayers[pid]; if (!pl) return reply({ ok: false });
+    c.cash -= price; R.track(c, 'expenses', price); pl.coins += price; delete c.partners[pid];
+    io.to(pid).emit('partnerBoughtOut', { amount: price, ...cParams(c) });
+    addLog(street, 'log.partnerBoughtOut', { player: pl.name, pct, amount: price, ...cParams(c) });
+    sync(); reply({ ok: true, price });
   });
 
   // ---- Sprint 26b: wholesale market (player companies sell surplus ERP stock to each other) ----
@@ -1866,6 +1912,27 @@ function marketTick(st) {
   if (!st.market?.offers?.length) return;
   MKT.expire(st, o => { const c = st.companies[o.cid]; if (c) { const b = ERP.book(c); b.stock[o.pid] = ERP.stockOf(c, o.pid) + o.qty; } });
 }
+// Sprint 29a: player partners hold equity in a company (cap on outside equity); every 30 days they receive their share of the last 30 days' profit
+const partnerPct = c => Object.values(c.partners || {}).reduce((a, b) => a + b, 0);
+const outsidePct = c => partnerPct(c) + (c.npcEquity || 0);
+function partnerTick(st) {
+  const day = st.day || 0;
+  for (const c of Object.values(st.companies)) {
+    if (c.pOffers?.length) c.pOffers = c.pOffers.filter(o => o.until > day);
+    if (c.isNpc || !c.partners || !Object.keys(c.partners).length || day % 30 !== 0) continue;
+    const profit = (c.fin?.daily || []).slice(-30).reduce((a, d) => a + (d.revenue || 0) - (d.expenses || 0), 0);
+    if (profit <= 0) { addLog(st, 'log.partnerNoPayout', cParams(c)); continue; }
+    const budget = Math.max(0, c.cash) * 0.5; let paid = 0;
+    for (const [pid, pct] of Object.entries(c.partners)) {
+      const amt = Math.min(Math.floor(profit * pct / 100), Math.floor(budget - paid)); if (amt <= 0) continue;
+      const pl = st.players[pid] || st.pastPlayers[pid]; if (!pl) continue;
+      pl.coins += amt; paid += amt; c.cash -= amt; R.track(c, 'expenses', amt);
+      pl.counters ||= {}; pl.counters.dividends = (pl.counters.dividends || 0) + amt;
+      io.to(pid).emit('dividend', { amount: amt, ...cParams(c) });
+    }
+    if (paid) addLog(st, 'log.partnerPayout', { amount: paid, ...cParams(c) });
+  }
+}
 function economyTick(only) {
   for (const st of only ? [only] : Object.values(rooms)) {
     for (const c of Object.values(st.companies)) {
@@ -1934,6 +2001,7 @@ function economyTick(only) {
     }
     R.closeDay(st);
     for (const p of Object.values(st.players)) { checkLevel(p); syncToAccount(p); }
+    partnerTick(st);
     weekSettle(st);
     goalSettle(st);
     marketTick(st);

@@ -436,7 +436,11 @@
     "toolsSuspended": "{{company}}: aylık sunucu gideri ödenemedi, {{n}} araç askıya alındı.",
     "marketEvent": "📰 Piyasa olayı: {{event}}",
     "goalMet": "🎯 {{n}}. ay ortak hedefi ({{goal}}) tamamlandı!",
-    "goalMissed": "🎯 {{n}}. ay ortak hedefi ({{goal}}) kaçırıldı."
+    "goalMissed": "🎯 {{n}}. ay ortak hedefi ({{goal}}) kaçırıldı.",
+    "partnerJoined": "💼 {{player}}, {{company}} şirketine %{{pct}} ortak oldu ({{amount}} coin).",
+    "partnerPayout": "💼 {{company}} ortaklarına {{amount}} coin temettü ödedi.",
+    "partnerNoPayout": "💼 {{company}}: bu ay kâr yok, temettü ödenmedi.",
+    "partnerBoughtOut": "💼 {{company}}, {{player}} ortağının %{{pct}} payını geri aldı ({{amount}} coin)."
   },
   "crisis": {
     "concordat": "Konkordato ilan etti",
@@ -1022,7 +1026,8 @@
     "teamGoal": "Ortak Başarı",
     "streak7": "7 Gün Serisi",
     "seasonStar": "Sezon Yıldızı",
-    "trader": "Tüccar"
+    "trader": "Tüccar",
+    "partner": "Ortak"
   },
   "badgeDesc": {
     "firstCompany": "İlk şirketini kur",
@@ -1054,7 +1059,8 @@
     "teamGoal": "Odanın aylık ortak hedefine katkı yap ve tamamla",
     "streak7": "7 gün üst üste oyuna gir",
     "seasonStar": "Bir sezonda 500 puana ulaş",
-    "trader": "5 toptan pazar işlemi yap"
+    "trader": "5 toptan pazar işlemi yap",
+    "partner": "Bir oyuncu ortaklığına katıl veya ortak al"
   },
   "bus": {
     "arrived": "Durağa vardın.",
@@ -1105,7 +1111,8 @@
       "events": "🎤 Etkinlikler",
       "canvas": "🧩 İş Modeli Kanvası",
       "pitch": "⏱ Asansör Konuşması",
-      "deck": "📊 Pitch Deck"
+      "deck": "📊 Pitch Deck",
+      "partners": "Ortaklar"
     },
     "canvasIntro": "9 bloklu Business Model Canvas. Her blok en az birkaç kelime olmalı; hazırlık puanının %36'sı buradan gelir.",
     "pitchIntro": "60 saniyelik asansör konuşması (~130 kelime/dk). En az 40 kelime puan getirir.",
@@ -1937,5 +1944,45 @@
       "network": "Bağlantı hatası",
       "generic": "İşlem başarısız"
     }
+  },
+  "partner": {
+    "tab": "Ortaklar",
+    "title": "Oyuncu ortakları",
+    "intro": "Odadaki bir oyuncuya şirketinden %pay sat: o parayı şirkete koyar, sen de kontrolü elinde tutarsın. Ortaklar her 30 günde son 30 günün kârından payını alır.",
+    "cap": "Dışarıdan toplam pay üst sınırı: %{{max}} (NPC yatırımcılar dahil). Şu an: %{{now}}.",
+    "list": "Mevcut ortaklar",
+    "none": "Henüz ortak yok.",
+    "pctShort": "%{{p}}",
+    "earned": "şimdiye kadar temettü",
+    "buyback": "Payı geri al",
+    "buybackAsk": "Bu payı adil değerle ({{price}}) geri almak ister misin?",
+    "offer": "Ortaklık teklif et",
+    "target": "Oyuncu",
+    "pct": "Pay (%)",
+    "amount": "Karşılığında ödeyeceği (coin)",
+    "fair": "Adil değer: {{fair}}",
+    "send": "Teklifi gönder",
+    "sent": "Teklif gönderildi",
+    "pendingTitle": "Bekleyen teklifler",
+    "pendingRow": "{{to}} · %{{pct}} · {{amount}}",
+    "incoming": "Sana gelen teklifler",
+    "incomingRow": "{{from}} → {{company}}: %{{pct}} pay, {{amount}} coin (adil değer {{fair}})",
+    "accept": "Kabul et",
+    "decline": "Reddet",
+    "accepted": "Ortak oldun",
+    "declined": "Teklif reddedildi",
+    "mine": "Ortak olduğun şirketler",
+    "noPlayers": "Odada başka oyuncu yok. Ortaklık için çok oyunculu bir odaya geç.",
+    "toastOffer": "💼 {{from}} sana {{company}} için %{{pct}} ortaklık teklif etti ({{amount}} coin). Demo Day › Ortaklar",
+    "toastDividend": "💼 {{company}} temettüsü: +{{amount}} coin",
+    "toastBought": "💼 {{company}} payın geri alındı: +{{amount}} coin",
+    "off": "Ortaklık şu an kapalı.",
+    "badTarget": "Geçersiz oyuncu.",
+    "badPct": "Pay geçersiz.",
+    "badAmount": "Tutar 10–20.000 coin olmalı.",
+    "capReached": "Dışarıdan toplam pay %{{max}} sınırını aşamaz.",
+    "tooMany": "En fazla 3 ortak olabilir.",
+    "pending": "Bu oyuncuya zaten bekleyen teklif var.",
+    "gone": "Teklif artık geçerli değil."
   }
 }

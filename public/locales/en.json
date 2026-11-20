@@ -436,7 +436,11 @@
     "toolsSuspended": "{{company}}: monthly hosting could not be paid, {{n}} tool(s) suspended.",
     "marketEvent": "📰 Market event: {{event}}",
     "goalMet": "🎯 Month {{n}} shared goal ({{goal}}) met!",
-    "goalMissed": "🎯 Month {{n}} shared goal ({{goal}}) missed."
+    "goalMissed": "🎯 Month {{n}} shared goal ({{goal}}) missed.",
+    "partnerJoined": "💼 {{player}} became a {{pct}}% partner in {{company}} ({{amount}} coins).",
+    "partnerPayout": "💼 {{company}} paid {{amount}} coins in partner dividends.",
+    "partnerNoPayout": "💼 {{company}}: no profit this month, no dividend.",
+    "partnerBoughtOut": "💼 {{company}} bought back {{player}}'s {{pct}}% stake ({{amount}} coins)."
   },
   "crisis": {
     "concordat": "Filed for concordat (debt restructuring)",
@@ -1022,7 +1026,8 @@
     "teamGoal": "Team Win",
     "streak7": "7-Day Streak",
     "seasonStar": "Season Star",
-    "trader": "Trader"
+    "trader": "Trader",
+    "partner": "Partner"
   },
   "badgeDesc": {
     "firstCompany": "Found your first company",
@@ -1054,7 +1059,8 @@
     "teamGoal": "Contribute to a completed monthly room goal",
     "streak7": "Play 7 days in a row",
     "seasonStar": "Reach 500 points in one season",
-    "trader": "Complete 5 wholesale trades"
+    "trader": "Complete 5 wholesale trades",
+    "partner": "Join or take on a player partnership"
   },
   "bus": {
     "arrived": "You arrived at the stop.",
@@ -1105,7 +1111,8 @@
       "events": "🎤 Events",
       "canvas": "🧩 Business Model Canvas",
       "pitch": "⏱ Elevator Pitch",
-      "deck": "📊 Pitch Deck"
+      "deck": "📊 Pitch Deck",
+      "partners": "Partners"
     },
     "canvasIntro": "9-block Business Model Canvas. Each block needs a few words; 36% of the readiness score comes from here.",
     "pitchIntro": "60-second elevator pitch (~130 words/min). At least 40 words scores points.",
@@ -1937,5 +1944,45 @@
       "network": "Connection error",
       "generic": "That did not work"
     }
+  },
+  "partner": {
+    "tab": "Partners",
+    "title": "Player partners",
+    "intro": "Sell a % stake of your company to another player in the room: they put the money into the company and you keep control. Partners receive their share of the last 30 days' profit every 30 days.",
+    "cap": "Total outside equity cap: {{max}}% (NPC investors included). Now: {{now}}%.",
+    "list": "Current partners",
+    "none": "No partners yet.",
+    "pctShort": "{{p}}%",
+    "earned": "dividends so far",
+    "buyback": "Buy back",
+    "buybackAsk": "Buy this stake back at fair value ({{price}})?",
+    "offer": "Offer a partnership",
+    "target": "Player",
+    "pct": "Stake (%)",
+    "amount": "They pay (coins)",
+    "fair": "Fair value: {{fair}}",
+    "send": "Send offer",
+    "sent": "Offer sent",
+    "pendingTitle": "Pending offers",
+    "pendingRow": "{{to}} · {{pct}}% · {{amount}}",
+    "incoming": "Offers to you",
+    "incomingRow": "{{from}} → {{company}}: {{pct}}% stake for {{amount}} coins (fair value {{fair}})",
+    "accept": "Accept",
+    "decline": "Decline",
+    "accepted": "You are now a partner",
+    "declined": "Offer declined",
+    "mine": "Companies you are a partner in",
+    "noPlayers": "No other players in the room. Join a multiplayer room to partner up.",
+    "toastOffer": "💼 {{from}} offered you {{pct}}% of {{company}} ({{amount}} coins). Demo Day › Partners",
+    "toastDividend": "💼 {{company}} dividend: +{{amount}} coins",
+    "toastBought": "💼 Your {{company}} stake was bought back: +{{amount}} coins",
+    "off": "Partnerships are off right now.",
+    "badTarget": "Invalid player.",
+    "badPct": "Invalid stake.",
+    "badAmount": "Amount must be 10–20,000 coins.",
+    "capReached": "Total outside equity cannot exceed {{max}}%.",
+    "tooMany": "At most 3 partners.",
+    "pending": "That player already has a pending offer.",
+    "gone": "That offer is no longer valid."
   }
 }

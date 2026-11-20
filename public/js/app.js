@@ -246,6 +246,9 @@ socket.on('streak', e => { toast(t('daily.streakToast', e)); profSig = ''; });
 socket.on('chest', e => { toast(t('daily.chestToast', e)); profSig = ''; });
 socket.on('seasonMilestone', e => { toast(t('daily.seasonToast', e)); profSig = ''; });
 socket.on('marketSold', e => { toast(t('market.sold', { qty: e.qty, coins: e.coins, buyer: e.buyer || (e.buyerKey ? t(e.buyerKey) : '') })); profSig = ''; });
+socket.on('partnerOffer', e => toast(t('partner.toastOffer', { from: e.from, company: e.company || (e.companyKey ? t(e.companyKey) : ''), pct: e.pct, amount: e.amount })));
+socket.on('dividend', e => { toast(t('partner.toastDividend', { company: e.company || (e.companyKey ? t(e.companyKey) : ''), amount: e.amount })); profSig = ''; });
+socket.on('partnerBoughtOut', e => { toast(t('partner.toastBought', { company: e.company || (e.companyKey ? t(e.companyKey) : ''), amount: e.amount })); profSig = ''; });
 socket.on('levelUp', e => { toast(t('week.levelUp', e)); profSig = ''; });
 socket.on('weekEnd', e => { toast(t('week.ended', e) + (e.coins ? t('week.endedWin', e) : '')); profSig = ''; });
 socket.on('questDone', q => { toast(`✅ ${t('quest.' + q.id, { goal: '' })} · +${money(q.coins)} · +${q.xp} XP`); profSig = ''; });
@@ -2920,6 +2923,7 @@ function openDemoDay(cidArg, tab = 'events') {
   const mine = Object.values(state.companies).filter(c => c.founders.includes(myId()));
   if (!mine.length) return openModal(body => {
     body.append(el('h3', '🎤 ' + t('demo.title')), el('p', t('demo.needCompany'), 'muted'));
+    const pbox = el('div'); renderPartners(pbox, null); if (pbox.children.length > 1) body.append(pbox);
     body.append(btn('🧭 ' + t('wiz.open'), () => openWizard(), { primary: true, isDefault: true }));
   });
   const c = state.companies[cidArg] && mine.includes(state.companies[cidArg]) ? state.companies[cidArg] : mine[0];
@@ -2930,16 +2934,46 @@ function demoFacts(c) {
   return { company: companyName(c), product, sector, price: c.price, city: seed.economy.cities[state.city]?.name || '', sales: c.sales || 0,
     month: f.monthRev, cash: c.cash, staff: staffOf(c), founders: c.founders.map(id => state.players[id]?.name || '—').join(', ') };
 }
+// Sprint 29a: player partnerships tab (inside the Demo Day modal)
+function renderPartners(box, c0, valuation = 0) {
+  const me_ = myId(), live = () => (c0 ? state.companies[c0.id] || c0 : null), c = live(), cname = x => x.name || (x.nameKey ? t(x.nameKey) : '—');
+  const pname = id => state.players[id]?.name || '—', act = r => { if (!r) return; if (r.key) toast(t(r.key, r.params)); else if (r.ok) toast(t(r.accepted ? 'partner.accepted' : r.declined ? 'partner.declined' : 'partner.sent')); setTimeout(() => openDemoDay(c0?.id, 'partners'), 250); };
+  const partners = Object.entries(c?.partners || {}), outside = partners.reduce((a, [, p]) => a + p, 0) + (c?.npcEquity || 0);
+  box.append(el('p', t('partner.intro'), 'muted'));
+  if (c) box.append(el('small', t('partner.cap', { max: 49, now: outside }), 'muted'));
+  // incoming offers (any company in the room)
+  const incoming = Object.values(state.companies).flatMap(x => (x.pOffers || []).filter(o => o.to === me_).map(o => ({ ...o, cid: x.id, cname: cname(x) })));
+  if (incoming.length) { box.append(el('h4', '📨 ' + t('partner.incoming'))); incoming.forEach(o => { const row = el('div', null, 'prodRow'), a = el('div', null, 'row'); a.append(btn(t('partner.accept'), () => socket.emit('partnerAnswer', { cid: o.cid, id: o.id, accept: true }, act), { primary: true }), btn(t('partner.decline'), () => socket.emit('partnerAnswer', { cid: o.cid, id: o.id, accept: false }, act))); row.append(el('div', t('partner.incomingRow', { from: o.from, company: o.cname, pct: o.pct, amount: fmt(o.amount), fair: fmt(o.fair) })), a); box.append(row); }); }
+  const myCos = Object.values(state.companies).filter(x => x.partners?.[me_]);
+  if (myCos.length) { box.append(el('h4', '💼 ' + t('partner.mine'))); myCos.forEach(x => box.append(el('div', `${cname(x)} · ${t('partner.pctShort', { p: x.partners[me_] })}`))); }
+  if (!c || !c.founders.includes(me_)) return;
+  box.append(el('h4', '🤝 ' + t('partner.list')));
+  if (!partners.length) box.append(el('small', t('partner.none'), 'muted'));
+  partners.forEach(([pid, p]) => { const row = el('div', null, 'prodRow'); row.append(el('div', `${pname(pid)} · ${t('partner.pctShort', { p })}`), btn(t('partner.buyback'), () => { if (confirm(t('partner.buybackAsk', { price: '' }).replace(/\(\s*\)/, ''))) socket.emit('partnerBuyback', { cid: c.id, pid }, act); })); box.append(row); });
+  if ((c.pOffers || []).length) { box.append(el('h4', t('partner.pendingTitle'))); c.pOffers.forEach(o => box.append(el('small', t('partner.pendingRow', { to: o.toName, pct: o.pct, amount: fmt(o.amount) }), 'muted'))); }
+  box.append(el('h4', '➕ ' + t('partner.offer')));
+  const others = Object.values(state.players).filter(p => p.id !== me_ && !c.founders.includes(p.id));
+  if (!others.length) return box.append(el('small', t('partner.noPlayers'), 'muted'));
+  const sel = el('select'); others.forEach(p => sel.append(new Option(p.name, p.id)));
+  const pct = el('input'); pct.type = 'number'; pct.min = 1; pct.max = 49; pct.value = 10; pct.style.width = '80px';
+  const amt = el('input'); amt.type = 'number'; amt.min = 10; amt.max = 20000; amt.style.width = '110px';
+  const fair = el('small', '', 'muted'), upd = () => { const v = Math.round((valuation * Number(pct.value || 0)) / 100); fair.textContent = valuation ? t('partner.fair', { fair: fmt(v) }) : ''; };
+  pct.oninput = upd; upd();
+  const f = el('div', null, 'row'); f.style.cssText = 'flex-wrap:wrap;align-items:center;gap:6px';
+  f.append(el('small', t('partner.target')), sel, el('small', t('partner.pct')), pct, el('small', t('partner.amount')), amt, btn(t('partner.send'), () => socket.emit('partnerOffer', { cid: c.id, to: sel.value, pct: Number(pct.value), amount: Number(amt.value) }, act), { primary: true }));
+  box.append(f, fair);
+}
 function renderDemo(c, data, tab, mine) {
   const facts = demoFacts(c), canvas = { ...data.canvas };
   openModal(body => {
     body.append(el('h3', `🎤 ${t('demo.title')} · ${companyName(c)}`));
     if (mine.length > 1) { const sel = el('select'); mine.forEach(x => sel.append(new Option(companyName(x), x.id))); sel.value = c.id; sel.onchange = () => openDemoDay(sel.value, tab); body.append(sel); }
     const tabs = el('div', null, 'others');
-    ['events', 'canvas', 'pitch', 'deck'].forEach(k => tabs.append(btn(t('demo.tab.' + k), () => renderDemo(c, data, k, mine), { primary: k === tab })));
+    ['events', 'canvas', 'pitch', 'deck', 'partners'].forEach(k => tabs.append(btn(t('demo.tab.' + k), () => renderDemo(c, data, k, mine), { primary: k === tab })));
     body.append(tabs);
     const box = el('div', null, 'co'); body.append(box);
-    if (tab === 'canvas') {
+    if (tab === 'partners') renderPartners(box, c, data.readiness?.valuation || 0);
+    else if (tab === 'canvas') {
       box.append(el('p', t('demo.canvasIntro'), 'muted'));
       const grid = el('div', null, 'bmc'), areas = {};
       CANVAS_KEYS.forEach(k => {

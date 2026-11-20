@@ -11,9 +11,11 @@ const CFG = {
   streakCoin: 10,       // daily login bonus = min(streak,7) x this (coins)
   chestCoins: 50,       // bonus when all 3 daily quests are done
   seasonReward: 50,     // season milestones (100/250/500 SP) pay this x 1/2/4
+  partnerOn: 1,         // player partnerships (equity) on/off
+  partnerMaxPct: 49,    // outside equity cap per company (NPC investors + partners), founder keeps control
   raceFirst: 200, raceSecond: 120, raceThird: 60,   // weekly race rewards (multiplayer, coins); solo: personal-best bonus = raceFirst / 2
 };
-const RANGES = { elasticity: [0, 1], optMult: [1, 3], overExp: [0, 2], levelCoins: [0, 200], streakCoin: [0, 200], chestCoins: [0, 1000], seasonReward: [0, 1000], goalOn: [0, 1], goalDifficulty: [0.2, 3], goalReward: [0, 2000], raceFirst: [0, 2000], raceSecond: [0, 2000], raceThird: [0, 2000] };
+const RANGES = { elasticity: [0, 1], optMult: [1, 3], overExp: [0, 2], levelCoins: [0, 200], partnerOn: [0, 1], partnerMaxPct: [5, 49], streakCoin: [0, 200], chestCoins: [0, 1000], seasonReward: [0, 1000], goalOn: [0, 1], goalDifficulty: [0.2, 3], goalReward: [0, 2000], raceFirst: [0, 2000], raceSecond: [0, 2000], raceThird: [0, 2000] };
 const SECTOR_REF = { 'sector.food': 14, 'sector.service': 22, 'sector.tech': 38, 'sector.retail': 16, 'sector.health': 30, 'sector.education': 26, 'sector.creative': 30, 'sector.auto': 50, 'sector.transport': 10 };
 const refPrice = (templatePrice, sector) => Math.max(1, templatePrice || SECTOR_REF[sector] || 20);
 // revenue multiplier for selling at `price` where `ref` is the typical price of the sector
