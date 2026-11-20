@@ -86,8 +86,11 @@
   </section>
   <aside id="side" data-view="street">
     <div id="sheetHandle" aria-hidden="true"><i></i></div>
-    <div class="card" data-panel="chat" id="chatCard" hidden>
+    <button id="sheetClose" type="button" aria-label="Close">✕</button>
+    <div class="card" data-panel="chat" id="chatCard">
       <h3 data-i18n="ui.chat"></h3>
+      <div id="chatSolo" hidden><p class="muted" data-i18n="ui.chatSoloNote"></p><button id="chatSoloBtn" class="primary" data-i18n="ui.chatSoloBtn"></button></div>
+      <div id="chatLive">
       <div id="pollBox"></div>
       <ul id="chatList"></ul>
       <div id="emojiBar" class="emojiBar" aria-label="Emoji"></div>
@@ -96,6 +99,7 @@
         <button id="chatSend" class="primary" data-i18n="ui.sendText"></button>
       </div>
       <div class="row"><button id="wizardBtn" data-i18n="wiz.open"></button></div>
+      </div>
     </div>
     <div class="card" data-panel="finance">
       <h3 data-i18n="ui.finance"></h3>

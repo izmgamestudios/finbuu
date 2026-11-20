@@ -555,3 +555,12 @@ nav button.active { color: var(--accent) !important; background: rgba(255, 183, 
 #carBtn { position: absolute; right: 14px; bottom: 150px; z-index: 6; padding: 12px 16px; font-size: 1rem }
 @media (max-width: 820px) { #carHud { top: 140px; right: 6px; min-width: 190px } #carBtn { bottom: 230px } }
 #carHud[hidden] { display: none }
+
+/* Mobile: every popup gets a ✕ in its top-right corner (modal + bottom sheet) */
+.modalX, #sheetClose { display: none }
+@media (max-width: 820px) {
+  .modalX { display: grid; place-items: center; position: sticky; top: 0; align-self: flex-end; width: 36px; height: 36px; min-height: 36px; padding: 0; margin: -4px -4px -2px 0; z-index: 3; border-radius: 50%; font-size: 1rem; line-height: 1; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 2px 6px rgba(20, 25, 40, .18) }
+  #side { position: fixed }
+  #sheetClose { display: grid; place-items: center; position: absolute; top: 6px; right: 10px; width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 50%; font-size: .95rem; z-index: 3; background: var(--panel); border: 1px solid var(--line) }
+  #side:not(.open) #sheetClose { display: none }
+}

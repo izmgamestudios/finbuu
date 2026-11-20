@@ -139,7 +139,9 @@ document.querySelectorAll('#side .card[data-panel] > h3').forEach(h => {
 $('sideBtn').onclick = () => { ui.noSide = !ui.noSide; saveUi(); applyUi(); setTimeout(() => dispatchEvent(new Event('resize')), 50); };
 $('hudBtn').onclick = () => { ui.noHud = !ui.noHud; saveUi(); applyUi(); };
 renderEmojiBar(); applyUi();
+$('sheetClose').onclick = () => showTab('street');
 $('closeDrawer').onclick = $('scrim').onclick = () => openDrawer(false);
+$('chatSoloBtn').onclick = () => { showTab('street'); showModes(); };
 $('openModes').onclick = () => { openDrawer(false); showModes(); };
 $('dwMap').onclick = () => { openDrawer(false); if (state) toggleMinimap(true); };
 $('dwBoard').onclick = () => { openDrawer(false); if (state) toggleBoard(true); };
@@ -230,7 +232,7 @@ socket.on('joined', info => {
   if (info.mode !== 'solo') history.replaceState(null, '', `?room=${encodeURIComponent(info.roomId)}`);
   closeModal(); renderRoomBar(); updateControls();
   $('advisor').hidden = false;
-  $('chatCard').hidden = info.mode === 'solo';
+  { const solo = info.mode === 'solo'; $('chatSolo').hidden = !solo; $('chatLive').hidden = solo; }
   if (isPres()) { showTab(matchMedia('(max-width:820px)').matches ? 'street' : 'chat'); setAuto(false); }
   setTimeout(() => ($('hint').style.display = 'none'), 10000);
 });
@@ -1964,7 +1966,7 @@ function openModal(fill, { closable = true, onClose = null } = {}) {
   if (modalOpen && modalOnClose) { const cb = modalOnClose; modalOnClose = null; cb(); }
   modalClosable = closable; modalOpen = true; modalOnClose = onClose;
   const body = $('modalBody'); body.replaceChildren(); body.classList.remove('wideBody'); delete body.dataset.npc; delete body.dataset.modes; fill(body);
-  if (closable) { const b = el('button', t('ui.close')); b.onclick = closeModal; body.append(b); }
+  if (closable) { const b = el('button', t('ui.close')); b.onclick = closeModal; body.append(b); const x = el('button', '✕', 'modalX'); x.type = 'button'; x.setAttribute('aria-label', t('ui.close')); x.onclick = closeModal; body.prepend(x); }
   $('modal').style.display = 'flex';
   const def = body.querySelector('[data-default]');
   if (def && !touch && !body.querySelector('input:focus')) setTimeout(() => def.focus(), 30);

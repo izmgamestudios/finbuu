@@ -150,7 +150,9 @@
       "dark": "🌙 Dark"
     },
     "dwDay": "Day {{d}}",
-    "dataError": "Could not load data."
+    "dataError": "Could not load data.",
+    "chatSoloNote": "Chat is off in solo mode. Create or join a room to talk to friends.",
+    "chatSoloBtn": "Create / join a room"
   },
   "tutorial": {
     "welcome": "Guide Building: Welcome! Your starting capital is ready.",

@@ -150,7 +150,9 @@
       "dark": "🌙 Koyu"
     },
     "dwDay": "Gün {{d}}",
-    "dataError": "Veri yüklenemedi."
+    "dataError": "Veri yüklenemedi.",
+    "chatSoloNote": "Tek oyunculu modda sohbet kapalı. Arkadaşlarınla yazışmak için bir oda kur veya odaya katıl.",
+    "chatSoloBtn": "Oda kur / katıl"
   },
   "tutorial": {
     "welcome": "Kılavuz Binası: Hoş geldin! Başlangıç sermayen hazır; Türkçede tutarlar gerçek 2026 ₺ değerleriyle gösterilir.",
