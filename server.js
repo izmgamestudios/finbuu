@@ -195,7 +195,7 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
   presentation: publicPresentation(st) || null,
   flats: (st.flats || []).map(f => ({ id: f.id, name: f.name, open: !!f.open })),
-  city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(), week: { n: Math.floor((st.day || 0) / 7) + 1, left: 7 - ((st.day || 0) % 7), scores: weekScores(st).slice(0, 5), last: st.lastWeek || null },
+  city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(), event: EVT.active(st) ? { id: st.event.id, until: st.event.until, tone: EVT.EVENTS[st.event.id].tone, income: EVT.EVENTS[st.event.id].income, bills: EVT.EVENTS[st.event.id].bills } : null, week: { n: Math.floor((st.day || 0) / 7) + 1, left: 7 - ((st.day || 0) % 7), scores: weekScores(st).slice(0, 5), last: st.lastWeek || null },
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 // ---------- PREMIUM FLAGS (Sprint 16): admin switches Premium features on/off globally; persisted in data/premium.json ----------
 // 'live' features change gameplay now; 'soon' features are only listed (voice/video arrive in Sprints 18-19) and cannot be switched on yet.
@@ -219,6 +219,10 @@ function saveToolsCfg() { try { fs.mkdirSync(path.dirname(TOOLS_CFG_FILE), { rec
 
 // ---------- BALANCE CONFIG (Sprint 25): price elasticity, level-up reward, weekly race; admin-tunable, persisted in data/balance-config.json ----------
 const BAL = require('./balance');
+const EVT = require('./events');
+const EVT_FILE = path.join(__dirname, 'data', 'events-config.json');
+try { EVT.setConfig(JSON.parse(fs.readFileSync(EVT_FILE, 'utf8'))); } catch { /* defaults */ }
+function saveEventsCfg() { try { fs.mkdirSync(path.dirname(EVT_FILE), { recursive: true, mode: 0o700 }); fs.writeFileSync(EVT_FILE, JSON.stringify(EVT.state()), { mode: 0o600 }); } catch (e) { console.warn('events config save failed:', e.message); } }
 const BAL_FILE = path.join(__dirname, 'data', 'balance-config.json');
 try { BAL.setConfig(JSON.parse(fs.readFileSync(BAL_FILE, 'utf8'))); } catch { /* defaults */ }
 function saveBalanceCfg() { try { fs.mkdirSync(path.dirname(BAL_FILE), { recursive: true, mode: 0o700 }); fs.writeFileSync(BAL_FILE, JSON.stringify(BAL.CFG), { mode: 0o600 }); } catch (e) { console.warn('balance config save failed:', e.message); } }
@@ -571,7 +575,7 @@ function priceMult(c) {
   const avg = ps.reduce((a, p) => a + (p.price || 0) * (1 - (p.discount || 0) / 100), 0) / ps.length;
   return BAL.demandMult(avg, BAL.refPrice(SEED.templates.find(t => t.key === c.nameKey)?.price, c.sector));
 }
-const incomeMult = (st, c) => priceMult(c) * (1 + TOOLS.effectOf(c, 'conversionRate')) * (1 + 0.5 * TOOLS.effectOf(c, 'brandReach')) * (TOOLS.effectOf(c, 'onlineSalesChannel') ? 1 + TOOLS.CFG.onlineBoost : 1) * (1 + adBoost(st, c)) * (1 + vehicleBoost(c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
+const incomeMult = (st, c) => priceMult(c) * EVT.incomeMult(st, c) * (1 + TOOLS.effectOf(c, 'conversionRate')) * (1 + 0.5 * TOOLS.effectOf(c, 'brandReach')) * (TOOLS.effectOf(c, 'onlineSalesChannel') ? 1 + TOOLS.CFG.onlineBoost : 1) * (1 + adBoost(st, c)) * (1 + vehicleBoost(c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
 // Mirrors the client: building height (floors) follows the lot's total cash. Virtual companies use their own cash.
 const floorsFor = cash => Math.max(1, Math.min(6, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
 function floorsOf(st, c) {
@@ -1706,6 +1710,8 @@ function weekSettle(st) {
     io.to(p.id).emit('weekEnd', { week: n, rank: i + 1, of: rank.length, score: r.score, coins, solo: !multi });
   });
   st.lastWeek = { week: n, rank: rank.slice(0, 5) };
+  const ev = EVT.roll(st);
+  if (ev) { if (st.event) st.lastEventId = st.event.id; st.event = ev; addLog(st, 'log.marketEvent', { eventKey: 'event.' + ev.id }); io.to(st.id).emit('marketEvent', { id: ev.id, until: ev.until, tone: EVT.EVENTS[ev.id].tone }); }
   for (const p of Object.values(st.players)) p.weekBase = p.counters?.revenue || 0;
 }
 function economyTick(only) {
@@ -1727,7 +1733,7 @@ function economyTick(only) {
       const rentPart = costPerTick(st, c) * opx, payroll = c.employees.length * (SEED.salary + c.benefitCost) + npcSalaries;
       let ub = { total: 0 }, stamp = 0, acctFee = 0;
       if (!c.isNpc) {
-        ub = utilityBills(st, c); if (opx < 1) ub = { ...ub, total: ub.total * opx };
+        ub = utilityBills(st, c); if (opx < 1) ub = { ...ub, total: ub.total * opx }; { const bm = EVT.billMult(st); if (bm !== 1) ub = { ...ub, total: ub.total * bm }; }
         // fractional taxes / fees accumulate and are charged in whole coins (same trick as fuel)
         c.stampAcc = (c.stampAcc || 0) + rentPart * ECON.tax.stampContract + payroll * ECON.tax.stampPayroll;
         stamp = Math.floor(c.stampAcc); c.stampAcc -= stamp;
@@ -2070,6 +2076,23 @@ admin.on('connection', socket => {
     if (typeof patch !== 'object' || !patch) return typeof cb === 'function' && cb({ ok: false });
     const cfg = TOOLS.setConfig(patch); saveToolsCfg(); audit('toolsConfig', JSON.stringify(cfg));
     if (typeof cb === 'function') cb({ ok: true, cfg });
+  });
+  socket.on('adminGetEventsCfg', (_, cb) => { if (typeof cb === 'function') cb({ cfg: EVT.state(), ranges: EVT.RANGES, events: Object.fromEntries(Object.entries(EVT.EVENTS).map(([k, v]) => [k, { days: v.days, tone: v.tone, income: v.income, bills: v.bills }])) }); });
+  socket.on('adminSetEventsCfg', (patch, cb) => {
+    if (typeof patch !== 'object' || !patch) return typeof cb === 'function' && cb({ ok: false });
+    const cfg = EVT.setConfig(patch); saveEventsCfg(); audit('eventsConfig', JSON.stringify(cfg));
+    if (typeof cb === 'function') cb({ ok: true, cfg });
+  });
+  socket.on('adminStartEvent', ({ roomId, id } = {}, cb) => {
+    if (!EVT.EVENTS[id]) return typeof cb === 'function' && cb({ ok: false });
+    const targets = roomId ? [rooms[roomId]].filter(Boolean) : Object.values(rooms); let n = 0;
+    for (const st of targets) {
+      if (st.event) st.lastEventId = st.event.id;
+      st.event = { id, start: st.day || 0, until: (st.day || 0) + EVT.EVENTS[id].days };
+      addLog(st, 'log.marketEvent', { eventKey: 'event.' + id }); io.to(st.id).emit('marketEvent', { id, until: st.event.until, tone: EVT.EVENTS[id].tone }); syncRoom(st); n++;
+    }
+    audit('eventStart', `${roomId || 'all'}:${id}`);
+    if (typeof cb === 'function') cb({ ok: true, rooms: n });
   });
   socket.on('adminGetBalanceCfg', (_, cb) => { if (typeof cb === 'function') cb({ cfg: { ...BAL.CFG }, ranges: BAL.RANGES }); });
   socket.on('adminSetBalanceCfg', (patch, cb) => {

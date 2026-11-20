@@ -258,7 +258,33 @@
     "sponsor": "Sponsorship / ad deal!",
     "investor": "An NPC investor put money in (5% equity).",
     "thief": "A thief robbed the register!",
-    "scammer": "A scammer placed a fake order!"
+    "scammer": "A scammer placed a fake order!",
+    "inflation": "Inflation",
+    "recession": "Recession",
+    "energyHike": "Energy price hike",
+    "supplyCrisis": "Supply crisis",
+    "fuelSpike": "Fuel price spike",
+    "fair": "Trade fair",
+    "techBoom": "Tech boom",
+    "holiday": "Holiday",
+    "healthWave": "Health wave",
+    "stimulus": "Stimulus package",
+    "desc": {
+      "inflation": "Prices rise: all income falls, bills go up.",
+      "recession": "The economy shrinks: income falls in every sector.",
+      "energyHike": "Electricity/water/gas bills rise sharply.",
+      "supplyCrisis": "Retail, food and auto income drops.",
+      "fuelSpike": "Transport and auto income drops.",
+      "fair": "Demand rises for retail, food and creative.",
+      "techBoom": "Demand rises for tech and education.",
+      "holiday": "Demand rises for food, retail and services.",
+      "healthWave": "Health demand rises, education slows.",
+      "stimulus": "All income rises slightly, bills drop."
+    },
+    "chip": "Market",
+    "daysLeft": "{{n}} days left",
+    "started": "📰 {{name}} has begun!",
+    "calm": "Calm market"
   },
   "role": {
     "candidate": "aspiring entrepreneur",
@@ -405,7 +431,8 @@
     "teamJoined": "👥 {{player}} joined \"{{team}}\".",
     "vehicle": "🚗 {{player}} vehicle for {{company}}: {{mode}}",
     "toolInstalled": "{{player}} installed {{tool}} on {{company}}.",
-    "toolsSuspended": "{{company}}: monthly hosting could not be paid, {{n}} tool(s) suspended."
+    "toolsSuspended": "{{company}}: monthly hosting could not be paid, {{n}} tool(s) suspended.",
+    "marketEvent": "📰 Market event: {{event}}"
   },
   "crisis": {
     "concordat": "Filed for concordat (debt restructuring)",

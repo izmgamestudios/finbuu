@@ -258,7 +258,33 @@
     "sponsor": "Sponsorluk / reklam anlaşması!",
     "investor": "NPC yatırımcı kasaya yatırım yaptı (%5 hisse).",
     "thief": "Hırsız kasadan çaldı!",
-    "scammer": "Dolandırıcı sahte sipariş verdi!"
+    "scammer": "Dolandırıcı sahte sipariş verdi!",
+    "inflation": "Enflasyon",
+    "recession": "Durgunluk",
+    "energyHike": "Enerji zammı",
+    "supplyCrisis": "Tedarik krizi",
+    "fuelSpike": "Akaryakıt zammı",
+    "fair": "Fuar",
+    "techBoom": "Teknoloji patlaması",
+    "holiday": "Bayram/tatil",
+    "healthWave": "Sağlık dalgası",
+    "stimulus": "Destek paketi",
+    "desc": {
+      "inflation": "Fiyatlar yükseldi: tüm gelirler düşer, faturalar artar.",
+      "recession": "Ekonomi daralıyor: tüm sektörlerde gelir düşer.",
+      "energyHike": "Elektrik/su/doğalgaz faturaları ciddi artar.",
+      "supplyCrisis": "Perakende, yiyecek ve otomotivde gelir düşer.",
+      "fuelSpike": "Ulaşım ve otomotivde gelir düşer.",
+      "fair": "Perakende, yiyecek ve yaratıcı sektörlerde talep artar.",
+      "techBoom": "Teknoloji ve eğitimde talep artar.",
+      "holiday": "Yiyecek, perakende ve hizmette talep artar.",
+      "healthWave": "Sağlıkta talep artar, eğitim yavaşlar.",
+      "stimulus": "Tüm gelirler hafif artar, faturalar düşer."
+    },
+    "chip": "Piyasa",
+    "daysLeft": "{{n}} gün kaldı",
+    "started": "📰 {{name}} başladı!",
+    "calm": "Sakin piyasa"
   },
   "role": {
     "candidate": "girişimci adayı",
@@ -405,7 +431,8 @@
     "teamJoined": "👥 {{player}} \"{{team}}\" takımına katıldı.",
     "vehicle": "🚗 {{player}}, {{company}} için araç: {{mode}}",
     "toolInstalled": "{{player}}, {{company}} şirketine {{tool}} kurdu.",
-    "toolsSuspended": "{{company}}: aylık sunucu gideri ödenemedi, {{n}} araç askıya alındı."
+    "toolsSuspended": "{{company}}: aylık sunucu gideri ödenemedi, {{n}} araç askıya alındı.",
+    "marketEvent": "📰 Piyasa olayı: {{event}}"
   },
   "crisis": {
     "concordat": "Konkordato ilan etti",

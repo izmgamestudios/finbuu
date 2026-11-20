@@ -235,6 +235,7 @@ socket.on('joined', info => {
   setTimeout(() => ($('hint').style.display = 'none'), 10000);
 });
 socket.on('badge', ({ id }) => { toast(`🏅 ${t('badge.unlocked')}: ${t('badge.' + id)}`); profSig = ''; });
+socket.on('marketEvent', e => { toast(t('event.started', { name: t('event.' + e.id) })); hudSig = ''; });
 socket.on('levelUp', e => { toast(t('week.levelUp', e)); profSig = ''; });
 socket.on('weekEnd', e => { toast(t('week.ended', e) + (e.coins ? t('week.endedWin', e) : '')); profSig = ''; });
 socket.on('questDone', q => { toast(`✅ ${t('quest.' + q.id, { goal: '' })} · +${money(q.coins)} · +${q.xp} XP`); profSig = ''; });
@@ -1041,13 +1042,14 @@ function renderHud() {
   const floors = floorsFor(fo.cash), next = 250 * 2 ** floors, prev = floors > 1 ? 250 * 2 ** (floors - 1) : 0;
   const s = p.stats, nextXp = 10 * s.level ** 2, prevXp = 10 * (s.level - 1) ** 2;
   const rank = myRank();
-  const sig = [p.coins, fo.cash, f.units, f.todayUnits, f.employees, f.cap, f.todayRev, f.dayExp, f.monthRev, f.monthExp, Math.round(s.xp), rank, i18next.language].join('|');
+  const sig = [p.coins, fo.cash, f.units, f.todayUnits, f.employees, f.cap, f.todayRev, f.dayExp, f.monthRev, f.monthExp, Math.round(s.xp), rank, i18next.language, state.event?.id || ''].join('|');
   if (sig === hudSig) return;
   hudSig = sig;
   updateHdrStats(p, s, prevXp, nextXp);
   const dateChip = chip('🗓', t('date.chipTitle'), '—', null); dateChip.classList.add('dateChip'); dateChip.append(el('small', '', 'sub muted'));
   hud.replaceChildren(
     dateChip,
+    ...(state.event ? [chip(state.event.tone === 'good' ? '📈' : '📉', t('event.chip'), [`${t('event.' + state.event.id)} · ${t('event.daysLeft', { n: Math.max(0, state.event.until - (state.day || 0)) })}`], null, state.event.tone === 'good' ? 'var(--good, #4ade80)' : 'var(--bad)', () => toast(t('event.desc.' + state.event.id)))] : []),
     chip('💰', t('hud.coins'), fmt(p.coins), p.coins / 2000),
     chip('🏦', t('hud.cash'), owned.length ? fmt(fo.cash) : '—', owned.length ? (floors >= MAX_FLOORS ? 1 : (fo.cash - prev) / (next - prev)) : 0, fo.cash < 0 ? 'var(--bad)' : null),
     chip('🛒', t('hud.customers'), f.units ? `${f.units} · ${t('hud.today')} ${f.todayUnits}` : '—', f.todayUnits / f.bestUnits),
