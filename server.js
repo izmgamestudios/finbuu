@@ -216,7 +216,7 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
   presentation: publicPresentation(st) || null,
-  flats: (st.flats || []).map(f => ({ id: f.id, name: f.name, open: !!f.open })),
+  flats: (st.flats || []).map(f => ({ id: f.id, name: f.name, open: !!f.open })), classroom: st.classroom?.on ? { title: st.classroom.title, assignments: st.classroom.assignments } : null,
   city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(), goal: publicGoal(st), event: EVT.active(st) ? { id: st.event.id, until: st.event.until, tone: EVT.EVENTS[st.event.id].tone, income: EVT.EVENTS[st.event.id].income, bills: EVT.EVENTS[st.event.id].bills } : null, week: { n: Math.floor((st.day || 0) / 7) + 1, left: 7 - ((st.day || 0) % 7), scores: weekScores(st).slice(0, 5), last: st.lastWeek || null },
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 // ---------- PREMIUM FLAGS (Sprint 16): admin switches Premium features on/off globally; persisted in data/premium.json ----------
@@ -704,12 +704,27 @@ function checkLevel(p) {
     p.coins += coins; io.to(p.id).emit('levelUp', { level: p.rewardedLevel, coins });
   }
 }
+// Sprint 30: classroom mode — the room owner (teacher) sets assignments; students' progress = counter delta since the assignment was created
+const CLASS_METRICS = ['sales', 'revenue', 'hire', 'invest', 'campaign', 'met', 'rides', 'taxiRides', 'quests', 'trades', 'topup', 'npcSale'];
+const classProgress = (a, p) => Math.max(0, Math.round((p.counters?.[a.metric] || 0) - (a.base?.[p.id] || 0)));
+function classCheck(st, p) {
+  for (const a of st.classroom?.assignments || []) {
+    p.classDone ||= {}; if (p.classDone[a.id] != null) continue;
+    if (a.until != null && (st.day || 0) >= a.until) continue;
+    if (classProgress(a, p) < a.goal) continue;
+    p.classDone[a.id] = st.day || 0;
+    if (a.reward) { p.coins += a.reward; }
+    p.stats.xp += 5; p.stats.level = levelOf(p.stats.xp);
+    io.to(p.id).emit('classDone', { title: a.title, reward: a.reward || 0 });
+  }
+}
 function progress(st, p, metric, amount = 1) {
   if (!p) return;
   checkLevel(p);
   p.counters ||= {};
   p.counters[metric] = (p.counters[metric] || 0) + amount;
   const n = p.counters[metric];
+  if (st.classroom?.on) classCheck(st, p);
   if (metric === 'sales') { if (n >= 10) award(st, p, 'sales10'); if (n >= 100) award(st, p, 'sales100'); if (n >= 1000) award(st, p, 'sales1000'); }
   if (metric === 'met' && n >= 5) award(st, p, 'social');
   if (metric === 'rides' && n >= 3) award(st, p, 'commuter');
@@ -1161,6 +1176,39 @@ io.on('connection', socket => {
     }
     cb({ ok: true, city: street?.city || null, cities: out });
   });
+  // ---- Sprint 30: classroom (education) mode ----
+  const isTeacher = () => !!street && street.ownerId === me?.id && ['multiplayer'].includes(street.mode);
+  const classPublic = st => (st.classroom?.on ? { on: true, title: st.classroom.title, assignments: st.classroom.assignments.map(a => ({ ...a })) } : { on: false });
+  socket.on('classGet', (_, cb) => { if (typeof cb === 'function' && street) cb({ ok: true, available: !!BAL.CFG.classOn && street.mode === 'multiplayer', teacher: isTeacher(), classroom: classPublic(street), metrics: CLASS_METRICS, day: street.day || 0 }); });
+  socket.on('classSet', ({ title, assignments } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r);
+    if (!isTeacher() || !BAL.CFG.classOn || limited()) return reply({ ok: false, key: 'class.notTeacher' });
+    const list = Array.isArray(assignments) ? assignments.slice(0, 10) : [], prev = street.classroom?.assignments || [], day = street.day || 0, humans = Object.values(street.players).filter(p => !p.isNpc);
+    const out = [];
+    for (const a of list) {
+      const metric = String(a?.metric || ''), goal = Math.floor(Number(a?.goal)), reward = Math.max(0, Math.min(500, Math.floor(Number(a?.reward) || 0))), t = clean(a?.title, 60);
+      if (!CLASS_METRICS.includes(metric) || !(goal >= 1 && goal <= 1000000) || !t) return reply({ ok: false, key: 'class.badAssignment' });
+      const until = a?.days ? day + Math.max(1, Math.min(365, Math.floor(Number(a.days)))) : (a?.until != null && a.until > day ? Math.floor(Number(a.until)) : null);
+      const old = prev.find(x => x.id === a?.id && x.metric === metric);   // keep baselines of unchanged assignments
+      out.push(old ? { ...old, title: t, goal, reward, until } : { id: crypto.randomBytes(3).toString('hex'), title: t, metric, goal, reward, until, base: Object.fromEntries(humans.map(p => [p.id, p.counters?.[metric] || 0])), created: day });
+    }
+    street.classroom = { on: true, title: clean(title, 60) || 'Class', assignments: out, startedDay: street.classroom?.startedDay ?? day };
+    addLog(street, 'log.classUpdated', { player: me.name }); audit('class', `${street.id}: ${out.length} assignments`); sync(); reply({ ok: true, classroom: classPublic(street) });
+  });
+  socket.on('classOff', (_, cb) => { if (!isTeacher()) return typeof cb === 'function' && cb({ ok: false }); street.classroom = null; sync(); if (typeof cb === 'function') cb({ ok: true }); });
+  socket.on('classReport', (_, cb) => {
+    if (typeof cb !== 'function' || !isTeacher()) return typeof cb === 'function' && cb({ ok: false, key: 'class.notTeacher' });
+    const cl = street.classroom, day = street.day || 0, all = [...Object.values(street.players), ...Object.values(street.pastPlayers || {})].filter(p => p && !p.isNpc && p.id !== street.ownerId);
+    const seen = new Set(), students = all.filter(p => (seen.has(p.id) ? false : seen.add(p.id)));
+    const rows = students.map(p => {
+      const cos = Object.values(street.companies).filter(c => !c.isNpc && c.founders.includes(p.id));
+      return { id: p.id, name: p.name, online: !!street.players[p.id], level: p.stats?.level || 1, xp: Math.round(p.stats?.xp || 0), coins: Math.round(p.coins), companies: cos.length, cash: Math.round(cos.reduce((a, c) => a + c.cash, 0)), staff: cos.reduce((a, c) => a + c.employees.length + (c.npcStaff || 0), 0),
+        sales: p.counters?.sales || 0, revenue: Math.round(p.counters?.revenue || 0), quests: p.counters?.quests || 0, badges: Object.keys(p.badges || {}).length,
+        assignments: (cl?.assignments || []).map(a => ({ progress: classProgress(a, p), goal: a.goal, done: p.classDone?.[a.id] != null })) };
+    });
+    cb({ ok: true, day, title: cl?.title || '', assignments: (cl?.assignments || []).map(a => ({ title: a.title, goal: a.goal, metric: a.metric, until: a.until })), rows });
+  });
+
   // ---- Sprint 29a: player partnerships (offer / accept / buy back) ----
   const pfair = (c, pct) => Math.round(readiness(street, c).valuation * pct / 100);
   socket.on('partnerOffer', ({ cid, to, pct, amount } = {}, cb) => {

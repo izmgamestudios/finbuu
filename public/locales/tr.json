@@ -441,7 +441,8 @@
     "partnerPayout": "💼 {{company}} ortaklarına {{amount}} coin temettü ödedi.",
     "partnerNoPayout": "💼 {{company}}: bu ay kâr yok, temettü ödenmedi.",
     "partnerBoughtOut": "💼 {{company}}, {{player}} ortağının %{{pct}} payını geri aldı ({{amount}} coin).",
-    "companySold": "💰 {{player}}, {{company}} şirketini {{amount}} coine sattı."
+    "companySold": "💰 {{player}}, {{company}} şirketini {{amount}} coine sattı.",
+    "classUpdated": "🎓 {{player}} ders görevlerini güncelledi."
   },
   "crisis": {
     "concordat": "Konkordato ilan etti",
@@ -2078,5 +2079,164 @@
     "teleported": "Işınlandın",
     "cooldown": "Işınlanma için {{n}} sn bekle",
     "fail": "Şu an gidilemiyor"
+  },
+  "class": {
+    "menu": "Sınıf",
+    "title": "🎓 Sınıf (eğitim modu)",
+    "off": "Eğitim modu bu odada kullanılamıyor (yalnızca çok oyunculu odalarda).",
+    "notTeacher": "Bunu yalnızca odanın sahibi (öğretmen) yapabilir.",
+    "badAssignment": "Her ders görevinin başlığı, geçerli bir ölçütü ve hedefi olmalı.",
+    "tabSettings": "Ayarlar",
+    "tabReport": "Rapor",
+    "tabMine": "Görevlerim",
+    "intro": "Odanın sahibi öğretmendir: ders görevleri verir, öğrencilerin ilerlemesini izler ve sınıf raporunu CSV olarak indirir. İlerleme, görev oluşturulduğu andan itibaren sayılır.",
+    "classTitle": "Sınıf adı",
+    "template": "Şablon",
+    "tplNone": "— Şablon seç —",
+    "tpl1": "Girişimcilik 101",
+    "tpl2": "Satış atölyesi",
+    "tpl3": "Finans ve büyüme",
+    "assignments": "Ders görevleri",
+    "addRow": "+ Görev ekle",
+    "rowTitle": "Görev başlığı",
+    "metric": "Ölçüt",
+    "goal": "Hedef",
+    "reward": "Ödül (coin)",
+    "days": "Süre (gün, boş = süresiz)",
+    "save": "Kaydet ve öğrencilere ver",
+    "saved": "Sınıf güncellendi",
+    "close": "Sınıfı kapat",
+    "closed": "Eğitim modu kapatıldı",
+    "studentsNone": "Henüz öğrenci yok.",
+    "student": "Öğrenci",
+    "online": "Çevrimiçi",
+    "level": "Seviye",
+    "xp": "XP",
+    "coins": "Coin",
+    "companies": "Şirket",
+    "cash": "Kasa",
+    "staff": "Çalışan",
+    "sales": "Satış",
+    "revenue": "Ciro",
+    "quests": "Görev",
+    "badges": "Rozet",
+    "refresh": "Yenile",
+    "csv": "⬇ CSV indir",
+    "reportDay": "Gün {{n}} · {{m}} öğrenci",
+    "noAssignments": "Henüz ders görevi yok.",
+    "progress": "{{p}} / {{g}}",
+    "done": "Tamamlandı",
+    "until": "Son: gün {{n}}",
+    "toastDone": "🎓 Ders görevi tamamlandı: {{title}}{{reward}}",
+    "toastReward": " · +{{n}} coin",
+    "notActive": "Bu odada eğitim modu açık değil.",
+    "myTitle": "📚 Ders görevleri",
+    "available": "Eğitim modunu başlatmak için bir ders görevi ekle.",
+    "metrics": {
+      "sales": "Satış sayısı",
+      "revenue": "Satış cirosu",
+      "hire": "İşe alım",
+      "invest": "Şirkete yatırım",
+      "campaign": "Kampanya/reklam",
+      "met": "Tanışılan NPC",
+      "rides": "Otobüs yolculuğu",
+      "taxiRides": "Taksi yolculuğu",
+      "quests": "Günlük görev",
+      "trades": "Toptan pazar işlemi",
+      "topup": "Ulaşım kartı yükleme",
+      "npcSale": "NPC müşteriye satış"
+    },
+    "tplRows": {
+      "tpl1": [
+        [
+          "İlk 10 satışını yap",
+          "sales",
+          10,
+          30,
+          0
+        ],
+        [
+          "İlk çalışanını işe al",
+          "hire",
+          1,
+          40,
+          0
+        ],
+        [
+          "Şirkete yatırım yap",
+          "invest",
+          1,
+          20,
+          0
+        ],
+        [
+          "Bir kampanya başlat",
+          "campaign",
+          1,
+          30,
+          0
+        ]
+      ],
+      "tpl2": [
+        [
+          "30 satış yap",
+          "sales",
+          30,
+          60,
+          0
+        ],
+        [
+          "500 coin ciro yap",
+          "revenue",
+          500,
+          60,
+          0
+        ],
+        [
+          "3 NPC müşteriye sat",
+          "npcSale",
+          3,
+          40,
+          0
+        ],
+        [
+          "5 NPC ile tanış",
+          "met",
+          5,
+          20,
+          0
+        ]
+      ],
+      "tpl3": [
+        [
+          "2 çalışan al",
+          "hire",
+          2,
+          60,
+          0
+        ],
+        [
+          "3 kez yatırım yap",
+          "invest",
+          3,
+          40,
+          0
+        ],
+        [
+          "2 kampanya başlat",
+          "campaign",
+          2,
+          50,
+          0
+        ],
+        [
+          "3 günlük görev bitir",
+          "quests",
+          3,
+          40,
+          0
+        ]
+      ]
+    }
   }
 }

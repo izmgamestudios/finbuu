@@ -441,7 +441,8 @@
     "partnerPayout": "💼 {{company}} paid {{amount}} coins in partner dividends.",
     "partnerNoPayout": "💼 {{company}}: no profit this month, no dividend.",
     "partnerBoughtOut": "💼 {{company}} bought back {{player}}'s {{pct}}% stake ({{amount}} coins).",
-    "companySold": "💰 {{player}} sold {{company}} for {{amount}} coins."
+    "companySold": "💰 {{player}} sold {{company}} for {{amount}} coins.",
+    "classUpdated": "🎓 {{player}} updated the class assignments."
   },
   "crisis": {
     "concordat": "Filed for concordat (debt restructuring)",
@@ -2078,5 +2079,164 @@
     "teleported": "Teleported",
     "cooldown": "Wait {{n}} s to teleport again",
     "fail": "Cannot go there right now"
+  },
+  "class": {
+    "menu": "Class",
+    "title": "🎓 Class (education mode)",
+    "off": "Education mode is only available in multiplayer rooms.",
+    "notTeacher": "Only the room owner (teacher) can do this.",
+    "badAssignment": "Every assignment needs a title, a valid metric and a goal.",
+    "tabSettings": "Settings",
+    "tabReport": "Report",
+    "tabMine": "My tasks",
+    "intro": "The room owner is the teacher: set assignments, follow student progress and download the class report as CSV. Progress counts from the moment an assignment is created.",
+    "classTitle": "Class name",
+    "template": "Template",
+    "tplNone": "— Pick a template —",
+    "tpl1": "Entrepreneurship 101",
+    "tpl2": "Sales workshop",
+    "tpl3": "Finance & growth",
+    "assignments": "Assignments",
+    "addRow": "+ Add assignment",
+    "rowTitle": "Assignment title",
+    "metric": "Metric",
+    "goal": "Goal",
+    "reward": "Reward (coins)",
+    "days": "Days (empty = no deadline)",
+    "save": "Save and assign",
+    "saved": "Class updated",
+    "close": "Close class",
+    "closed": "Education mode turned off",
+    "studentsNone": "No students yet.",
+    "student": "Student",
+    "online": "Online",
+    "level": "Level",
+    "xp": "XP",
+    "coins": "Coins",
+    "companies": "Companies",
+    "cash": "Cash",
+    "staff": "Staff",
+    "sales": "Sales",
+    "revenue": "Revenue",
+    "quests": "Quests",
+    "badges": "Badges",
+    "refresh": "Refresh",
+    "csv": "⬇ Download CSV",
+    "reportDay": "Day {{n}} · {{m}} students",
+    "noAssignments": "No assignments yet.",
+    "progress": "{{p}} / {{g}}",
+    "done": "Done",
+    "until": "Due: day {{n}}",
+    "toastDone": "🎓 Assignment complete: {{title}}{{reward}}",
+    "toastReward": " · +{{n}} coins",
+    "notActive": "Education mode is not active in this room.",
+    "myTitle": "📚 Assignments",
+    "available": "Add an assignment to start education mode.",
+    "metrics": {
+      "sales": "Number of sales",
+      "revenue": "Sales revenue",
+      "hire": "Hires",
+      "invest": "Investments into the company",
+      "campaign": "Campaigns / ads",
+      "met": "NPCs met",
+      "rides": "Bus rides",
+      "taxiRides": "Taxi rides",
+      "quests": "Daily quests",
+      "trades": "Wholesale trades",
+      "topup": "Transit card top-ups",
+      "npcSale": "Sales to NPC customers"
+    },
+    "tplRows": {
+      "tpl1": [
+        [
+          "Make your first 10 sales",
+          "sales",
+          10,
+          30,
+          0
+        ],
+        [
+          "Hire your first employee",
+          "hire",
+          1,
+          40,
+          0
+        ],
+        [
+          "Invest in your company",
+          "invest",
+          1,
+          20,
+          0
+        ],
+        [
+          "Start a campaign",
+          "campaign",
+          1,
+          30,
+          0
+        ]
+      ],
+      "tpl2": [
+        [
+          "Make 30 sales",
+          "sales",
+          30,
+          60,
+          0
+        ],
+        [
+          "Earn 500 coins revenue",
+          "revenue",
+          500,
+          60,
+          0
+        ],
+        [
+          "Sell to 3 NPC customers",
+          "npcSale",
+          3,
+          40,
+          0
+        ],
+        [
+          "Meet 5 NPCs",
+          "met",
+          5,
+          20,
+          0
+        ]
+      ],
+      "tpl3": [
+        [
+          "Hire 2 employees",
+          "hire",
+          2,
+          60,
+          0
+        ],
+        [
+          "Invest 3 times",
+          "invest",
+          3,
+          40,
+          0
+        ],
+        [
+          "Start 2 campaigns",
+          "campaign",
+          2,
+          50,
+          0
+        ],
+        [
+          "Finish 3 daily quests",
+          "quests",
+          3,
+          40,
+          0
+        ]
+      ]
+    }
   }
 }

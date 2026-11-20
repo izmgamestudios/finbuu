@@ -1907,6 +1907,46 @@
    "related": []
   },
   {
+   "id": "classroom",
+   "cat": "s-room",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Eğitim modu (sınıf)",
+    "en": "Education mode (class)"
+   },
+   "body": {
+    "tr": "Çok oyunculu odanın sahibi öğretmen olur: ders görevleri verir (satış, işe alım, yatırım, kampanya…), öğrencilerin ilerlemesini izler ve sınıf raporunu CSV olarak indirir. Öğrenciler görevlerini Profil sekmesinde ve Menü › Sınıf'ta görür; tamamlayınca ödül alır.",
+    "en": "The owner of a multiplayer room becomes the teacher: assign tasks (sales, hires, investments, campaigns…), follow student progress and download the class report as CSV. Students see their tasks in the Profile tab and Menu › Class, and earn a reward when done."
+   },
+   "tags": [
+    "egitim",
+    "sinif",
+    "ogretmen",
+    "csv",
+    "ders"
+   ],
+   "steps": {
+    "tr": [
+     "Oda kur (Menü › Oda kur)",
+     "Menü › 🎓 Sınıf",
+     "Şablon seç veya görev ekle → \"Kaydet ve öğrencilere ver\"",
+     "Rapor sekmesinden CSV indir"
+    ],
+    "en": [
+     "Create a room (Menu › Create room)",
+     "Menu › 🎓 Class",
+     "Pick a template or add tasks → \"Save and assign\"",
+     "Download the CSV from the Report tab"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "menu"
+   },
+   "related": []
+  },
+  {
    "id": "teams",
    "cat": "s-room",
    "type": "feature",

@@ -396,7 +396,7 @@ function updateControls() {
   $('budgetBtn').hidden = $('doorBtn').hidden = !inOwnFlat();
   $('advisor').hidden = !joined || scene.name !== 'street';
   $('advChip').hidden = $('advisor').hidden;
-  const mapOk = !!joined && scene.name === 'street' && !isPres(); $('mapBtn').hidden = !mapOk; $('zoomBox').hidden = !mapOk; $('guideBtn').hidden = !joined || isPres(); if (!mapOk && minimapOpen) toggleMinimap(false);
+  const mapOk = !!joined && scene.name === 'street' && !isPres(); $('dwClass').hidden = !(joined && joined.mode === 'multiplayer'); $('mapBtn').hidden = !mapOk; $('zoomBox').hidden = !mapOk; $('guideBtn').hidden = !joined || isPres(); if (!mapOk && minimapOpen) toggleMinimap(false);
 }
 
 // ---------- Input: keyboard ----------
@@ -859,6 +859,78 @@ function guideTaxi(b, x, after) {
     });
   });
 }
+
+// ---------- Classroom (education mode, Sprint 30) ----------
+const classMetricName = m => t('class.metrics.' + m);
+function csvCell(v) { let s = String(v ?? ''); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function downloadCsv(name, rows) { const blob = new Blob(['﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
+function openClassroom(tab) {
+  socket.emit('classGet', {}, g => {
+    if (!g?.ok || !g.available) return toast(t('class.off'));
+    tab ||= g.teacher ? (g.classroom.on ? 'report' : 'settings') : 'mine';
+    if (!g.teacher && !g.classroom.on) return toast(t('class.notActive'));
+    openModal(body => {
+      body.classList.add('wideBody'); body.append(el('h3', t('class.title')));
+      const tabs = el('div', null, 'others');
+      (g.teacher ? [['settings', 'tabSettings'], ['report', 'tabReport'], ['mine', 'tabMine']] : [['mine', 'tabMine']]).forEach(([k, key]) => tabs.append(btn(t('class.' + key), () => openClassroom(k), { primary: k === tab })));
+      body.append(tabs);
+      const box = el('div', null, 'co'); body.append(box);
+      if (tab === 'mine') return renderClassMine(box, g.classroom);
+      if (tab === 'report') return renderClassReport(box);
+      renderClassSettings(box, g);
+    });
+  });
+}
+function renderClassMine(box, cl) {
+  if (!cl.on) return box.append(el('p', t('class.available'), 'muted'));
+  const p = me(); box.append(el('h4', cl.title));
+  if (!cl.assignments.length) box.append(el('small', t('class.noAssignments'), 'muted'));
+  cl.assignments.forEach(a => { const prog = Math.max(0, Math.round((p?.counters?.[a.metric] || 0) - (a.base?.[myId()] || 0))), pct = Math.min(100, prog / a.goal * 100), d = el('div', null, 'quest' + (prog >= a.goal ? ' done' : '')), r1 = el('div', null, 'row1');
+    r1.append(el('span', (prog >= a.goal ? '✅ ' : '🎯 ') + a.title), el('b', t('class.progress', { p: Math.min(prog, a.goal), g: a.goal })));
+    const bar = el('div', null, 'bar'), fill = el('i'); fill.style.width = pct + '%'; bar.append(fill);
+    d.append(r1, bar, el('small', `${classMetricName(a.metric)}${a.reward ? ' · +' + a.reward + ' coin' : ''}${a.until != null ? ' · ' + t('class.until', { n: a.until }) : ''}`, 'muted')); box.append(d); });
+}
+function renderClassSettings(box, g) {
+  box.append(el('p', t('class.intro'), 'muted'));
+  const title = el('input'); title.maxLength = 60; title.value = g.classroom.title || ''; title.placeholder = t('class.classTitle'); title.style.width = '100%';
+  const rows = (g.classroom.on ? g.classroom.assignments : []).map(a => ({ id: a.id, title: a.title, metric: a.metric, goal: a.goal, reward: a.reward || 0, days: '' , until: a.until }));
+  const list = el('div'), draw = () => {
+    list.replaceChildren(...rows.map((r, i) => {
+      const row = el('div', null, 'prodRow'), wrap = el('div', null, 'row'); wrap.style.cssText = 'flex-wrap:wrap;gap:6px;align-items:center';
+      const ti = el('input'); ti.value = r.title; ti.placeholder = t('class.rowTitle'); ti.style.flex = '1 1 200px'; ti.oninput = () => { r.title = ti.value; };
+      const me_ = el('select'); g.metrics.forEach(m => me_.append(new Option(classMetricName(m), m))); me_.value = r.metric; me_.onchange = () => { r.metric = me_.value; };
+      const num = (ph, key, w) => { const x = el('input'); x.type = 'number'; x.min = 0; x.placeholder = ph; x.title = ph; x.value = r[key] ?? ''; x.style.width = w; x.oninput = () => { r[key] = x.value === '' ? '' : Number(x.value); }; return x; };
+      wrap.append(ti, me_, num(t('class.goal'), 'goal', '90px'), num(t('class.reward'), 'reward', '90px'), num(t('class.days'), 'days', '90px'), btn('🗑', () => { rows.splice(i, 1); draw(); }));
+      row.append(wrap); return row;
+    }));
+  };
+  draw();
+  const tpl = el('select'); tpl.append(new Option(t('class.tplNone'), '')); ['tpl1', 'tpl2', 'tpl3'].forEach(k => tpl.append(new Option(t('class.' + k), k)));
+  tpl.onchange = () => { if (!tpl.value) return; const defs = i18next.t('class.tplRows.' + tpl.value, { returnObjects: true }); rows.splice(0, rows.length, ...defs.map(d => ({ title: d[0], metric: d[1], goal: d[2], reward: d[3], days: '' }))); if (!title.value) title.value = t('class.' + tpl.value); draw(); };
+  box.append(el('label', t('class.classTitle')), title, el('label', t('class.template')), tpl, el('h4', t('class.assignments')), list);
+  box.append(btn(t('class.addRow'), () => { if (rows.length < 10) { rows.push({ title: '', metric: 'sales', goal: 10, reward: 20, days: '' }); draw(); } }));
+  const act = el('div', null, 'row');
+  act.append(btn('✓ ' + t('class.save'), () => socket.emit('classSet', { title: title.value, assignments: rows.map(r => ({ id: r.id, title: r.title, metric: r.metric, goal: r.goal, reward: r.reward || 0, days: r.days || undefined, until: r.days ? undefined : r.until })) }, r => { if (r?.key) return toast(t(r.key)); if (r?.ok) { toast(t('class.saved')); openClassroom('report'); } }), { primary: true }));
+  if (g.classroom.on) act.append(btn(t('class.close'), () => socket.emit('classOff', {}, r => { if (r?.ok) { toast(t('class.closed')); closeModal(); } })));
+  box.append(act);
+}
+function renderClassReport(box) {
+  socket.emit('classReport', {}, r => {
+    if (!r?.ok) return box.append(el('p', t(r?.key || 'class.off'), 'muted'));
+    box.append(el('small', `${r.title ? r.title + ' · ' : ''}${t('class.reportDay', { n: r.day, m: r.rows.length })}`, 'muted'));
+    const bar = el('div', null, 'row'); bar.append(btn(t('class.refresh'), () => openClassroom('report')), btn(t('class.csv'), () => {
+      const head = [t('class.student'), t('class.online'), t('class.level'), t('class.xp'), t('class.coins'), t('class.companies'), t('class.cash'), t('class.staff'), t('class.sales'), t('class.revenue'), t('class.quests'), t('class.badges'), ...r.assignments.map(a => `${a.title} (${a.goal})`)];
+      downloadCsv(`finbuu-class-day${r.day}.csv`, [head, ...r.rows.map(x => [x.name, x.online ? 1 : 0, x.level, x.xp, x.coins, x.companies, x.cash, x.staff, x.sales, x.revenue, x.quests, x.badges, ...x.assignments.map(a => `${a.progress}/${a.goal}${a.done ? ' ✓' : ''}`)])]);
+    }, { primary: true })); box.append(bar);
+    if (!r.rows.length) return box.append(el('p', t('class.studentsNone'), 'muted'));
+    const wrap = el('div'); wrap.style.cssText = 'overflow:auto;max-width:100%'; const tbl = el('table'), thead = el('thead'), hr = el('tr');
+    [t('class.student'), t('class.level'), t('class.coins'), t('class.cash'), t('class.sales'), t('class.revenue'), ...r.assignments.map(a => a.title)].forEach(h => hr.append(el('th', h))); thead.append(hr);
+    const tb = el('tbody'); r.rows.forEach(x => { const tr = el('tr'); [`${x.online ? '🟢 ' : '⚪ '}${x.name}`, x.level, fmt(x.coins), fmt(x.cash), x.sales, fmt(x.revenue), ...x.assignments.map(a => `${a.progress}/${a.goal}${a.done ? ' ✓' : ''}`)].forEach(v => tr.append(el('td', String(v)))); tb.append(tr); });
+    tbl.append(thead, tb); wrap.append(tbl); box.append(wrap);
+  });
+}
+$('dwClass').onclick = () => { openDrawer(false); openClassroom(); };
+socket.on('classDone', e => { toast(t('class.toastDone', { title: e.title, reward: e.reward ? t('class.toastReward', { n: e.reward }) : '' })); profSig = ''; });
 // ---------- Taxi (Sprint 24b): click a taxi, it pulls up, haggle over the fare, ride anywhere ----------
 let taxiHail = null;                       // { car, t0 } while a taxi is on its way / waiting
 function hailTaxi(car) {
@@ -2004,12 +2076,13 @@ const BADGE_ICON = { trader: '🤝', streak7: '🔥', seasonStar: '🏅', teamGo
 let extraSig = '';
 function renderExtras(p) {
   const teams = state?.teams || {};
-  const sig = p ? JSON.stringify([p.quests, p.streak, p.season, p.chest, p.badges, p.team, teams, joined?.mode, i18next.language, Object.values(state.players).map(x => [x.id, x.team, x.loc, x.name, x.afk])]) : '';
+  const sig = p ? JSON.stringify([state?.classroom ? [state.classroom.assignments.map(x => x.id), p.counters] : null, p.quests, p.streak, p.season, p.chest, p.badges, p.team, teams, joined?.mode, i18next.language, Object.values(state.players).map(x => [x.id, x.team, x.loc, x.name, x.afk])]) : '';
   if (sig === extraSig) return;
   extraSig = sig;
   const qBox = $('quests'), tBox = $('teams'), bBox = $('badges');
   qBox.replaceChildren(); tBox.replaceChildren(); bBox.replaceChildren();
   if (!p) return;
+  if (state.classroom) { const cb = el('div', null, 'quest'); cb.append(el('b', t('class.myTitle') + ' · ' + state.classroom.title)); const inner = el('div'); renderClassMine(inner, { on: true, title: '', assignments: state.classroom.assignments }); inner.children[0]?.remove?.(); cb.append(inner); qBox.append(cb); }
   // daily streak / chest / season points (Sprint 27)
   { const head = el('div', null, 'quest'), sp = p.season || 0, nextMs = [100, 250, 500].find(x => sp < x) || 500, bar = el('div', null, 'bar'), fill = el('i'); fill.style.width = `${Math.min(100, sp / nextMs * 100)}%`; bar.append(fill);
     const r1 = el('div', null, 'row1'); r1.append(el('span', t('daily.streak', { n: p.streak || 0 }) + (p.bestStreak > (p.streak || 0) ? ` (${t('daily.best', { n: p.bestStreak })})` : '')), el('b', `${t('daily.chest')}: ${p.chest ? t('daily.chestOpen') : t('daily.chestHint')}`));
