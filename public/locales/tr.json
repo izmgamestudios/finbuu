@@ -1984,5 +1984,31 @@
     "tooMany": "En fazla 3 ortak olabilir.",
     "pending": "Bu oyuncuya zaten bekleyen teklif var.",
     "gone": "Teklif artık geçerli değil."
+  },
+  "wmap": {
+    "title": "🇹🇷 Dünya görünümü",
+    "intro": "Şehirlerdeki şirketlerini, evini ve ekibini gör. Bir şehre dokun.",
+    "legend": "🏢 şirket · 🏠 ev · 👥 ekip",
+    "here": "📍 Şu an buradasın",
+    "noInfo": "Bu şehirde henüz bir varlığın yok.",
+    "locked": "Bu şehir şu an kapalı.",
+    "companies": "Şirketler",
+    "owner": "Kurucu",
+    "employee": "Çalışan",
+    "staff": "{{n}} kişi",
+    "sales": "{{n}} satış",
+    "partners": "{{n}} ortak",
+    "home": "🏠 Evin burada",
+    "noHome": "Burada evin yok",
+    "team": "👥 Ekip: {{name}} ({{n}} üye)",
+    "noTeam": "Burada ekibin yok",
+    "players": "{{n}} oyuncu şu an burada",
+    "totals": "Toplam: {{c}} şirket · {{s}} çalışan · {{cash}} kasa",
+    "toTerminal": "🚌 Seyahat için terminale git",
+    "back": "Sokağa dön",
+    "day": "Gün {{n}}",
+    "zoomIn": "Yakınlaş",
+    "zoomOut": "Uzaklaş",
+    "worldBtn": "Türkiye haritası"
   }
 }

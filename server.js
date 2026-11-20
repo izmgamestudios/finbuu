@@ -1138,6 +1138,20 @@ io.on('connection', socket => {
     sync(); reply(erpReply(c));
   });
 
+  // ---- Sprint 29b: world overview (all cities of the player's world: companies, home, team, staff) ----
+  socket.on('worldOverview', (_, cb) => {
+    if (typeof cb !== 'function' || !me) return;
+    const out = {}, myTeam = me.team;
+    for (const r of Object.values(rooms)) {
+      if (r.worldId !== (street?.worldId ?? myWorld)) continue;
+      const cos = Object.values(r.companies).filter(c => !c.isNpc && c.status === 'active' && (c.founders.includes(me.id) || c.employees.includes(me.id)));
+      const humans = Object.values(r.players).filter(p => !p.isNpc);
+      const team = myTeam && r.teams?.[myTeam] ? { name: r.teams[myTeam].name, members: [...Object.values(r.players), ...Object.values(r.pastPlayers)].filter(p => p?.team === myTeam).length } : null;
+      out[r.city] = { current: r === street, day: r.day || 0, players: humans.length, home: (r.flats || []).some(f => f.id === me.id), team,
+        companies: cos.map(c => ({ id: c.id, name: c.name || null, nameKey: c.nameKey || null, cash: Math.round(c.cash), sales: c.sales || 0, owner: c.founders.includes(me.id), staff: c.employees.length + (c.npcStaff || 0), partners: Object.keys(c.partners || {}).length })) };
+    }
+    cb({ ok: true, city: street?.city || null, cities: out });
+  });
   // ---- Sprint 29a: player partnerships (offer / accept / buy back) ----
   const pfair = (c, pct) => Math.round(readiness(street, c).valuation * pct / 100);
   socket.on('partnerOffer', ({ cid, to, pct, amount } = {}, cb) => {

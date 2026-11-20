@@ -26,3 +26,23 @@ export function renderTrMap(cities, { selected, onPick }) {
   }
   return svg;
 }
+
+// Sprint 29b: world overview map. data[cityKey] = { current, companies[], home, team, players }; cities as for renderTrMap.
+// Cities where the player has something get a larger pin with badges (🏢 companies, 🏠 home, 👥 team); others are small grey dots. onPick(city, info) on click.
+export function renderWorldMap(cities, data, { onPick, labels }) {
+  const svg = mk('svg', { viewBox: `0 0 ${MAP_W} ${MAP_H}`, class: 'trMap worldMap', role: 'img', 'aria-label': 'Türkiye' });
+  svg.append(mk('path', { d: path(OUTLINE), class: 'trLand' }), mk('path', { d: path(MARMARA), class: 'trSea' }));
+  for (const c of cities) {
+    const info = data[c.key], [x, y] = px(c.lon, c.lat), has = !!info && (info.companies.length || info.home || info.team);
+    const g = mk('g', { class: `trCity wm ${c.status}${info?.current ? ' here' : ''}${has ? ' has' : ''}`, tabindex: 0, role: 'button', 'aria-label': c.name });
+    g.append(mk('circle', { cx: x, cy: y, r: has ? 11 : info ? 8 : 6 }));
+    if (info?.current) g.append(mk('circle', { cx: x, cy: y, r: 17, class: 'pulse' }));
+    g.append(mk('text', { x, y: y - 16, 'text-anchor': 'middle', class: 'nm' }, c.name));
+    const badge = [info?.companies.length ? `🏢${info.companies.length}` : '', info?.home ? '🏠' : '', info?.team ? `👥${info.team.members}` : ''].filter(Boolean).join(' ');
+    if (badge) g.append(mk('text', { x, y: y + 24, 'text-anchor': 'middle', class: 'bd' }, badge));
+    else if (c.status !== 'open') g.append(mk('text', { x, y: y + 20, 'text-anchor': 'middle', class: 'bd' }, '🔒'));
+    g.onclick = () => onPick(c, info || null); g.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(c, info || null); } };
+    svg.append(g);
+  }
+  return svg;
+}

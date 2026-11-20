@@ -1984,5 +1984,31 @@
     "tooMany": "At most 3 partners.",
     "pending": "That player already has a pending offer.",
     "gone": "That offer is no longer valid."
+  },
+  "wmap": {
+    "title": "🇹🇷 World view",
+    "intro": "See your companies, home and team in every city. Tap a city.",
+    "legend": "🏢 companies · 🏠 home · 👥 team",
+    "here": "📍 You are here",
+    "noInfo": "You have nothing in this city yet.",
+    "locked": "This city is closed right now.",
+    "companies": "Companies",
+    "owner": "Founder",
+    "employee": "Employee",
+    "staff": "{{n}} people",
+    "sales": "{{n}} sales",
+    "partners": "{{n}} partners",
+    "home": "🏠 Your home is here",
+    "noHome": "No home here",
+    "team": "👥 Team: {{name}} ({{n}} members)",
+    "noTeam": "No team here",
+    "players": "{{n}} players here now",
+    "totals": "Total: {{c}} companies · {{s}} staff · {{cash}} cash",
+    "toTerminal": "🚌 Walk to the terminal to travel",
+    "back": "Back to the street",
+    "day": "Day {{n}}",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "worldBtn": "Map of Türkiye"
   }
 }

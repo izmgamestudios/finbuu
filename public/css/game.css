@@ -564,3 +564,22 @@ nav button.active { color: var(--accent) !important; background: rgba(255, 183, 
   #sheetClose { display: grid; place-items: center; position: absolute; top: 6px; right: 10px; width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 50%; font-size: .95rem; z-index: 3; background: var(--panel); border: 1px solid var(--line) }
   #side:not(.open) #sheetClose { display: none }
 }
+
+/* Sprint 29b: street zoom buttons + world map */
+#zoomBox { position: absolute; top: 44%; transform: translateY(-50%); right: 8px; z-index: 3; display: flex; flex-direction: column; gap: 4px }
+#zoomBox[hidden] { display: none }
+#zoomBox button { width: 36px; min-height: 36px; height: 36px; padding: 0; font-size: 1.05rem; line-height: 1; border-radius: 10px; opacity: .92 }
+#stage { touch-action: none }
+.worldMap .trCity.wm circle { fill: var(--muted); stroke: var(--panel); stroke-width: 2 }
+.worldMap .trCity.wm.open circle { fill: #8c96a8 } .worldMap .trCity.wm.has circle { fill: var(--good) }
+.worldMap .trCity.wm.here circle:first-of-type { stroke: var(--accent); stroke-width: 4 }
+.worldMap .pulse { fill: none !important; stroke: var(--accent); stroke-width: 2; animation: wmPulse 1.6s ease-out infinite }
+@keyframes wmPulse { from { opacity: .9; transform-origin: center; r: 11 } to { opacity: 0; r: 24 } }
+.worldMap text.nm { font: 700 11px system-ui, sans-serif; paint-order: stroke; stroke: var(--panel); stroke-width: 3px }
+.worldMap text.bd { font: 700 11px system-ui, sans-serif; fill: var(--text); paint-order: stroke; stroke: var(--panel); stroke-width: 3px }
+#mapOverlay.wmFade .mapCard { animation: wmIn .45s ease-out }
+@keyframes wmIn { from { opacity: 0; transform: scale(1.18) } to { opacity: 1; transform: none } }
+@media (max-width: 820px) {
+  .worldMap text.nm { font-size: 17px; stroke-width: 4px } .worldMap text.bd { font-size: 16px; stroke-width: 4px }
+  .worldMap .trCity.wm circle:first-of-type { r: 12px } .worldMap .trCity.wm.has circle:first-of-type { r: 15px }
+}

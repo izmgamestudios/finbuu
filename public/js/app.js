@@ -4,7 +4,7 @@
 // founding wizard, chat + polls, presentation (watch-only) mode. The server stays authoritative for every action.
 import { layout, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook, carX } from './world.js';
 import { paintAd, AD_SIZE } from './ads.js';
-import { renderTrMap } from './trmap.js';
+import { renderTrMap, renderWorldMap } from './trmap.js';
 import { rankFaq, searchItems, tutorialState, FAQ_IDS } from './help.js';
 import { suggestions, companyActions, employeeCap, maxTenants, staffOf, floorsFor, floorsOfCompany, deptOpen } from './advisor.js';
 import { createBoardUi } from './gfboard.js';
@@ -23,7 +23,7 @@ const ZOOM_IN_MS = 520, ZOOM_OUT_MS = 420, FADE_MS = 260, TOUR_MS = 7000;
 
 // ---------- state ----------
 let seed = null, state = null, joined = null, buildings = layout(null), spawned = false;
-const view = { w: 0, h: 0, s: 1, ty: 0, camX: 0, dpr: 1 };
+const view = { w: 0, h: 0, s: 1, base: 1, ty: 0, camX: 0, dpr: 1 };
 const player = { x: 120, dir: 1, phase: 0, moving: false, target: null, onArrive: null, targetId: null };
 const others = new Map(); // id -> { x, tx, dir, phase, moving }
 const bubbles = new Map(); // playerId -> { text | emoji, until } (speech bubbles over heads)
@@ -365,8 +365,8 @@ function resize() {
   const r = stage.getBoundingClientRect();
   view.dpr = iview.dpr = Math.min(window.devicePixelRatio || 1, perf.low ? 1 : 1.5);
   view.w = iview.w = r.width; view.h = iview.h = r.height;
-  view.s = Math.min(view.h / WORLD_H, view.w / 480);
-  view.ty = view.h - WORLD_H * view.s;
+  view.base = Math.min(view.h / WORLD_H, view.w / 480);
+  applyZoom(true);
   // leave room for HUD (top) and the floor bar (bottom) so the ground floor is never hidden
   iview.s = view.w < 600 ? view.w / 500 : Math.min(view.w / IW, view.h / (IH + INNER_PAD_TOP + INNER_PAD_BOTTOM));
   cv.width = Math.round(view.w * view.dpr); cv.height = Math.round(view.h * view.dpr);
@@ -393,7 +393,7 @@ function updateControls() {
   $('budgetBtn').hidden = $('doorBtn').hidden = !inOwnFlat();
   $('advisor').hidden = !joined || scene.name !== 'street';
   $('advChip').hidden = $('advisor').hidden;
-  const mapOk = !!joined && scene.name === 'street' && !isPres(); $('mapBtn').hidden = !mapOk; if (!mapOk && minimapOpen) toggleMinimap(false);
+  const mapOk = !!joined && scene.name === 'street' && !isPres(); $('mapBtn').hidden = !mapOk; $('zoomBox').hidden = !mapOk; if (!mapOk && minimapOpen) toggleMinimap(false);
 }
 
 // ---------- Input: keyboard ----------
@@ -442,8 +442,79 @@ function innerKey(e, k) {
   else if (k === 'e' || k === 'enter') { e.preventDefault(); openDeptHere(); }
 }
 
+
+// ---------- Zoom (Sprint 29b): wheel / pinch / buttons / +,- keys. Zooming out past the minimum opens the Türkiye world map ----------
+const Z = { min: 0.6, max: 2.6, cur: 1, target: 1 };
+function applyZoom(now = false) {
+  if (now) Z.cur = Z.target; else if (Z.cur !== Z.target) { Z.cur += (Z.target - Z.cur) * 0.28; if (Math.abs(Z.target - Z.cur) < 0.003) Z.cur = Z.target; }
+  view.s = view.base * Z.cur; view.ty = view.h - WORLD_H * view.s;
+}
+const zoomOk = () => scene.name === 'street' && !!joined && !isPres() && !modalOpen && $('mapOverlay').hidden;
+function zoomBy(f) {
+  if (!zoomOk()) return;
+  const next = Z.target * f;
+  if (f < 1 && next < Z.min * 0.97) { Z.target = Z.min; return openWorldMap(); }
+  Z.target = clamp(next, Z.min, Z.max);
+}
+cv.addEventListener('wheel', e => {
+  if (!zoomOk()) return; e.preventDefault();
+  zoomBy(Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0016)));
+}, { passive: false });
+$('zoomIn').onclick = () => zoomBy(1.25); $('zoomOut').onclick = () => zoomBy(1 / 1.25); $('worldBtn').onclick = () => openWorldMap();
+const zPtr = new Map(); let pinch = null, pinchUntil = 0;
+const zDist = () => { const [p, q] = [...zPtr.values()]; return Math.hypot(p.x - q.x, p.y - q.y) || 1; };
+cv.addEventListener('pointerdown', e => {
+  zPtr.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (zPtr.size === 2 && zoomOk()) { pinch = { d0: zDist(), z0: Z.target }; player.target = null; player.onArrive = null; pinchUntil = performance.now() + 400; }
+}, true);
+cv.addEventListener('pointermove', e => {
+  if (zPtr.has(e.pointerId)) zPtr.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && zPtr.size >= 2) {
+    const want = pinch.z0 * (zDist() / pinch.d0); pinchUntil = performance.now() + 400;
+    if (want < Z.min * 0.9) { pinch = null; Z.target = Z.min; openWorldMap(); } else Z.target = clamp(want, Z.min, Z.max);
+  }
+});
+const zUp = e => { zPtr.delete(e.pointerId); if (zPtr.size < 2) { if (pinch) pinchUntil = performance.now() + 400; pinch = null; } };
+cv.addEventListener('pointerup', zUp); cv.addEventListener('pointercancel', zUp);
+addEventListener('keydown', e => { if (e.target.matches?.('input, textarea, select') || e.ctrlKey || e.metaKey) return; if (e.key === '+' || e.key === '=') zoomBy(1.25); else if (e.key === '-' || e.key === '_') zoomBy(1 / 1.25); });
+
+// ---------- World map: companies / home / team per city ----------
+let worldMapOpen = false;
+function openWorldMap() {
+  if (worldMapOpen || !joined || !seed) return;
+  worldMapOpen = true;
+  socket.timeout(4000).emit('worldOverview', {}, (err, res) => {
+    if (err || !res?.ok) { worldMapOpen = false; return; }
+    const ov = $('mapOverlay'), cities = seed.economy.cityMap;
+    const close = () => { ov.hidden = true; ov.classList.remove('wmFade'); worldMapOpen = false; Z.target = 1; };
+    const card = el('div', null, 'card mapCard');
+    const head = el('div', null, 'mmHead'); head.append(el('h3', t('wmap.title')), btn('✕', close));
+    const all = Object.values(res.cities), cnt = all.reduce((n, c) => n + c.companies.length, 0), staff = all.reduce((n, c) => n + c.companies.reduce((m, x) => m + x.staff, 0), 0), cash = all.reduce((n, c) => n + c.companies.reduce((m, x) => m + (x.owner ? x.cash : 0), 0), 0);
+    const info = el('small', t('wmap.totals', { c: cnt, s: staff, cash: fmt(cash) }), 'muted');
+    const svg = renderWorldMap(cities, res.cities, { onPick: (c, d) => openCityInfo(c, d, res.city, close) });
+    card.append(head, el('small', t('wmap.intro') + ' ' + t('wmap.legend'), 'muted'), svg, info, btn(t('wmap.back'), close, { primary: true }));
+    ov.replaceChildren(card); ov.hidden = false; ov.classList.add('wmFade');
+    ov.onclick = e => { if (e.target === ov) close(); };
+  });
+}
+function openCityInfo(c, d, current, closeMap) {
+  openModal(body => {
+    body.append(el('h3', `📍 ${c.name}`));
+    if (c.status !== 'open') body.append(el('p', `🔒 ${t('wmap.locked')}`, 'muted'));
+    if (d?.current || c.key === current) body.append(el('p', t('wmap.here'), 'muted'));
+    if (!d || (!d.companies.length && !d.home && !d.team)) body.append(el('p', t('wmap.noInfo'), 'muted'));
+    if (d) {
+      body.append(el('small', `${t('wmap.day', { n: d.day })} · ${t('wmap.players', { n: d.players })}`, 'muted'));
+      if (d.companies.length) { body.append(el('h4', '🏢 ' + t('wmap.companies'))); d.companies.forEach(x => body.append(el('div', `${x.name || t(x.nameKey)} · ${x.owner ? t('wmap.owner') : t('wmap.employee')} · ${t('wmap.staff', { n: x.staff })} · ${fmt(x.cash)} · ${t('wmap.sales', { n: x.sales })}${x.partners ? ' · ' + t('wmap.partners', { n: x.partners }) : ''}`))); }
+      body.append(el('div', d.home ? t('wmap.home') : t('wmap.noHome'), 'muted'), el('div', d.team ? t('wmap.team', { name: d.team.name, n: d.team.members }) : t('wmap.noTeam'), 'muted'));
+    }
+    if (c.key !== current && c.status === 'open') { const term = buildings.find(b => b.kind === 'terminal'); if (term) body.append(btn(t('wmap.toTerminal'), () => { closeModal(); closeMap(); walkTo(term.x + term.w / 2, () => openBuilding(term), term.id); }, { primary: true })); }
+  });
+}
+
 // ---------- Input: mouse / tap ----------
 cv.addEventListener('pointerdown', e => {
+  if (zPtr.size >= 2 || performance.now() < pinchUntil) return;
   if (!state) return showModes();
   if (boardOpen) return toggleBoard(false);
   if (scene.name === 'interior') return innerTap(e);
@@ -861,6 +932,7 @@ function cameraTarget(now) {
   return clamp(x - viewWorldW / 2, 0, Math.max(0, wWidth() - viewWorldW));
 }
 function renderStreet(now) {
+  applyZoom();
   view.camX += (cameraTarget(now) - view.camX) * Math.min(1, 0.1);
   if (!view.w) return;
   let v = view, white = 0;
