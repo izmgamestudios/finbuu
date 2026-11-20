@@ -97,7 +97,7 @@ async function loadLang(lng) {
 }
 function renderSeed() {
   if (!seed || !i18next.isInitialized) return;
-  realSig = ''; renderRealData();
+  realSig = ''; renderRealData(); labelNav();
   $('tut').replaceChildren(...seed.tutorial.map(k => el('li', t(k))));
   $('locked').replaceChildren(...seed.locked.map(k => { const s = el('span', '☁🔒 ' + t(k), 'locked'); s.onclick = () => toast(t('ui.premiumAlert', { feature: t(k) })); return s; }));
 }
@@ -155,9 +155,14 @@ function showTab(tab) {
   if (tab === 'finance') tutFlag('finance');
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
   $('side').classList.toggle('open', tab !== 'street');
+  $('side').dataset.view = tab;
   document.querySelectorAll('#side .card').forEach(c => c.classList.toggle('active', c.dataset.panel === tab));
   if (tab === 'finance') renderFinance(true);
 }
+// UI-3: number keys 1-6 mirror the rail / bottom menu order
+const NAV_TABS = [...document.querySelectorAll('nav button')].map(b => b.dataset.tab);
+function labelNav() { document.querySelectorAll('nav button').forEach((b, i) => { b.dataset.key = i + 1; b.title = `${b.querySelector('b')?.textContent || ''} (${i + 1})`; }); }
+labelNav();
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => (b.dataset.tab === 'menu' ? openDrawer(true) : showTab(b.dataset.tab)));
 $('lang').onchange = e => loadLang(e.target.value);
 $('recAudio').onclick = $('recVideo').onclick = () => toast(t('ui.premiumAlert', { feature: t('locked.mediaIdeas') }));
@@ -373,6 +378,7 @@ addEventListener('keydown', e => {
     return;
   }
   if (typing(e)) return;
+  if (/^[1-6]$/.test(k) && !e.ctrlKey && !e.metaKey && !e.altKey && state) { e.preventDefault(); const tab = NAV_TABS[Number(k) - 1]; if (tab === 'menu') openDrawer(true); else showTab(tab); return; }
   if (k === 'shift') { keys.add('shift'); return; }
   if (k === 'f3') { e.preventDefault(); $('toggleStatus').click(); return; }
   if (k === 'm' && state) { e.preventDefault(); toggleMinimap(); return; }

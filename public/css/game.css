@@ -480,3 +480,23 @@ nav button.active { color: var(--accent) !important; background: rgba(255, 183, 
 .dwRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; margin-bottom: 4px } .dwRow label { flex: 1 } .dwRow select, .dwRow button { flex: 1.4; min-width: 0 }
 #drawer #toggleStatus { margin-top: 8px } #drawer #closeDrawer { margin-top: 10px; margin-bottom: max(16px, env(safe-area-inset-bottom)) }
 #scrim { background: rgba(10, 16, 41, .5); backdrop-filter: blur(2px) }
+
+/* ===== UI-3: desktop left rail + single-focus side panel ===== */
+@media (min-width: 821px) {
+  :root { --hdr-h: 61px; --rail-w: 72px }
+  nav { display: flex; flex-direction: column; align-items: stretch; gap: 4px; position: fixed; left: 0; top: var(--hdr-h); bottom: 0; width: var(--rail-w); padding: 10px 6px; background: var(--nav) !important; border-top: 0 !important; border-right: 3px solid var(--accent); z-index: 15 }
+  nav button { position: relative; flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 2px 6px; min-height: 58px; background: none; border: 0; border-radius: 14px; color: var(--nav-dim); font-size: .66rem }
+  nav button span { font-size: 1.45rem; line-height: 1.15 } nav button b { font-weight: 700 }
+  nav button:hover { background: rgba(255, 244, 221, .1); color: var(--nav-ink) }
+  nav button.active { background: rgba(255, 183, 3, .18); color: var(--accent) !important; box-shadow: inset 3px 0 0 var(--accent) }
+  nav button::after { content: attr(data-key); position: absolute; top: 3px; right: 6px; font-size: .58rem; opacity: .45; font-weight: 800 }
+  nav button.unread::before { content: ""; position: absolute; top: 8px; left: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--bad); border: 2px solid var(--nav) }
+  nav button[data-tab="menu"] { margin-top: auto }
+  main { padding-left: calc(var(--rail-w) + 12px) }
+  /* one focus at a time: the street view shows the overview (chat + finance + profile), other tabs show their own card */
+  #side .card { display: none }
+  #side[data-view="street"] .card[data-panel="chat"], #side[data-view="street"] .card[data-panel="finance"], #side[data-view="street"] .card[data-panel="profile"],
+  #side[data-view="finance"] .card[data-panel="finance"], #side[data-view="chat"] .card[data-panel="chat"], #side[data-view="profile"] .card[data-panel="profile"],
+  #side[data-view="events"] .card[data-panel="events"], #side[data-view="guide"] .card[data-panel="guide"], #side[data-view="ideas"] .card[data-panel="ideas"] { display: block }
+  #side[data-view]:not([data-view="street"]) .card.collapsed > *:not(h3) { display: revert !important }
+}
