@@ -1674,5 +1674,18 @@
       "3": "Vallahi zor, ortada buluşalım."
     },
     "counterLine": "Şoförün teklifi: {{price}} (pazarlık {{n}}/{{max}})"
+  },
+  "week": {
+    "title": "🏁 Haftalık yarış",
+    "left": "{{n}}. hafta · {{left}} gün kaldı",
+    "lead": "Lider: {{name}} ({{score}})",
+    "none": "Henüz satış yok",
+    "last": "Geçen hafta ({{n}}): {{name}} kazandı",
+    "prize": "Ödül: 🥇 {{a}} · 🥈 {{b}} · 🥉 {{c}} coin",
+    "soloPrize": "Kendi rekorunu kır: +{{a}} coin",
+    "you": "Senin skorun",
+    "ended": "🏁 {{week}}. hafta bitti — {{rank}}/{{of}} · skor {{score}}",
+    "endedWin": " · +{{coins}} coin",
+    "levelUp": "⭐ Seviye {{level}}! +{{coins}} coin"
   }
 }

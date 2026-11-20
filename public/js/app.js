@@ -235,6 +235,8 @@ socket.on('joined', info => {
   setTimeout(() => ($('hint').style.display = 'none'), 10000);
 });
 socket.on('badge', ({ id }) => { toast(`🏅 ${t('badge.unlocked')}: ${t('badge.' + id)}`); profSig = ''; });
+socket.on('levelUp', e => { toast(t('week.levelUp', e)); profSig = ''; });
+socket.on('weekEnd', e => { toast(t('week.ended', e) + (e.coins ? t('week.endedWin', e) : '')); profSig = ''; });
 socket.on('questDone', q => { toast(`✅ ${t('quest.' + q.id, { goal: '' })} · +${money(q.coins)} · +${q.xp} XP`); profSig = ''; });
 socket.on('chatHistory', list => { $('chatList').replaceChildren(); list.forEach(addChat); });
 socket.on('chat', m => { addChat(m); bubbles.set(m.pid, { text: m.text, until: performance.now() + 2500 + Math.min(4500, m.text.length * 90) }); });
@@ -1083,8 +1085,17 @@ function lotRanks() {
   return m;
 }
 function toggleBoard(v = !boardOpen) { boardOpen = v; $('board').hidden = !v; if (v) renderBoard(); }
+function renderWeek() {
+  const w = state.week, box = $('weekCard'); if (!box || !w) return;
+  const top = w.scores[0], mine = w.scores.find(s => s.id === myId());
+  const parts = [`${t('week.title')} — ${t('week.left', { n: w.n, left: w.left })}`, top && top.score > 0 ? t('week.lead', { name: top.name, score: fmt(top.score) }) : t('week.none')];
+  if (mine) parts.push(`${t('week.you')}: ${fmt(mine.score)}`);
+  if (w.last?.rank?.[0]) parts.push(t('week.last', { n: w.last.week, name: w.last.rank[0].name }));
+  box.textContent = parts.join(' · ');
+}
 function renderBoard() {
   if (!boardOpen) return;
+  renderWeek();
   if ($('boardSort').value === 'teams') {
     const head = el('tr'); ['#', t('team.title'), '👥', '🏢', '💰', '📅', '🛒'].forEach(h => head.append(el('th', h)));
     const thead = el('thead'); thead.append(head); const tbody = el('tbody');

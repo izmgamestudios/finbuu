@@ -80,6 +80,7 @@
     <button data-tab="ads">📢 Reklamlar <b id="adsBadge" class="pill s-atRisk" hidden></b></button>
     <button data-tab="premium">⭐ Premium</button>
     <button data-tab="toolcfg">🧰 Araç Dengesi</button>
+    <button data-tab="balcfg">⚖ Denge</button>
     <button data-tab="content">📚 Bina İçerikleri</button>
     <button data-tab="audit">Denetim Kaydı</button>
   </div>
@@ -189,6 +190,14 @@
       <p class="muted">Oyuncuların şirkete kurduğu araçların ekonomisi. Değişiklik anında geçerlidir ve sunucuda saklanır (aralık dışı değerler sınırlanır).</p>
       <table><thead><tr><th>Ayar</th><th>Açıklama</th><th>Değer</th></tr></thead><tbody id="tcBody"></tbody></table>
       <div class="row" style="margin-top:10px"><button id="tcSave" class="primary">Kaydet</button><span id="tcMsg" class="muted"></span></div>
+    </div>
+  </main>
+  <main id="balcfg">
+    <div class="card">
+      <h3>Oyun Dengesi (Sprint 25)</h3>
+      <p class="muted">Fiyat esnekliği, seviye ödülü ve haftalık yarış ödülleri. Değişiklik anında geçerlidir ve sunucuda saklanır.</p>
+      <table><thead><tr><th>Ayar</th><th>Açıklama</th><th>Değer</th></tr></thead><tbody id="bcBody"></tbody></table>
+      <div class="row" style="margin-top:10px"><button id="bcSave" class="primary">Kaydet</button><span id="bcMsg" class="muted"></span></div>
     </div>
   </main>
   <main id="premium">
@@ -311,6 +320,7 @@ $('tabs').onclick = e => {
   if (b.dataset.tab === 'ads') loadAds();
   if (b.dataset.tab === 'premium') loadPremium();
   if (b.dataset.tab === 'toolcfg') loadToolCfg();
+  if (b.dataset.tab === 'balcfg') loadBalCfg();
   if (b.dataset.tab === 'content') ctInit();
 };
 
@@ -336,6 +346,28 @@ function loadToolCfg() {
 }
 $('tcSave').onclick = () => { const patch = {}; document.querySelectorAll('#tcBody input').forEach(i => { patch[i.dataset.k] = Number(i.value); }); socket.emit('adminSetToolsCfg', patch, r => { $('tcMsg').textContent = r?.ok ? '✓ Kaydedildi' : 'Hata'; loadToolCfg(); }); };
 
+
+// ---------- Game balance (Sprint 25) ----------
+const BC_TXT = {
+  elasticity: ['Fiyat esnekliği (1=açık, 0=kapalı)', 'Sektör ortalamasının çok üstündeki fiyatlarda müşteri kaybı olur; kapalıyken en yüksek fiyat hep en kârlıdır'],
+  optMult: ['Tatlı nokta çarpanı', 'Sektör tipik fiyatı × bu değer = en kârlı fiyat (1,5 = %50 üstü)'],
+  overExp: ['Aşırı fiyat cezası', 'Tatlı noktanın üstünde gelir ~ fiyat^-(1+bu). 0 = gelir sabit kalır, 1 = sert düşer'],
+  levelCoins: ['Seviye ödülü (coin)', 'Yeni seviye × bu değer kişisel coin (0 = ödül yok)'],
+  raceFirst: ['Haftalık yarış 1.', 'Çok oyunculu: haftanın en çok satış yapanı. Tek kişi: kendi rekorunu kırarsa bunun yarısı'],
+  raceSecond: ['Haftalık yarış 2.', 'İkinci olanın ödülü (coin)'],
+  raceThird: ['Haftalık yarış 3.', 'Üçüncü olanın ödülü (coin)']
+};
+function loadBalCfg() {
+  socket.emit('adminGetBalanceCfg', {}, res => {
+    if (!res) return;
+    $('bcBody').replaceChildren(...Object.keys(BC_TXT).map(k => {
+      const tr = document.createElement('tr'), [n, d] = BC_TXT[k], inp = document.createElement('input'); inp.type = 'number'; inp.step = '0.05'; inp.dataset.k = k; inp.value = res.cfg[k]; inp.min = res.ranges[k][0]; inp.max = res.ranges[k][1]; inp.style.width = '90px';
+      const td = document.createElement('td'); td.append(inp, Object.assign(document.createElement('small'), { className: 'muted', textContent: ` (${res.ranges[k][0]}–${res.ranges[k][1]})` }));
+      tr.append(Object.assign(document.createElement('td'), { textContent: n }), Object.assign(document.createElement('td'), { textContent: d }), td); return tr;
+    }));
+  });
+}
+$('bcSave').onclick = () => { const patch = {}; document.querySelectorAll('#bcBody input').forEach(i => { patch[i.dataset.k] = Number(i.value); }); socket.emit('adminSetBalanceCfg', patch, r => { $('bcMsg').textContent = r?.ok ? '✓ Kaydedildi' : 'Hata'; loadBalCfg(); }); };
 
 // ---------- Building content CRUD (Sprint 22) ----------
 const CT = { name: 'open-source-tools', doc: null, overridden: false, view: 'list', edit: null, filter: '', cat: '', raw: false };

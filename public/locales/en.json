@@ -1674,5 +1674,18 @@
       "3": "Tough one, let's meet in the middle."
     },
     "counterLine": "Driver's offer: {{price}} (haggle {{n}}/{{max}})"
+  },
+  "week": {
+    "title": "🏁 Weekly race",
+    "left": "Week {{n}} · {{left}} days left",
+    "lead": "Leader: {{name}} ({{score}})",
+    "none": "No sales yet",
+    "last": "Last week ({{n}}): {{name}} won",
+    "prize": "Prize: 🥇 {{a}} · 🥈 {{b}} · 🥉 {{c}} coins",
+    "soloPrize": "Beat your own record: +{{a}} coins",
+    "you": "Your score",
+    "ended": "🏁 Week {{week}} is over — {{rank}}/{{of}} · score {{score}}",
+    "endedWin": " · +{{coins}} coins",
+    "levelUp": "⭐ Level {{level}}! +{{coins}} coins"
   }
 }

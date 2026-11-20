@@ -195,7 +195,7 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
   presentation: publicPresentation(st) || null,
   flats: (st.flats || []).map(f => ({ id: f.id, name: f.name, open: !!f.open })),
-  city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(),
+  city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(), week: { n: Math.floor((st.day || 0) / 7) + 1, left: 7 - ((st.day || 0) % 7), scores: weekScores(st).slice(0, 5), last: st.lastWeek || null },
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 // ---------- PREMIUM FLAGS (Sprint 16): admin switches Premium features on/off globally; persisted in data/premium.json ----------
 // 'live' features change gameplay now; 'soon' features are only listed (voice/video arrive in Sprints 18-19) and cannot be switched on yet.
@@ -216,6 +216,12 @@ loadPremium();
 const TOOLS_CFG_FILE = path.join(__dirname, 'data', 'tools-config.json');
 try { TOOLS.setConfig(JSON.parse(fs.readFileSync(TOOLS_CFG_FILE, 'utf8'))); } catch { /* defaults */ }
 function saveToolsCfg() { try { fs.mkdirSync(path.dirname(TOOLS_CFG_FILE), { recursive: true, mode: 0o700 }); fs.writeFileSync(TOOLS_CFG_FILE, JSON.stringify(TOOLS.CFG), { mode: 0o600 }); } catch (e) { console.warn('tools config save failed:', e.message); } }
+
+// ---------- BALANCE CONFIG (Sprint 25): price elasticity, level-up reward, weekly race; admin-tunable, persisted in data/balance-config.json ----------
+const BAL = require('./balance');
+const BAL_FILE = path.join(__dirname, 'data', 'balance-config.json');
+try { BAL.setConfig(JSON.parse(fs.readFileSync(BAL_FILE, 'utf8'))); } catch { /* defaults */ }
+function saveBalanceCfg() { try { fs.mkdirSync(path.dirname(BAL_FILE), { recursive: true, mode: 0o700 }); fs.writeFileSync(BAL_FILE, JSON.stringify(BAL.CFG), { mode: 0o600 }); } catch (e) { console.warn('balance config save failed:', e.message); } }
 
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
   busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, cityMap: ECON.cityMap, intercity: ECON.intercity, life: ECON.life, tax: ECON.tax });
@@ -558,7 +564,14 @@ const crisisActive = (st, c) => c.crisis && c.crisis.until > (st.day || 0);
 const marketingActive = (st, c) => c.marketing && c.marketing.until > (st.day || 0);
 // employees get the productivity tools bonus (Sprint 21a); founders sell at base performance
 const perfFor = (c, who) => (c.employees.includes(who.id) ? c.performance * (1 + TOOLS.effectOf(c, 'employeeProductivity')) : 1);
-const incomeMult = (st, c) => (1 + TOOLS.effectOf(c, 'conversionRate')) * (1 + 0.5 * TOOLS.effectOf(c, 'brandReach')) * (TOOLS.effectOf(c, 'onlineSalesChannel') ? 1 + TOOLS.CFG.onlineBoost : 1) * (1 + adBoost(st, c)) * (1 + vehicleBoost(c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
+// Sprint 25: price elasticity — the company's average unit price vs the typical price of its sector (template price, else sector reference)
+function priceMult(c) {
+  if (!BAL.CFG.elasticity || c.isNpc) return 1;
+  const ps = c.products?.length ? c.products : [{ price: c.price, discount: 0 }];
+  const avg = ps.reduce((a, p) => a + (p.price || 0) * (1 - (p.discount || 0) / 100), 0) / ps.length;
+  return BAL.demandMult(avg, BAL.refPrice(SEED.templates.find(t => t.key === c.nameKey)?.price, c.sector));
+}
+const incomeMult = (st, c) => priceMult(c) * (1 + TOOLS.effectOf(c, 'conversionRate')) * (1 + 0.5 * TOOLS.effectOf(c, 'brandReach')) * (TOOLS.effectOf(c, 'onlineSalesChannel') ? 1 + TOOLS.CFG.onlineBoost : 1) * (1 + adBoost(st, c)) * (1 + vehicleBoost(c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
 // Mirrors the client: building height (floors) follows the lot's total cash. Virtual companies use their own cash.
 const floorsFor = cash => Math.max(1, Math.min(6, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
 function floorsOf(st, c) {
@@ -626,8 +639,19 @@ function award(st, p, id) {
   addLog(st, 'log.badge', { player: p.name, badgeKey: 'badge.' + id });
   io.to(p.id).emit('badge', { id });
 }
+// Sprint 25: level-up reward = levelCoins x new level (personal coins); checked after progress events and every tick
+function checkLevel(p) {
+  if (!p?.stats) return;
+  p.rewardedLevel ??= p.stats.level; // existing players are not back-paid
+  while (p.rewardedLevel < p.stats.level) {
+    p.rewardedLevel++;
+    const coins = Math.round(BAL.CFG.levelCoins * p.rewardedLevel);
+    p.coins += coins; io.to(p.id).emit('levelUp', { level: p.rewardedLevel, coins });
+  }
+}
 function progress(st, p, metric, amount = 1) {
   if (!p) return;
+  checkLevel(p);
   p.counters ||= {};
   p.counters[metric] = (p.counters[metric] || 0) + amount;
   const n = p.counters[metric];
@@ -1667,6 +1691,23 @@ function payIncomeTax(st) {
 }
 
 // ---------- ECONOMY TICK (1 tick = 1 game day) ----------
+// Sprint 26 (weekly race): every 7 days players are ranked by revenue earned that week. Multiplayer: top-3 get coins; solo: bonus for beating own best week
+const weekScores = st => Object.values(st.players).filter(p => !p.isNpc).map(p => ({ id: p.id, name: p.name, score: Math.max(0, Math.round((p.counters?.revenue || 0) - (p.weekBase || 0))) })).sort((a, b) => b.score - a.score);
+function weekSettle(st) {
+  if (!st.day || st.day % 7 !== 0) return;
+  const n = st.day / 7, rank = weekScores(st), multi = rank.length > 1, prizes = [BAL.CFG.raceFirst, BAL.CFG.raceSecond, BAL.CFG.raceThird];
+  rank.forEach((r, i) => {
+    const p = st.players[r.id]; if (!p) return;
+    let coins = 0;
+    if (multi) { if (r.score > 0 && i < 3) coins = Math.round(prizes[i]); }
+    else if (r.score > (p.bestWeek || 0) && r.score > 0) coins = Math.round(BAL.CFG.raceFirst / 2);
+    p.bestWeek = Math.max(p.bestWeek || 0, r.score);
+    if (coins) p.coins += coins;
+    io.to(p.id).emit('weekEnd', { week: n, rank: i + 1, of: rank.length, score: r.score, coins, solo: !multi });
+  });
+  st.lastWeek = { week: n, rank: rank.slice(0, 5) };
+  for (const p of Object.values(st.players)) p.weekBase = p.counters?.revenue || 0;
+}
 function economyTick(only) {
   for (const st of only ? [only] : Object.values(rooms)) {
     for (const c of Object.values(st.companies)) {
@@ -1734,6 +1775,8 @@ function economyTick(only) {
       if (r.suspended.length) addLog(st, 'log.toolsSuspended', { n: r.suspended.length, ...cParams(c) });
     }
     R.closeDay(st);
+    for (const p of Object.values(st.players)) checkLevel(p);
+    weekSettle(st);
     st.tickAt = Date.now();
     for (const c of Object.values(st.companies)) {
       if (c.crisis && !crisisActive(st, c)) { addLog(st, 'log.crisisOver', cParams(c)); c.crisis = null; c.founders.forEach(pid => award(st, st.players[pid], 'survivor')); }
@@ -2026,6 +2069,12 @@ admin.on('connection', socket => {
   socket.on('adminSetToolsCfg', (patch, cb) => {
     if (typeof patch !== 'object' || !patch) return typeof cb === 'function' && cb({ ok: false });
     const cfg = TOOLS.setConfig(patch); saveToolsCfg(); audit('toolsConfig', JSON.stringify(cfg));
+    if (typeof cb === 'function') cb({ ok: true, cfg });
+  });
+  socket.on('adminGetBalanceCfg', (_, cb) => { if (typeof cb === 'function') cb({ cfg: { ...BAL.CFG }, ranges: BAL.RANGES }); });
+  socket.on('adminSetBalanceCfg', (patch, cb) => {
+    if (typeof patch !== 'object' || !patch) return typeof cb === 'function' && cb({ ok: false });
+    const cfg = BAL.setConfig(patch); saveBalanceCfg(); audit('balanceConfig', JSON.stringify(cfg));
     if (typeof cb === 'function') cb({ ok: true, cfg });
   });
   // ---- Sprint 22: building content CRUD (documents are validated field by field in content.js) ----
