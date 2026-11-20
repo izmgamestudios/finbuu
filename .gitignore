@@ -156,5 +156,5 @@ vite.config.ts.timestamp-*
 .nx/workspace-data
 .nx/migrate-runs
 
-# Finbuu runtime data / backups
-data/
+# Finbuu runtime data / backups (root only: public/data holds committed game content)
+/data/

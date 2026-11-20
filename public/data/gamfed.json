@@ -1,0 +1,182 @@
+{
+ "title": {
+  "tr": "GamFed Türkiye · TOY Oyunlaştırma Modeli",
+  "en": "GamFed Türkiye · TOY Gamification Model"
+ },
+ "intro": {
+  "tr": "Oyunlaştırma projesini 10 adımda tasarla. Binanın her katı bir adım; en alttan (1) en üste (10) çıkarsın.",
+  "en": "Design a gamification project in 10 steps. Each floor is a step; climb from the ground (1) to the top (10)."
+ },
+ "sources": [
+  {
+   "label": "oyunlastirma.co",
+   "url": "https://www.oyunlastirma.co/"
+  },
+  {
+   "label": "DergiPark makalesi",
+   "url": "https://dergipark.org.tr/en/download/article-file/3167667"
+  }
+ ],
+ "floors": [
+  {
+   "n": 1,
+   "icon": "🎯",
+   "title": {
+    "tr": "İş Hedefleri",
+    "en": "Business Goals"
+   },
+   "desc": {
+    "tr": "Projenin hem kuruma faydalı somut hedeflerinin hem de insan odaklı hedeflerinin netleştirildiği aşama.",
+    "en": "The stage where concrete organisational goals and human-centred goals of the project are clarified."
+   },
+   "game": {
+    "tr": "Günlük görevler ve KPI paneli: hedef önce ölçülebilir hâle gelir.",
+    "en": "Daily quests and the KPI panel: goals become measurable first."
+   }
+  },
+  {
+   "n": 2,
+   "icon": "🧗",
+   "title": {
+    "tr": "Davranışlar",
+    "en": "Behaviors"
+   },
+   "desc": {
+    "tr": "Hedeflere ulaşmak için kullanıcılardan beklenen aksiyonların, akış teorisine uygun olarak kolaydan zora doğru listelendiği adım.",
+    "en": "Actions expected from users to reach the goals, listed from easy to hard in line with flow theory."
+   },
+   "game": {
+    "tr": "Satış yap → işe al → reklam ver → şehirler arası genişle: zorluk kademeli artar.",
+    "en": "Sell → hire → advertise → expand between cities: difficulty rises gradually."
+   }
+  },
+  {
+   "n": 3,
+   "icon": "🧑‍🤝‍🧑",
+   "title": {
+    "tr": "Persona (Oyuncu Tipleri)",
+    "en": "Persona (Player Types)"
+   },
+   "desc": {
+    "tr": "Hedef kitledeki kullanıcıların demografik özelliklerinin ve oyun içi motivasyon kaynaklarının analiz edildiği aşama.",
+    "en": "The stage where demographics and in-game motivations of the target users are analysed."
+   },
+   "game": {
+    "tr": "Müşteri görüşmesindeki 4 kişilik tipi (güler yüzlü, aceleci, tutumlu, şüpheci) farklı motivasyonları temsil eder.",
+    "en": "The 4 customer personas in sales talks (friendly, impatient, thrifty, skeptical) represent different motivations."
+   }
+  },
+  {
+   "n": 4,
+   "icon": "🗺",
+   "title": {
+    "tr": "Oyuncunun Yolculuğu",
+    "en": "Player's Journey"
+   },
+   "desc": {
+    "tr": "Kullanıcının sisteme ilk girişinden ustalık seviyesine kadar geçireceği deneyim aşamalarının haritalandırıldığı adım.",
+    "en": "The step that maps the experience stages from a user's first entry to mastery."
+   },
+   "game": {
+    "tr": "Başlangıç rehberi → ilk şirket → katlar → Mini SaaS: ilk dakikadan ustalığa bir yol.",
+    "en": "Getting-started guide → first company → floors → Mini SaaS: a path from minute one to mastery."
+   }
+  },
+  {
+   "n": 5,
+   "icon": "💓",
+   "title": {
+    "tr": "8 Temel Oyun Duygusu",
+    "en": "8 Core Game Emotions"
+   },
+   "desc": {
+    "tr": "Oyuncuların süreç boyunca deneyimlemesi hedeflenen merak, rekabet, iş birliği, başarma veya keşfetme gibi temel duyguların seçildiği aşama.",
+    "en": "The stage where core emotions players should feel (curiosity, competition, cooperation, achievement, discovery...) are chosen."
+   },
+   "game": {
+    "tr": "Sıralama (rekabet), takımlar (iş birliği), rozetler (başarma), harita ve şehirler (keşif).",
+    "en": "Ranking (competition), teams (cooperation), badges (achievement), map and cities (discovery)."
+   }
+  },
+  {
+   "n": 6,
+   "icon": "🧩",
+   "title": {
+    "tr": "Oyun Elementleri",
+    "en": "Game Elements"
+   },
+   "desc": {
+    "tr": "Seçilen duyguları ve davranışları tetikleyecek puan, rozet, seviye, liderlik tablosu veya görev gibi oyun mekaniklerinin kurgulandığı adım.",
+    "en": "The step where mechanics such as points, badges, levels, leaderboards or quests are designed to trigger the chosen emotions and behaviors."
+   },
+   "game": {
+    "tr": "Coin, XP, seviye, rozetler, liderlik tablosu ve günlük görevler.",
+    "en": "Coins, XP, levels, badges, the leaderboard and daily quests."
+   }
+  },
+  {
+   "n": 7,
+   "icon": "🎁",
+   "title": {
+    "tr": "Ödüller",
+    "en": "Rewards"
+   },
+   "desc": {
+    "tr": "Kullanıcıları motive edecek içsel (takdir, statü, gelişim) ve dışsal (hediye, indirim, fiziksel ödül) ödüllerin ve veriliş modellerinin belirlendiği aşama.",
+    "en": "The stage defining intrinsic (recognition, status, growth) and extrinsic (gifts, discounts, physical prizes) rewards and how they are given."
+   },
+   "game": {
+    "tr": "Görev ödülü coin, yeni rozet, bina katı büyümesi ve Demo Day hibesi.",
+    "en": "Quest coins, new badges, taller buildings and the Demo Day grant."
+   }
+  },
+  {
+   "n": 8,
+   "icon": "🛠",
+   "title": {
+    "tr": "Teknoloji",
+    "en": "Technology"
+   },
+   "desc": {
+    "tr": "Tasarlanan oyunlaştırma kurgusunu hayata geçirmek için ihtiyaç duyulan dijital altyapı, yazılım veya araçların seçildiği adım.",
+    "en": "The step where the digital infrastructure, software or tools needed to implement the design are chosen."
+   },
+   "game": {
+    "tr": "Açık Kaynak Destek binasındaki 65 araç: kendi oyunlaştırma altyapını bunlarla kurabilirsin.",
+    "en": "The 65 tools in the Open Source Support building: build your own gamification stack with them."
+   }
+  },
+  {
+   "n": 9,
+   "icon": "🔔",
+   "title": {
+    "tr": "Hatırlatıcılar ve Tetikleyiciler",
+    "en": "Reminders & Triggers"
+   },
+   "desc": {
+    "tr": "Kullanıcının sistemden kopmaması için bildirimlerin, geri bildirimlerin ve aksiyon çağrılarının hangi şartlarda ve sıklıkta devreye gireceğinin planlandığı aşama.",
+    "en": "The stage planning when and how often notifications, feedback and calls to action fire so users stay engaged."
+   },
+   "game": {
+    "tr": "Danışman önerileri (Tamam/Sonraki), okunmamış sohbet noktası, 'Sen yokken' özeti.",
+    "en": "Advisor suggestions (OK/Next), unread chat dot, the 'While you were away' summary."
+   }
+  },
+  {
+   "n": 10,
+   "icon": "📊",
+   "title": {
+    "tr": "Ölçümleme ve Değerlendirme",
+    "en": "Measurement & Evaluation"
+   },
+   "desc": {
+    "tr": "Projenin başarısını takip etmek için kullanılacak metriklerin, istatistiklerin ve hedeflere ulaşım kriterlerinin belirlendiği son aşama.",
+    "en": "The final stage defining the metrics, statistics and criteria used to track success against goals."
+   },
+   "game": {
+    "tr": "Mini SaaS CRM & KPI paneli, finans raporları ve sıralama.",
+    "en": "The Mini SaaS CRM & KPI panel, finance reports and the ranking."
+   }
+  }
+ ]
+}

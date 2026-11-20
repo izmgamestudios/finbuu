@@ -2,7 +2,9 @@
 // Pure helpers; server.js owns money/XP/IO. Catalog: public/data/open-source-tools.json (also shown client-side in the Open Source building).
 'use strict';
 const path = require('path');
-const catalog = require(path.join(__dirname, 'public', 'data', 'open-source-tools.json'));
+let catalog = { tools: [] };
+try { catalog = require(path.join(__dirname, 'public', 'data', 'open-source-tools.json')); }
+catch (e) { console.warn('open-source tools catalog missing, tools disabled:', e.message); } // never take the whole server down for content data
 
 const BY_ID = new Map(catalog.tools.map(t => [t.id, t]));
 const CFG = { setupScale: 0.4, diminish: 0.8, cap: 0.35, capOpCost: 0.2, onlineBoost: 0.15 }; // admin-tunable (data/tools-config.json)

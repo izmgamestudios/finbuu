@@ -1,0 +1,2046 @@
+{
+  "version": "2026-11-20",
+  "categories": {
+    "devops": "Geliştirme & DevOps",
+    "backend": "Backend / BaaS",
+    "design-3d": "3D & Oyun",
+    "design-2d": "2D Tasarım & UI",
+    "cms": "CMS & Web",
+    "crm": "CRM & Müşteri",
+    "erp": "ERP & Operasyon",
+    "analytics": "KPI, BI & Analitik",
+    "social": "Sosyal Medya & Pazarlama",
+    "ecommerce": "E-Ticaret",
+    "ai": "Yapay Zeka",
+    "automation": "Otomasyon",
+    "productivity": "İşbirliği & Verimlilik"
+  },
+  "effectStats": {
+    "employeeProductivity": "Çalışan verimliliği (+%)",
+    "operatingCostReduction": "Operasyon gideri düşüşü (-%)",
+    "customerRetention": "Müşteri sadakati (+%)",
+    "conversionRate": "Satışa dönüşüm (+%)",
+    "marketResearch": "Pazar araştırması gücü (+%)",
+    "brandReach": "Marka erişimi (+%)",
+    "securityLevel": "Siber saldırı direnci (+%)",
+    "onlineSalesChannel": "Online satış kanalını açar (1=açık)",
+    "xpGain": "Oyuncu XP kazanımı (+%)"
+  },
+  "tools": [
+    {
+      "id": "gitea",
+      "name": "Gitea",
+      "category": "devops",
+      "description": "Hafif, self-hosted Git sunucusu (GitHub alternatifi).",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/go-gitea/gitea",
+        "website": "https://about.gitea.com",
+        "docs": "https://docs.gitea.com",
+        "community": "https://forum.gitea.com",
+        "support": "https://github.com/go-gitea/gitea/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Admin hesabı aç, organizasyon ve repo oluştur",
+        "Gitea Actions ile CI/CD pipeline tanımla"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.05
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "gitlab-ce",
+      "name": "GitLab CE",
+      "category": "devops",
+      "description": "Git, CI/CD, issue ve wiki tek pakette DevOps platformu.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://gitlab.com/gitlab-org/gitlab",
+        "website": "https://about.gitlab.com",
+        "docs": "https://docs.gitlab.com",
+        "community": "https://forum.gitlab.com",
+        "support": "https://gitlab.com/gitlab-org/gitlab"
+      },
+      "howToUse": [
+        "Omnibus paket veya Docker ile kur (min. 4 GB RAM)",
+        "Proje + issue board + merge request akışını kur",
+        ".gitlab-ci.yml ile pipeline yaz"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.08
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "coolify",
+      "name": "Coolify",
+      "category": "devops",
+      "description": "Heroku/Vercel benzeri self-hosted PaaS.",
+      "license": "Apache-2.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/coollabsio/coolify",
+        "website": "https://coolify.io",
+        "docs": "https://coolify.io/docs",
+        "community": "https://coollabs.io/discord",
+        "support": "https://github.com/coollabsio/coolify/issues"
+      },
+      "howToUse": [
+        "Tek satır install script ile VPS'e kur",
+        "Git repo bağla, build pack seç (Nixpacks/Dockerfile)",
+        "Domain + otomatik SSL ver, deploy et"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "operatingCostReduction",
+          "value": 0.05
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "portainer",
+      "name": "Portainer CE",
+      "category": "devops",
+      "description": "Docker/Kubernetes için web yönetim paneli.",
+      "license": "Zlib",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/portainer/portainer",
+        "website": "https://www.portainer.io",
+        "docs": "https://docs.portainer.io",
+        "community": null,
+        "support": "https://github.com/portainer/portainer/issues"
+      },
+      "howToUse": [
+        "Portainer container'ını docker socket ile başlat",
+        "Admin şifresi belirle, local environment ekle",
+        "Container/stack'leri arayüzden yönet"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "securityLevel",
+          "value": 0.03
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "uptime-kuma",
+      "name": "Uptime Kuma",
+      "category": "devops",
+      "description": "Site/servis uptime izleme ve status page.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/louislam/uptime-kuma",
+        "website": "https://uptime.kuma.pet",
+        "docs": "https://github.com/louislam/uptime-kuma/wiki",
+        "community": null,
+        "support": "https://github.com/louislam/uptime-kuma/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "HTTP/TCP/ping monitor ekle",
+        "Telegram/Discord bildirim + public status page aç"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "customerRetention",
+          "value": 0.03
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase",
+      "category": "backend",
+      "description": "PostgreSQL tabanlı Firebase alternatifi (auth, storage, realtime).",
+      "license": "Apache-2.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/supabase/supabase",
+        "website": "https://supabase.com",
+        "docs": "https://supabase.com/docs",
+        "community": "https://discord.supabase.com",
+        "support": "https://github.com/supabase/supabase/issues"
+      },
+      "howToUse": [
+        "Cloud'da proje aç veya docker compose ile self-host et",
+        "Tabloları oluştur, RLS policy yaz",
+        "supabase-js ile auth + realtime bağla"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.07
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "pocketbase",
+      "name": "PocketBase",
+      "category": "backend",
+      "description": "Tek dosyalık backend: SQLite + auth + realtime + dosya.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/pocketbase/pocketbase",
+        "website": "https://pocketbase.io",
+        "docs": "https://pocketbase.io/docs",
+        "community": "https://github.com/pocketbase/pocketbase/discussions",
+        "support": "https://github.com/pocketbase/pocketbase/issues"
+      },
+      "howToUse": [
+        "Tek binary indir, ./pocketbase serve",
+        "Admin UI'dan collection + API rule tanımla",
+        "JS SDK ile frontend'e bağla"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "operatingCostReduction",
+          "value": 0.04
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "appwrite",
+      "name": "Appwrite",
+      "category": "backend",
+      "description": "Self-hosted backend-as-a-service.",
+      "license": "BSD-3-Clause",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/appwrite/appwrite",
+        "website": "https://appwrite.io",
+        "docs": "https://appwrite.io/docs",
+        "community": "https://appwrite.io/discord",
+        "support": "https://github.com/appwrite/appwrite/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Proje + platform (web) ekle",
+        "Auth, Database, Functions servislerini SDK ile kullan"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.06
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "blender",
+      "name": "Blender",
+      "category": "design-3d",
+      "description": "3D modelleme, animasyon, render ve video kurgu.",
+      "license": "GPL-2.0-or-later",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://projects.blender.org/blender/blender",
+        "website": "https://www.blender.org",
+        "docs": "https://docs.blender.org/manual/en/latest/",
+        "community": "https://blenderartists.org",
+        "support": "https://projects.blender.org/blender/blender"
+      },
+      "howToUse": [
+        "blender.org'dan indir, kur",
+        "Modelle → UV → materyal → render (Cycles/Eevee) akışını öğren",
+        "glTF olarak web/oyuna export et"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "brandReach",
+          "value": 0.06
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "godot",
+      "name": "Godot Engine",
+      "category": "design-3d",
+      "description": "2D/3D açık kaynak oyun motoru.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/godotengine/godot",
+        "website": "https://godotengine.org",
+        "docs": "https://docs.godotengine.org",
+        "community": "https://forum.godotengine.org",
+        "support": "https://github.com/godotengine/godot/issues"
+      },
+      "howToUse": [
+        "Editörü indir (kurulum gerektirmez)",
+        "Scene/Node yapısını kur, GDScript yaz",
+        "HTML5/Web export ile tarayıcıda yayınla"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "xpGain",
+          "value": 0.1
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "krita",
+      "name": "Krita",
+      "category": "design-2d",
+      "description": "Dijital resim, illüstrasyon ve 2D animasyon.",
+      "license": "GPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://invent.kde.org/graphics/krita",
+        "website": "https://krita.org",
+        "docs": "https://docs.krita.org",
+        "community": "https://krita-artists.org",
+        "support": "https://invent.kde.org/graphics/krita"
+      },
+      "howToUse": [
+        "krita.org'dan indir",
+        "Fırça setleri ve katmanlarla dijital çizim yap",
+        "Animasyon timeline ile sprite üret"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "brandReach",
+          "value": 0.04
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "gimp",
+      "name": "GIMP",
+      "category": "design-2d",
+      "description": "Photoshop alternatifi raster görüntü editörü.",
+      "license": "GPL-3.0-or-later",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://gitlab.gnome.org/GNOME/gimp",
+        "website": "https://www.gimp.org",
+        "docs": "https://docs.gimp.org",
+        "community": "https://www.gimp.org/discuss.html",
+        "support": "https://gitlab.gnome.org/GNOME/gimp"
+      },
+      "howToUse": [
+        "gimp.org'dan indir",
+        "Katman, maske ve seçim araçlarıyla fotoğraf düzenle",
+        "Web için export (WebP/PNG)"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "brandReach",
+          "value": 0.03
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "inkscape",
+      "name": "Inkscape",
+      "category": "design-2d",
+      "description": "Vektör grafik editörü (Illustrator alternatifi).",
+      "license": "GPL-2.0-or-later",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://gitlab.com/inkscape/inkscape",
+        "website": "https://inkscape.org",
+        "docs": "https://inkscape.org/learn/",
+        "community": "https://inkscape.org/community/",
+        "support": "https://gitlab.com/inkscape/inkscape"
+      },
+      "howToUse": [
+        "inkscape.org'dan indir",
+        "Logo/ikon vektör çiz",
+        "Plain SVG olarak export et"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "brandReach",
+          "value": 0.03
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "penpot",
+      "name": "Penpot",
+      "category": "design-2d",
+      "description": "Figma alternatifi, açık standart tabanlı UI tasarım aracı.",
+      "license": "MPL-2.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/penpot/penpot",
+        "website": "https://penpot.app",
+        "docs": "https://help.penpot.app",
+        "community": "https://community.penpot.app",
+        "support": "https://github.com/penpot/penpot/issues"
+      },
+      "howToUse": [
+        "penpot.app'te ücretsiz hesap aç veya Docker ile self-host et",
+        "Component + design token ile UI tasarla",
+        "Inspect modundan CSS/SVG kodu al"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "conversionRate",
+          "value": 0.04
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "excalidraw",
+      "name": "Excalidraw",
+      "category": "design-2d",
+      "description": "El çizimi görünümlü whiteboard ve diyagram aracı.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/excalidraw/excalidraw",
+        "website": "https://excalidraw.com",
+        "docs": "https://plus.excalidraw.com/docs/sdk",
+        "community": null,
+        "support": "https://github.com/excalidraw/excalidraw/issues"
+      },
+      "howToUse": [
+        "excalidraw.com'u aç (kurulum yok)",
+        "Wireframe / mimari diyagram çiz",
+        "Live collaboration linki paylaş"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.02
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "wordpress",
+      "name": "WordPress",
+      "category": "cms",
+      "description": "Web'in ~%40'ını çalıştıran CMS.",
+      "license": "GPL-2.0-or-later",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/WordPress/wordpress-develop",
+        "website": "https://wordpress.org",
+        "docs": "https://developer.wordpress.org",
+        "community": "https://wordpress.org/support/forums/",
+        "support": "https://github.com/WordPress/wordpress-develop/issues"
+      },
+      "howToUse": [
+        "Hosting'e (CloudPanel WP template) kur",
+        "Tema + eklenti seç, sayfa oluştur",
+        "SEO + güvenlik eklentisi ekle, yedek al"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "brandReach",
+          "value": 0.08
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "ghost",
+      "name": "Ghost",
+      "category": "cms",
+      "description": "Blog + newsletter + üyelik platformu.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/TryGhost/Ghost",
+        "website": "https://ghost.org",
+        "docs": "https://ghost.org/docs/",
+        "community": "https://forum.ghost.org",
+        "support": "https://github.com/TryGhost/Ghost/issues"
+      },
+      "howToUse": [
+        "Ghost-CLI veya Docker ile kur",
+        "Blog yazısı + newsletter aç",
+        "Ücretli üyelik (membership) tanımla"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "brandReach",
+          "value": 0.06
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "strapi",
+      "name": "Strapi",
+      "category": "cms",
+      "description": "Node.js headless CMS.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/strapi/strapi",
+        "website": "https://strapi.io",
+        "docs": "https://docs.strapi.io",
+        "community": "https://forum.strapi.io",
+        "support": "https://github.com/strapi/strapi/issues"
+      },
+      "howToUse": [
+        "npx create-strapi@latest ile proje aç",
+        "Content-Type Builder ile model oluştur",
+        "REST/GraphQL API'yi frontend'e bağla"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.05
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "payload",
+      "name": "Payload CMS",
+      "category": "cms",
+      "description": "Next.js native, TypeScript headless CMS.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/payloadcms/payload",
+        "website": "https://payloadcms.com",
+        "docs": "https://payloadcms.com/docs",
+        "community": "https://github.com/payloadcms/payload/discussions",
+        "support": "https://github.com/payloadcms/payload/issues"
+      },
+      "howToUse": [
+        "npx create-payload-app ile Next.js projesi aç",
+        "Collection config'leri TypeScript ile yaz",
+        "Admin paneli + Local API kullan"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.05
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "directus",
+      "name": "Directus",
+      "category": "cms",
+      "description": "SQL veritabanını anında API + admin paneline çevirir. Not: BSL — gelir eşiği üstünde ticari lisans gerekir.",
+      "license": "BSL-1.1",
+      "licenseType": "source-available",
+      "links": {
+        "repo": "https://github.com/directus/directus",
+        "website": "https://directus.com",
+        "docs": "https://directus.com/docs/",
+        "community": "https://directus.chat",
+        "support": "https://github.com/directus/directus/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Mevcut SQL veritabanını bağla",
+        "Otomatik REST/GraphQL API + admin app kullan"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.05
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "twenty",
+      "name": "Twenty CRM",
+      "category": "crm",
+      "description": "Modern, Salesforce alternatifi açık kaynak CRM.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/twentyhq/twenty",
+        "website": "https://twenty.com",
+        "docs": "https://docs.twenty.com",
+        "community": "https://github.com/twentyhq/twenty/discussions",
+        "support": "https://github.com/twentyhq/twenty/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Workspace aç, People/Companies/Opportunities kur",
+        "Custom object + API/webhook ile entegre et"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "customerRetention",
+          "value": 0.08
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "suitecrm",
+      "name": "SuiteCRM",
+      "category": "crm",
+      "description": "Kurumsal seviye PHP CRM.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/salesagility/SuiteCRM-Core",
+        "website": "https://suitecrm.com",
+        "docs": "https://docs.suitecrm.com",
+        "community": "https://community.suitecrm.com",
+        "support": "https://github.com/salesagility/SuiteCRM-Core/issues"
+      },
+      "howToUse": [
+        "PHP/MySQL sunucuya kur",
+        "Lead → Opportunity → Quote akışını tanımla",
+        "Workflow ve rapor modüllerini aç"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "customerRetention",
+          "value": 0.07
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "espocrm",
+      "name": "EspoCRM",
+      "category": "crm",
+      "description": "Hafif, hızlı, özelleştirilebilir CRM.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/espocrm/espocrm",
+        "website": "https://www.espocrm.com",
+        "docs": "https://docs.espocrm.com",
+        "community": "https://forum.espocrm.com",
+        "support": "https://github.com/espocrm/espocrm/issues"
+      },
+      "howToUse": [
+        "Installer ile PHP sunucuya kur",
+        "Entity Manager ile alan ekle",
+        "E-posta hesabını bağla, satış pipeline'ını kur"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "customerRetention",
+          "value": 0.06
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "krayin",
+      "name": "Krayin CRM",
+      "category": "crm",
+      "description": "Laravel tabanlı KOBİ CRM.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/krayin/laravel-crm",
+        "website": "https://krayincrm.com",
+        "docs": "https://devdocs.krayincrm.com",
+        "community": null,
+        "support": "https://github.com/krayin/laravel-crm/issues"
+      },
+      "howToUse": [
+        "composer create-project ile Laravel'e kur",
+        "Lead pipeline + aktiviteleri tanımla",
+        "Web form ile lead topla"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "customerRetention",
+          "value": 0.05
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "chatwoot",
+      "name": "Chatwoot",
+      "category": "crm",
+      "description": "Omnichannel müşteri destek (Intercom/Zendesk alternatifi).",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/chatwoot/chatwoot",
+        "website": "https://www.chatwoot.com",
+        "docs": "https://www.chatwoot.com/docs",
+        "community": "https://github.com/chatwoot/chatwoot/discussions",
+        "support": "https://github.com/chatwoot/chatwoot/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Website live-chat widget + WhatsApp/Instagram inbox bağla",
+        "Canned response ve otomasyon kuralları yaz"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "customerRetention",
+          "value": 0.07
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "erpnext",
+      "name": "ERPNext",
+      "category": "erp",
+      "description": "Tam kapsamlı ERP (muhasebe, stok, üretim, İK).",
+      "license": "GPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/frappe/erpnext",
+        "website": "https://frappe.io/erpnext",
+        "docs": "https://docs.erpnext.com",
+        "community": "https://discuss.frappe.io",
+        "support": "https://github.com/frappe/erpnext/issues"
+      },
+      "howToUse": [
+        "frappe_docker ile kur",
+        "Setup wizard: şirket, para birimi, hesap planı",
+        "Satış, stok, muhasebe, İK modüllerini aç"
+      ],
+      "game": {
+        "tier": 4,
+        "unlockLevel": 10,
+        "setupCost": 10000,
+        "monthlyHostingCost": 1000,
+        "effect": {
+          "stat": "operatingCostReduction",
+          "value": 0.1
+        },
+        "xpReward": 500
+      }
+    },
+    {
+      "id": "odoo",
+      "name": "Odoo Community",
+      "category": "erp",
+      "description": "Modüler ERP/CRM paketi (Community sürümü açık kaynak).",
+      "license": "LGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/odoo/odoo",
+        "website": "https://www.odoo.com",
+        "docs": "https://www.odoo.com/documentation/",
+        "community": "https://www.odoo.com/forum",
+        "support": "https://github.com/odoo/odoo/issues"
+      },
+      "howToUse": [
+        "Docker image ile kur",
+        "İhtiyaç duyduğun app'leri (Satış, Envanter, Fatura) yükle",
+        "Python modül yazarak özelleştir"
+      ],
+      "game": {
+        "tier": 4,
+        "unlockLevel": 10,
+        "setupCost": 10000,
+        "monthlyHostingCost": 1000,
+        "effect": {
+          "stat": "operatingCostReduction",
+          "value": 0.1
+        },
+        "xpReward": 500
+      }
+    },
+    {
+      "id": "dolibarr",
+      "name": "Dolibarr",
+      "category": "erp",
+      "description": "KOBİ ve serbest çalışanlar için ERP/CRM.",
+      "license": "GPL-3.0-or-later",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/Dolibarr/dolibarr",
+        "website": "https://www.dolibarr.org",
+        "docs": "https://wiki.dolibarr.org",
+        "community": "https://www.dolibarr.org/forum",
+        "support": "https://github.com/Dolibarr/dolibarr/issues"
+      },
+      "howToUse": [
+        "DoliWamp veya PHP sunucuya kur",
+        "Modülleri aç: Fatura, Teklif, Stok",
+        "Müşteri/tedarikçi kartlarını gir"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "operatingCostReduction",
+          "value": 0.06
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "inventree",
+      "name": "InvenTree",
+      "category": "erp",
+      "description": "Envanter ve parça yönetimi.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/inventree/InvenTree",
+        "website": "https://inventree.org",
+        "docs": "https://docs.inventree.org",
+        "community": "https://github.com/inventree/InvenTree/discussions",
+        "support": "https://github.com/inventree/InvenTree/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Parça kategorileri + stok lokasyonları oluştur",
+        "Satın alma / satış siparişi akışını kullan"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "operatingCostReduction",
+          "value": 0.04
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "bookstack",
+      "name": "BookStack",
+      "category": "erp",
+      "description": "Kurumsal wiki / bilgi bankası.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/BookStackApp/BookStack",
+        "website": "https://www.bookstackapp.com",
+        "docs": "https://www.bookstackapp.com/docs/",
+        "community": null,
+        "support": "https://github.com/BookStackApp/BookStack/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Shelf → Book → Chapter → Page yapısını kur",
+        "Şirket SOP ve onboarding dokümanlarını yaz"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.04
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "metabase",
+      "name": "Metabase",
+      "category": "analytics",
+      "description": "Kod bilmeden SQL veriden KPI dashboard'ları.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/metabase/metabase",
+        "website": "https://www.metabase.com",
+        "docs": "https://www.metabase.com/docs/latest/",
+        "community": "https://discourse.metabase.com",
+        "support": "https://github.com/metabase/metabase/issues"
+      },
+      "howToUse": [
+        "Docker ile kur, veritabanını bağla",
+        "Soru (question) oluştur, dashboard'a ekle",
+        "KPI alert ve e-posta abonelikleri kur"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "marketResearch",
+          "value": 0.08
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "superset",
+      "name": "Apache Superset",
+      "category": "analytics",
+      "description": "Kurumsal ölçekli BI ve görselleştirme.",
+      "license": "Apache-2.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/apache/superset",
+        "website": "https://superset.apache.org",
+        "docs": "https://superset.apache.org/docs/intro",
+        "community": "https://github.com/apache/superset/discussions",
+        "support": "https://github.com/apache/superset/issues"
+      },
+      "howToUse": [
+        "docker compose ile kur",
+        "Database + dataset tanımla",
+        "Chart ve dashboard oluştur"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "marketResearch",
+          "value": 0.1
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "grafana",
+      "name": "Grafana",
+      "category": "analytics",
+      "description": "Metrik, log ve KPI izleme dashboard'ları.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/grafana/grafana",
+        "website": "https://grafana.com",
+        "docs": "https://grafana.com/docs/grafana/latest/",
+        "community": "https://community.grafana.com",
+        "support": "https://github.com/grafana/grafana/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Prometheus/PostgreSQL data source ekle",
+        "Panel + alert kuralları oluştur"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "securityLevel",
+          "value": 0.05
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "plausible",
+      "name": "Plausible CE",
+      "category": "analytics",
+      "description": "Çerezsiz, KVKK/GDPR dostu web analitiği.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/plausible/analytics",
+        "website": "https://plausible.io",
+        "docs": "https://plausible.io/docs",
+        "community": "https://github.com/plausible/analytics/discussions",
+        "support": "https://github.com/plausible/analytics/issues"
+      },
+      "howToUse": [
+        "community-edition repo ile docker compose kur",
+        "Siteni ekle, script tag'ini yapıştır",
+        "Goal/conversion event tanımla"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "marketResearch",
+          "value": 0.05
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "umami",
+      "name": "Umami",
+      "category": "analytics",
+      "description": "Hafif, gizlilik odaklı web analitiği.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/umami-software/umami",
+        "website": "https://umami.is",
+        "docs": "https://umami.is/docs",
+        "community": null,
+        "support": "https://github.com/umami-software/umami/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Website ekle, tracking script'i yerleştir",
+        "Custom event ile buton tıklamalarını ölç"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "marketResearch",
+          "value": 0.04
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "matomo",
+      "name": "Matomo",
+      "category": "analytics",
+      "description": "Google Analytics alternatifi tam analitik.",
+      "license": "GPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/matomo-org/matomo",
+        "website": "https://matomo.org",
+        "docs": "https://matomo.org/docs/",
+        "community": "https://forum.matomo.org",
+        "support": "https://github.com/matomo-org/matomo/issues"
+      },
+      "howToUse": [
+        "PHP/MySQL sunucuya kur",
+        "Tracking kodunu ekle",
+        "Funnel, heatmap ve hedef raporlarını incele"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "marketResearch",
+          "value": 0.06
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "posthog",
+      "name": "PostHog",
+      "category": "analytics",
+      "description": "Ürün analitiği + feature flag + A/B test.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/PostHog/posthog",
+        "website": "https://posthog.com",
+        "docs": "https://posthog.com/docs",
+        "community": "https://posthog.com/questions",
+        "support": "https://github.com/PostHog/posthog/issues"
+      },
+      "howToUse": [
+        "Cloud ücretsiz katmanla başla (self-host hobby deploy da var)",
+        "posthog-js SDK ekle",
+        "Funnel, session replay, feature flag, A/B test kullan"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "conversionRate",
+          "value": 0.08
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "postiz",
+      "name": "Postiz",
+      "category": "social",
+      "description": "Buffer/Hootsuite alternatifi sosyal medya planlayıcı.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/gitroomhq/postiz-app",
+        "website": "https://postiz.com",
+        "docs": "https://docs.postiz.com",
+        "community": null,
+        "support": "https://github.com/gitroomhq/postiz-app/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Sosyal hesapları (X, LinkedIn, IG…) bağla",
+        "Takvimden gönderi planla, AI ile içerik üret"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "brandReach",
+          "value": 0.08
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "mixpost",
+      "name": "Mixpost",
+      "category": "social",
+      "description": "Self-hosted sosyal medya yönetimi (Lite sürümü MIT).",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/inovector/mixpost",
+        "website": "https://mixpost.app",
+        "docs": "https://docs.mixpost.app",
+        "community": null,
+        "support": "https://github.com/inovector/mixpost/issues"
+      },
+      "howToUse": [
+        "Laravel paketi veya Docker ile kur",
+        "Hesapları bağla, post takvimi oluştur",
+        "Analitik ekranından performansı izle"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "brandReach",
+          "value": 0.06
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "mautic",
+      "name": "Mautic",
+      "category": "social",
+      "description": "Pazarlama otomasyonu (HubSpot Marketing alternatifi).",
+      "license": "GPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/mautic/mautic",
+        "website": "https://www.mautic.org",
+        "docs": "https://docs.mautic.org",
+        "community": "https://forum.mautic.org",
+        "support": "https://github.com/mautic/mautic/issues"
+      },
+      "howToUse": [
+        "PHP sunucuya kur",
+        "Segment + form + landing page oluştur",
+        "Campaign builder ile otomasyon akışı kur"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "conversionRate",
+          "value": 0.08
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "listmonk",
+      "name": "Listmonk",
+      "category": "social",
+      "description": "Yüksek performanslı newsletter / e-posta kampanya aracı.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/knadh/listmonk",
+        "website": "https://listmonk.app",
+        "docs": "https://listmonk.app/docs/",
+        "community": null,
+        "support": "https://github.com/knadh/listmonk/issues"
+      },
+      "howToUse": [
+        "Tek binary veya Docker ile kur",
+        "SMTP (SES/Mailgun) bağla, liste oluştur",
+        "Template + kampanya gönder"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "customerRetention",
+          "value": 0.05
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "mastodon",
+      "name": "Mastodon",
+      "category": "social",
+      "description": "Merkeziyetsiz sosyal ağ (Fediverse).",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/mastodon/mastodon",
+        "website": "https://joinmastodon.org",
+        "docs": "https://docs.joinmastodon.org",
+        "community": null,
+        "support": "https://github.com/mastodon/mastodon/issues"
+      },
+      "howToUse": [
+        "Var olan bir sunucuya katıl veya kendi instance'ını kur",
+        "Profil + topluluk kuralları oluştur",
+        "Fediverse'de takipçi kitlesi büyüt"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "brandReach",
+          "value": 0.05
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "discourse",
+      "name": "Discourse",
+      "category": "social",
+      "description": "Topluluk forumu; trust level ve rozet sistemiyle gamification.",
+      "license": "GPL-2.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/discourse/discourse",
+        "website": "https://www.discourse.org",
+        "docs": "https://meta.discourse.org/docs",
+        "community": "https://meta.discourse.org",
+        "support": "https://github.com/discourse/discourse/issues"
+      },
+      "howToUse": [
+        "discourse_docker ile kur",
+        "Kategori + trust level + rozet ayarla",
+        "SSO ile kendi uygulamana bağla"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "customerRetention",
+          "value": 0.07
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "woocommerce",
+      "name": "WooCommerce",
+      "category": "ecommerce",
+      "description": "WordPress üzerinde e-ticaret.",
+      "license": "GPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/woocommerce/woocommerce",
+        "website": "https://woocommerce.com",
+        "docs": "https://woocommerce.com/documentation/",
+        "community": "https://wordpress.org/support/plugin/woocommerce/",
+        "support": "https://github.com/woocommerce/woocommerce/issues"
+      },
+      "howToUse": [
+        "WordPress'e eklenti olarak kur",
+        "Ürün, kargo, vergi ayarla",
+        "Ödeme sağlayıcı (iyzico/PayTR eklentisi) bağla"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "onlineSalesChannel",
+          "value": 1
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "medusa",
+      "name": "Medusa",
+      "category": "ecommerce",
+      "description": "Node.js headless commerce.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/medusajs/medusa",
+        "website": "https://medusajs.com",
+        "docs": "https://docs.medusajs.com",
+        "community": "https://github.com/medusajs/medusa/discussions",
+        "support": "https://github.com/medusajs/medusa/issues"
+      },
+      "howToUse": [
+        "npx create-medusa-app ile kur",
+        "Region, ürün, fiyat listesi tanımla",
+        "Next.js storefront starter bağla"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "onlineSalesChannel",
+          "value": 1
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "saleor",
+      "name": "Saleor",
+      "category": "ecommerce",
+      "description": "GraphQL-first, kurumsal headless e-ticaret.",
+      "license": "BSD-3-Clause",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/saleor/saleor",
+        "website": "https://saleor.io",
+        "docs": "https://docs.saleor.io",
+        "community": "https://github.com/saleor/saleor/discussions",
+        "support": "https://github.com/saleor/saleor/issues"
+      },
+      "howToUse": [
+        "saleor-platform docker compose ile kur",
+        "Dashboard'dan kanal + ürün tipi tanımla",
+        "GraphQL API ile storefront geliştir"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "onlineSalesChannel",
+          "value": 1
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "prestashop",
+      "name": "PrestaShop",
+      "category": "ecommerce",
+      "description": "Avrupa'da yaygın PHP e-ticaret platformu.",
+      "license": "OSL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/PrestaShop/PrestaShop",
+        "website": "https://www.prestashop.com",
+        "docs": "https://devdocs.prestashop-project.org",
+        "community": "https://www.prestashop-project.org",
+        "support": "https://github.com/PrestaShop/PrestaShop/issues"
+      },
+      "howToUse": [
+        "PHP sunucuya installer ile kur",
+        "Tema + modül seç",
+        "Ürün kataloğu ve ödeme modüllerini ayarla"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "onlineSalesChannel",
+          "value": 1
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "bagisto",
+      "name": "Bagisto",
+      "category": "ecommerce",
+      "description": "Laravel tabanlı e-ticaret ve marketplace.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/bagisto/bagisto",
+        "website": "https://bagisto.com",
+        "docs": "https://devdocs.bagisto.com",
+        "community": null,
+        "support": "https://github.com/bagisto/bagisto/issues"
+      },
+      "howToUse": [
+        "composer create-project bagisto/bagisto",
+        "Kanal, para birimi, ürün ekle",
+        "Multi-vendor marketplace eklentisini değerlendir"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "onlineSalesChannel",
+          "value": 1
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "category": "ai",
+      "description": "Açık modelleri (Llama, Qwen, Gemma…) lokalde çalıştırma.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/ollama/ollama",
+        "website": "https://ollama.com",
+        "docs": "https://docs.ollama.com",
+        "community": "https://discord.gg/ollama",
+        "support": "https://github.com/ollama/ollama/issues"
+      },
+      "howToUse": [
+        "ollama.com'dan kur",
+        "ollama run llama3.2 ile model çalıştır",
+        "localhost:11434 REST API'yi uygulamana bağla"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.1
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "open-webui",
+      "name": "Open WebUI",
+      "category": "ai",
+      "description": "ChatGPT benzeri self-hosted AI arayüzü. Not: v0.6.6+ lisansında marka koruma maddesi var.",
+      "license": "BSD-3-Clause + branding clause",
+      "licenseType": "source-available",
+      "links": {
+        "repo": "https://github.com/open-webui/open-webui",
+        "website": "https://openwebui.com",
+        "docs": "https://docs.openwebui.com",
+        "community": null,
+        "support": "https://github.com/open-webui/open-webui/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Ollama veya OpenAI uyumlu API bağla",
+        "Ekip için kullanıcı + RAG doküman kütüphanesi aç"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.08
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "dify",
+      "name": "Dify",
+      "category": "ai",
+      "description": "LLM uygulama ve agent geliştirme platformu. Not: multi-tenant SaaS için ek koşullar.",
+      "license": "Dify Open Source License (Apache-2.0 + conditions)",
+      "licenseType": "source-available",
+      "links": {
+        "repo": "https://github.com/langgenius/dify",
+        "website": "https://dify.ai",
+        "docs": "https://docs.dify.ai",
+        "community": "https://github.com/langgenius/dify/discussions",
+        "support": "https://github.com/langgenius/dify/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Model sağlayıcı ekle",
+        "Workflow / chatbot / agent oluştur, API olarak yayınla"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.1
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "flowise",
+      "name": "Flowise",
+      "category": "ai",
+      "description": "Görsel LLM / agent akış oluşturucu.",
+      "license": "Apache-2.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/FlowiseAI/Flowise",
+        "website": "https://flowiseai.com",
+        "docs": "https://docs.flowiseai.com",
+        "community": null,
+        "support": "https://github.com/FlowiseAI/Flowise/issues"
+      },
+      "howToUse": [
+        "npx flowise start veya Docker",
+        "Sürükle-bırak ile chatflow oluştur",
+        "Embed widget ile siteye ekle"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.07
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "langchain",
+      "name": "LangChain",
+      "category": "ai",
+      "description": "LLM uygulama geliştirme framework'ü (Python/JS).",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/langchain-ai/langchain",
+        "website": "https://www.langchain.com",
+        "docs": "https://docs.langchain.com",
+        "community": null,
+        "support": "https://github.com/langchain-ai/langchain/issues"
+      },
+      "howToUse": [
+        "pip install langchain (veya npm i langchain)",
+        "Model + prompt + tool zinciri kur",
+        "LangGraph ile agent akışı tasarla"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.08
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "comfyui",
+      "name": "ComfyUI",
+      "category": "ai",
+      "description": "Node tabanlı görsel/video üretim (Stable Diffusion, Flux).",
+      "license": "GPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/comfyanonymous/ComfyUI",
+        "website": "https://www.comfy.org",
+        "docs": "https://docs.comfy.org",
+        "community": null,
+        "support": "https://github.com/comfyanonymous/ComfyUI/issues"
+      },
+      "howToUse": [
+        "Desktop sürümünü indir veya repo'dan kur (GPU önerilir)",
+        "Node tabanlı görsel üretim workflow'u kur",
+        "Workflow'u API olarak çağır"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "brandReach",
+          "value": 0.07
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "anythingllm",
+      "name": "AnythingLLM",
+      "category": "ai",
+      "description": "Doküman tabanlı özel AI asistanı (RAG).",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/Mintplex-Labs/anything-llm",
+        "website": "https://anythingllm.com",
+        "docs": "https://docs.anythingllm.com",
+        "community": null,
+        "support": "https://github.com/Mintplex-Labs/anything-llm/issues"
+      },
+      "howToUse": [
+        "Desktop uygulamasını veya Docker'ı kur",
+        "Workspace aç, PDF/doküman yükle",
+        "Şirket dokümanlarıyla RAG sohbet et"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "marketResearch",
+          "value": 0.06
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "localai",
+      "name": "LocalAI",
+      "category": "ai",
+      "description": "OpenAI API uyumlu self-hosted model sunucusu.",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/mudler/LocalAI",
+        "website": "https://localai.io",
+        "docs": "https://localai.io/docs/",
+        "community": null,
+        "support": "https://github.com/mudler/LocalAI/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Model galerisinden model yükle",
+        "OpenAI uyumlu endpoint'i mevcut kodda kullan"
+      ],
+      "game": {
+        "tier": 3,
+        "unlockLevel": 6,
+        "setupCost": 4000,
+        "monthlyHostingCost": 400,
+        "effect": {
+          "stat": "operatingCostReduction",
+          "value": 0.06
+        },
+        "xpReward": 250
+      }
+    },
+    {
+      "id": "n8n",
+      "name": "n8n",
+      "category": "automation",
+      "description": "Zapier alternatifi workflow otomasyonu. Not: fair-code — iç kullanım serbest, SaaS olarak yeniden satış kısıtlı.",
+      "license": "Sustainable Use License",
+      "licenseType": "fair-code",
+      "links": {
+        "repo": "https://github.com/n8n-io/n8n",
+        "website": "https://n8n.io",
+        "docs": "https://docs.n8n.io",
+        "community": "https://community.n8n.io",
+        "support": "https://github.com/n8n-io/n8n/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Trigger (webhook/cron) + node'larla workflow kur",
+        "AI Agent node ile otomasyona LLM ekle"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "operatingCostReduction",
+          "value": 0.08
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "activepieces",
+      "name": "Activepieces",
+      "category": "automation",
+      "description": "No-code otomasyon (Community Edition MIT).",
+      "license": "MIT",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/activepieces/activepieces",
+        "website": "https://www.activepieces.com",
+        "docs": "https://www.activepieces.com/docs",
+        "community": null,
+        "support": "https://github.com/activepieces/activepieces/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Flow oluştur, trigger seç",
+        "Hazır 'piece' entegrasyonlarıyla adımları ekle"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "operatingCostReduction",
+          "value": 0.06
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "node-red",
+      "name": "Node-RED",
+      "category": "automation",
+      "description": "Akış tabanlı programlama (IoT ve entegrasyon).",
+      "license": "Apache-2.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/node-red/node-red",
+        "website": "https://nodered.org",
+        "docs": "https://nodered.org/docs/",
+        "community": "https://discourse.nodered.org",
+        "support": "https://github.com/node-red/node-red/issues"
+      },
+      "howToUse": [
+        "npm install -g node-red && node-red",
+        "Tarayıcıda flow editor'ü aç",
+        "IoT/HTTP/MQTT node'larıyla akış kur"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "operatingCostReduction",
+          "value": 0.04
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "nextcloud",
+      "name": "Nextcloud",
+      "category": "productivity",
+      "description": "Google Workspace alternatifi dosya + işbirliği.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/nextcloud/server",
+        "website": "https://nextcloud.com",
+        "docs": "https://docs.nextcloud.com",
+        "community": "https://help.nextcloud.com",
+        "support": "https://github.com/nextcloud/server/issues"
+      },
+      "howToUse": [
+        "AIO Docker image ile kur",
+        "Dosya, takvim, kişiler, Talk uygulamalarını aç",
+        "Ekip klasörleri ve paylaşımları tanımla"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.07
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "mattermost",
+      "name": "Mattermost",
+      "category": "productivity",
+      "description": "Slack alternatifi ekip sohbeti.",
+      "license": "AGPL-3.0 (server) / Apache-2.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/mattermost/mattermost",
+        "website": "https://mattermost.com",
+        "docs": "https://docs.mattermost.com",
+        "community": "https://forum.mattermost.com",
+        "support": "https://github.com/mattermost/mattermost/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Team + kanal oluştur",
+        "Webhook/bot ile CI ve sistem bildirimlerini bağla"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.06
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "plane",
+      "name": "Plane",
+      "category": "productivity",
+      "description": "Jira/Linear alternatifi proje ve sprint yönetimi.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/makeplane/plane",
+        "website": "https://plane.so",
+        "docs": "https://docs.plane.so",
+        "community": null,
+        "support": "https://github.com/makeplane/plane/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "Proje + cycle (sprint) + module oluştur",
+        "Issue'ları board/list/gantt görünümünde yönet"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.07
+        },
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "appflowy",
+      "name": "AppFlowy",
+      "category": "productivity",
+      "description": "Notion alternatifi.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/AppFlowy-IO/AppFlowy",
+        "website": "https://appflowy.com",
+        "docs": "https://docs.appflowy.io",
+        "community": null,
+        "support": "https://github.com/AppFlowy-IO/AppFlowy/issues"
+      },
+      "howToUse": [
+        "Desktop/mobil uygulamayı indir",
+        "Doküman + database + kanban sayfaları oluştur",
+        "AppFlowy Cloud ile self-host senkron kur"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "employeeProductivity",
+          "value": 0.05
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "calcom",
+      "name": "Cal.com",
+      "category": "productivity",
+      "description": "Calendly alternatifi randevu planlama.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/calcom/cal.com",
+        "website": "https://cal.com",
+        "docs": "https://cal.com/docs",
+        "community": null,
+        "support": "https://github.com/calcom/cal.com/issues"
+      },
+      "howToUse": [
+        "cal.com'da hesap aç veya Docker ile self-host et",
+        "Event type (toplantı türü) tanımla",
+        "Takvimi bağla, booking linkini paylaş"
+      ],
+      "game": {
+        "tier": 1,
+        "unlockLevel": 1,
+        "setupCost": 500,
+        "monthlyHostingCost": 50,
+        "effect": {
+          "stat": "conversionRate",
+          "value": 0.05
+        },
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "documenso",
+      "name": "Documenso",
+      "category": "productivity",
+      "description": "DocuSign alternatifi e-imza.",
+      "license": "AGPL-3.0",
+      "licenseType": "osi",
+      "links": {
+        "repo": "https://github.com/documenso/documenso",
+        "website": "https://documenso.com",
+        "docs": "https://docs.documenso.com",
+        "community": null,
+        "support": "https://github.com/documenso/documenso/issues"
+      },
+      "howToUse": [
+        "Docker / docker compose ile kendi sunucuna kur (CloudPanel/Coolify da olur)",
+        "PDF yükle, imza alanı ekle",
+        "Alıcılara gönder, imza durumunu takip et"
+      ],
+      "game": {
+        "tier": 2,
+        "unlockLevel": 3,
+        "setupCost": 1500,
+        "monthlyHostingCost": 150,
+        "effect": {
+          "stat": "conversionRate",
+          "value": 0.04
+        },
+        "xpReward": 120
+      }
+    }
+  ]
+}
