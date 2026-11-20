@@ -905,6 +905,54 @@ function drawFinanceCharts(c, h) {
     { label: t('fin.expense'), data: months.map(m => m.expenses + m.losses), backgroundColor: exp, borderRadius: 4, maxBarThickness: 16 }], true);
   $('finTable').replaceChildren(pnlTable(months));
 }
+// ---------- Taxes, accountant and shop bills (Accounting department) ----------
+const TAX = () => seed.economy.tax;
+function incomeTaxCoins(profit) {
+  const rate = seed.economy.rate, tl = Math.max(0, profit) * rate; let tax = 0, lower = 0;
+  for (const b of TAX().brackets) { const upper = b.limit ?? Infinity; if (tl > lower) tax += (Math.min(tl, upper) - lower) * b.rate; lower = upper; }
+  return tax / rate;
+}
+const accOf = c => TAX().accountant[c.accountant || 'none'];
+const estNote = () => (TAX().est ? ' *' : '');
+// Expected year-end income tax from the months of this year so far (+ today); filled in when history arrives
+function taxEstimate(c, monthly) {
+  const out = document.getElementById('taxEst'); if (!out) return;
+  const year = Math.floor((state.day || 0) / 360) + 1, net = x => (x.revenue || 0) - (x.expenses || 0) + (x.tax || 0) - (x.losses || 0);
+  const base = monthly.filter(m => m.year === year).reduce((s, m) => s + net(m), 0) + net(c.fin?.today || {});
+  const tax = Math.round(incomeTaxCoins(base) * accOf(c).mult), left = 360 - ((state.day || 0) % 360);
+  out.textContent = t('acc.taxEst', { tax: money(tax), base: money(Math.max(0, Math.round(base))), days: left }) + estNote();
+}
+function taxPanel(box, c, founder) {
+  box.append(el('h4', t('acc.taxTitle')));
+  const last = c.fin?.lastDay || {}, other = Math.max(0, (finOf([c]).dayExp || 0) - (last.utilities || 0) - (last.stampTax || 0) - (last.accounting || 0));
+  const k = el('div', null, 'mini');
+  k.append(kpi(t('acc.stamp'), fmt(last.stampTax || 0)), kpi(t('acc.accounting'), fmt(last.accounting || 0)), kpi(t('acc.utilities'), fmt(last.utilities || 0)), kpi(t('acc.other'), fmt(other)));
+  box.append(el('small', t('acc.breakdown'), 'muted'), k);
+  const est = el('p'); est.id = 'taxEst'; est.textContent = '…'; box.append(est);
+  if (c.lastTax) box.append(el('small', t('acc.lastTax', { year: c.lastTax.year, base: money(c.lastTax.base), tax: money(c.lastTax.tax) }), 'muted'));
+  box.append(el('h4', t('acc.accountantTitle')));
+  const row = el('div', null, 'others'), cur = c.accountant || 'none';
+  ['none', 'basic', 'pro'].forEach(l => {
+    const a = TAX().accountant[l], monthly = Math.round(a.feeDaily * 30), pct = Math.round((a.mult - 1) * 100);
+    const label = `${t('acc.acc.' + l)} · ${l === 'none' ? t('acc.free') : t('acc.perMonth', { fee: money(monthly) })} · ${pct > 0 ? '+' : ''}${pct}% ${t('acc.taxWord')}`;
+    const b = btn(label, () => { if (founder) socket.emit('setAccountant', { cid: c.id, level: l }); }); b.disabled = !founder; if (l === cur) b.className = 'sel'; row.append(b);
+  });
+  box.append(row, el('small', t('acc.accountantNote') + estNote(), 'muted'));
+}
+// Shop bills: each utility is optional; switching one off saves money but hurts sales
+const UTIL_ICON = { electricity: '⚡', water: '💧', gas: '🔥', internet: '🌐' };
+function billsPanel(box, c, founder) {
+  box.append(el('h4', t('acc.billsTitle')));
+  const on = { electricity: true, water: true, gas: true, internet: true, ...(c.utilities || {}) }, bills = c.bills || {};
+  const list = el('div', null, 'prodList');
+  Object.keys(UTIL_ICON).forEach(k => {
+    const row = el('div', null, 'prodRow'), label = el('div', null, 'prodName');
+    label.append(el('b', `${UTIL_ICON[k]} ${t('acc.util.' + k)}`), el('span', on[k] ? t('acc.billDay', { amount: money(bills[k] || 0) }) : t('acc.utilOff.' + k), 'prodPrice'));
+    const sw = btn(on[k] ? t('acc.on') : t('acc.off'), () => socket.emit('setUtilities', { cid: c.id, utilities: { [k]: !on[k] } })); sw.disabled = !founder; if (on[k]) sw.className = 'sel';
+    row.append(label, sw); list.append(row);
+  });
+  box.append(list, el('small', t('acc.billsNote'), 'muted'));
+}
 function pnlTable(months) {
   const frag = document.createDocumentFragment();
   const head = el('tr'); [t('fin.period'), t('fin.revenue'), t('fin.expense'), t('fin.profit'), t('fin.cash')].forEach(x => head.append(el('th', x)));
@@ -1624,8 +1672,10 @@ function openDept(c, d) {
         const k = el('div', null, 'mini');
         k.append(kpi(t('acc.rent'), fmt(rent)), kpi(t('acc.salaries'), fmt(salaries)), kpi(t('acc.total'), fmt(rent + salaries)), kpi(t('acc.lastDay'), fmt(finOf([c]).dayExp)));
         box.append(el('small', t('acc.perDay'), 'muted'), k);
+        taxPanel(box, c, founder);
+        if (lot?.type === 'shop' || (c.workspace === 'shop')) billsPanel(box, c, founder);
         const tbl = el('table'); tbl.id = 'accTable'; tbl.style.width = '100%'; box.append(tbl);
-        getHistory(c.id, h => tbl.replaceChildren(pnlTable(h.monthly.slice(-6))));
+        getHistory(c.id, h => { tbl.replaceChildren(pnlTable(h.monthly.slice(-6))); taxEstimate(c, h.monthly); });
         break;
       }
       case 'marketing': {

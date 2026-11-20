@@ -181,12 +181,12 @@ const publicPlayer = p => ({ id: p.id, name: p.name, coins: p.coins, role: p.rol
   team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {} });
 const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: st.day ? R.calendar(st.day) : null,
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
-  companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, publicCompany(c, R.calendar((st.day || 0) + 1).monthKey)])),
+  companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c) }])),
   presentation: publicPresentation(st) || null,
   city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, serverNow: Date.now(),
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
-  busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities });
+  busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, tax: ECON.tax });
 const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops,
   teamColors: SEED.teams.colors, quests: SEED.quests, badges: SEED.badges, salary: SEED.salary, custom: SEED.custom, departments: SEED.departments, marketing: SEED.marketing, itUpgrade: SEED.itUpgrade, npcTalk: { serviceCost: SEED.npcTalk.serviceCost, ids: SEED.npcTalk.ids }, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
   lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES });
@@ -210,13 +210,48 @@ function activeBenefits(c) {
 const performanceOf = c => +(1 + activeBenefits(c).reduce((s, k) => s + SEED.benefits[k].perf, 0)).toFixed(2);
 const benefitCostPerEmployee = c => activeBenefits(c).reduce((s, k) => s + SEED.benefits[k].cost, 0);
 
+// ---------- Taxes, accounting and shop utility bills (Sprint 8b) ----------
+const ACC_LEVELS = ['none', 'basic', 'pro'];
+const accountantOf = c => ECON.tax.accountant[ACC_LEVELS.includes(c.accountant) ? c.accountant : 'none'];
+// Progressive income tax on a yearly profit (coins); brackets are real ₺ amounts converted with the game rate
+function incomeTaxCoins(profitCoins) {
+  const rate = ECON.rate, tl = Math.max(0, profitCoins) * rate; let tax = 0, lower = 0;
+  for (const b of ECON.tax.brackets) { const upper = b.limit ?? Infinity; if (tl > lower) tax += (Math.min(tl, upper) - lower) * b.rate; lower = upper; }
+  return tax / rate;
+}
+const UTILITIES = ['electricity', 'water', 'gas', 'internet'];
+const UTIL_SHARE = { electricity: 0.45, water: 0.10, gas: 0.25, internet: 0.20 };   // split of the old "30% of rent" utility lump
+const utilOn = c => ({ electricity: true, water: true, gas: true, internet: true, ...(c.utilities || {}) });
+const isWinter = month => month >= 11 || month <= 3;
+// Per-day bills of a shop: each utility = fixed subscription (60%) + variable use (40%, grows with headcount); gas is seasonal
+function utilityBills(st, c) {
+  const out = { electricity: 0, water: 0, gas: 0, internet: 0, total: 0 };
+  if (c.lotId == null || c.isNpc) return out;
+  const lot = st.lots[c.lotId]; if (lot.type !== 'shop') return out;
+  const budget = (lotRent(st, lot) * 0.3) / Math.max(1, lot.companyIds.length), on = utilOn(c);
+  const month = R.calendar((st.day || 0) + 1).month, heads = c.founders.length + c.employees.length + (c.npcStaff || 0), activity = Math.min(2, 0.6 + 0.2 * heads);
+  let sum = 0;
+  for (const k of UTILITIES) {
+    if (!on[k]) continue;
+    const share = budget * UTIL_SHARE[k], season = k === 'gas' ? (isWinter(month) ? 1.8 : 0.3) : 1;
+    out[k] = Math.round((share * 0.6 + share * 0.4 * activity) * season * 100) / 100; sum += out[k];
+  }
+  out.total = sum > 0 ? Math.max(1, Math.ceil(sum)) : 0;
+  return out;
+}
+// Switching a utility off saves money but hurts business (no power: almost nothing sells; no internet: -15%; ...)
+function utilMult(st, c) {
+  if (c.lotId == null || c.isNpc || st.lots[c.lotId].type !== 'shop') return 1;
+  const on = utilOn(c), winter = isWinter(R.calendar((st.day || 0) + 1).month);
+  return (on.electricity ? 1 : 0.4) * (on.internet ? 1 : 0.85) * (on.water ? 1 : 0.95) * (on.gas || !winter ? 1 : 0.9);
+}
 function costPerTick(st, c) {
   if (c.lotId == null) { const w = WS[c.workspace]; return w.rent + w.electricity; }
   const lot = st.lots[c.lotId];
   if (lot.type === 'coworking') return WS.coworking.rent;
   const base = lotRent(st, lot), n = Math.max(1, lot.companyIds.length);
   const rent = lot.owner === c.id ? 0 : Math.ceil(base / n);   // owners pay no rent, only utilities
-  return rent + Math.ceil((base * 0.3) / n);
+  return c.isNpc ? rent + Math.ceil((base * 0.3) / n) : rent;
 }
 // City-based real estate: daily rent and purchase price of a lot (₺/m² converted to coins)
 const cityOf = st => (ECON.cities[st.city] ? st.city : 'istanbul');
@@ -292,7 +327,7 @@ function createStreet(id, mode, pin, city) {
 }
 const crisisActive = (st, c) => c.crisis && c.crisis.until > (st.day || 0);
 const marketingActive = (st, c) => c.marketing && c.marketing.until > (st.day || 0);
-const incomeMult = (st, c) => (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
+const incomeMult = (st, c) => utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
 // Mirrors the client: building height (floors) follows the lot's total cash. Virtual companies use their own cash.
 const floorsFor = cash => Math.max(1, Math.min(6, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
 function floorsOf(st, c) {
@@ -504,6 +539,19 @@ io.on('connection', socket => {
     c.price = ps[0].price; c.product = ps[0].name || null; if (i === 0) c.nameKey = ps[0].nameKey || c.nameKey;
     addLog(street, 'log.productRemoved', { player: me.name, product: gone.name || '—', ...cParams(c) });
     sync();
+  });
+
+  // Accountant level (none / basic / pro): monthly fee vs. tax penalty or saving
+  socket.on('setAccountant', ({ cid, level } = {}) => {
+    const c = founderOf(cid); if (!c || limited() || !needDept(c, 'accounting')) return;
+    if (!ACC_LEVELS.includes(level) || c.accountant === level) return;
+    c.accountant = level; addLog(street, 'log.accountant', { player: me.name, level, ...cParams(c) }); sync();
+  });
+  // Shop utility bills on/off (electricity, water, gas, internet)
+  socket.on('setUtilities', ({ cid, utilities } = {}) => {
+    const c = founderOf(cid); if (!c || limited() || c.lotId == null || street.lots[c.lotId].type !== 'shop' || !utilities || typeof utilities !== 'object') return;
+    const next = utilOn(c); for (const k of UTILITIES) if (typeof utilities[k] === 'boolean') next[k] = utilities[k];
+    c.utilities = next; addLog(street, 'log.utilities', { player: me.name, ...cParams(c) }); sync();
   });
 
   socket.on('itUpgrade', ({ cid } = {}) => {
@@ -935,6 +983,21 @@ function setRoomSpeed(st, speed) {
   st.speed = next; return true;
 }
 
+// Yearly income tax on each player company's net profit of the year (11 closed months + today)
+function payIncomeTax(st) {
+  const year = Math.floor(((st.day || 0)) / 360) + 1;
+  for (const c of Object.values(st.companies)) {
+    if (c.isNpc || c.status !== 'active') continue;
+    const f = R.ensureFin(c), net = x => (x.revenue || 0) - (x.expenses || 0) + (x.tax || 0) - (x.losses || 0); // income tax itself is not deductible
+    const base = Object.values(f.monthly).filter(m => m.year === year).reduce((s, m) => s + net(m), 0) + net(f.today);
+    const gross = incomeTaxCoins(base), tax = Math.round(gross * accountantOf(c).mult);
+    c.lastTax = { year, base: Math.max(0, Math.round(base)), tax };
+    if (tax <= 0) continue;
+    c.cash -= tax; R.track(c, 'expenses', tax); R.track(c, 'tax', tax);
+    addLog(st, 'log.incomeTax', { year, amount: tax, ...cParams(c) });
+  }
+}
+
 // ---------- ECONOMY TICK (1 tick = 1 game day) ----------
 function economyTick(only) {
   for (const st of only ? [only] : Object.values(rooms)) {
@@ -951,9 +1014,19 @@ function economyTick(only) {
         const lot = st.lots[c.lotId], owner = lot.owner && lot.owner !== c.id ? st.companies[lot.owner] : null;
         if (owner && lot.type === 'shop') { const r = Math.ceil(lotRent(st, lot) / Math.max(1, lot.companyIds.length)); owner.cash += r; R.track(owner, 'revenue', r); }
       }
-      const cost = costPerTick(st, c) + c.employees.length * (SEED.salary + c.benefitCost) + npcSalaries + fuel + vehicle;
+      const rentPart = costPerTick(st, c), payroll = c.employees.length * (SEED.salary + c.benefitCost) + npcSalaries;
+      let ub = { total: 0 }, stamp = 0, acctFee = 0;
+      if (!c.isNpc) {
+        ub = utilityBills(st, c);
+        // fractional taxes / fees accumulate and are charged in whole coins (same trick as fuel)
+        c.stampAcc = (c.stampAcc || 0) + rentPart * ECON.tax.stampContract + payroll * ECON.tax.stampPayroll;
+        stamp = Math.floor(c.stampAcc); c.stampAcc -= stamp;
+        c.acctAcc = (c.acctAcc || 0) + accountantOf(c).feeDaily;
+        acctFee = Math.floor(c.acctAcc); c.acctAcc -= acctFee;
+      }
+      const cost = rentPart + ub.total + payroll + fuel + vehicle + stamp + acctFee;
       c.cash -= cost;
-      R.track(c, 'expenses', cost);
+      R.track(c, 'expenses', cost); R.track(c, 'utilities', ub.total); R.track(c, 'stampTax', stamp); R.track(c, 'accounting', acctFee);
       c.employees.forEach(pid => {
         const p = st.players[pid];
         if (!p) return;
@@ -973,6 +1046,7 @@ function economyTick(only) {
       }
       if (c.marketing && !marketingActive(st, c)) c.marketing = null;
     }
+    if (((st.day || 0) + 1) % 360 === 0) payIncomeTax(st);
     R.closeDay(st);
     st.tickAt = Date.now();
     for (const c of Object.values(st.companies)) {

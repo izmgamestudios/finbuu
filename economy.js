@@ -16,6 +16,13 @@ const TR2026 = {
   },
   fuel: { gasoline: 80.45, diesel: 100.5, asOf: '2026-10-28', where: 'İstanbul (Avrupa)' },
   car: { consumptionL100: 7, buyPrice: 1250000, upkeepMonthly: 7500, rentDaily: 1800, est: true },
+  // Vergiler: gelir vergisi tarifesi (₺, yıllık net kâr dilimleri). 2026 dilimleri 190.000 / 400.000 / 1.500.000 / 5.300.000 ₺ olarak alındı;
+  // resmi Tebliğ ile doğrulanmalı (est). Damga vergisi: kira sözleşmesi binde 9,48, ücret bordrosu binde 7,59.
+  tax: {
+    income: [[190000, 0.15], [400000, 0.20], [1500000, 0.27], [5300000, 0.35], [Infinity, 0.40]], est: true,
+    stampContract: 0.00948, stampPayroll: 0.00759,
+    accountantMonthly: { basic: 2500, pro: 6000 }, noAccountantPenalty: 0.15, proSaving: 0.07, est2: true // muhasebe ücretleri ve ceza/tasarruf oranları tahmini
+  },
   courierPerKm: 18,                                             // kurye / taksi ile teslimat (est)
   busFare: 40,                                                  // toplu taşıma tek biniş (est)
   priceToRentMonths: 220,                                       // satış fiyatı ≈ 220 aylık kira (~%5,5 brüt getiri, est)
@@ -30,6 +37,8 @@ const TR2026 = {
     { label: 'Asgari ücret 2026 (QNB Yatırım)', url: 'https://www.qnbinvest.com.tr/investodak/qnbarastirma/2026-asgari-ucret-aciklandi-net-28075-tl' },
     { label: 'Asgari ücret işveren maliyeti (PwC)', url: 'https://www.pwc.com.tr/tr/medya/kose-yazilari/celal-ozcan/2026-yili-asgari-ucreti-ve-sektorlere-gore-isveren-maliyeti.html' },
     { label: 'SGK prim oranları 2026 (Alomaliye)', url: 'https://www.alomaliye.com/2025/12/21/2025-2026-isveren-tesvik-ve-sgk-prim-oranlari-karsilastirma-tablosu/' },
+    { label: 'Gelir vergisi tarifesi 2026 (GİB) — doğrulayın', url: 'https://www.gib.gov.tr' },
+    { label: 'Damga vergisi oranları (Damga Vergisi Kanunu, 488 s.K.)', url: 'https://www.mevzuat.gov.tr' },
     { label: 'Kiralık dükkan m² (Emlakjet / Endeksa)', url: 'https://www.emlakjet.com/emlak-piyasasi/kiralik-dukkan' },
     { label: 'Kiralık müstakil işyeri m² (Emlakjet)', url: 'https://www.emlakjet.com/emlak-piyasasi/kiralik-ofis-mustakil' },
     { label: 'Akaryakıt fiyatları 28 Ekim 2026', url: 'https://www.24saatgazetesi.com/akaryakit-fiyatlari-28-ekim-2026-akaryakita-zam-gelecek' },
@@ -61,6 +70,15 @@ function build(blueSalaryCoins) {
       courierPerKm: c(TR2026.courierPerKm),                              // no company car
       rentPerDay: Math.round(c(car.rentDaily)), buyPrice: Math.round(c(car.buyPrice)), upkeepPerDay: Math.round(c(car.upkeepMonthly / 30) * 10) / 10,
       resale: 0.6
+    },
+    tax: {
+      brackets: TR2026.tax.income.map(([limit, rate]) => ({ limit: limit === Infinity ? null : limit, rate })), est: true,
+      stampContract: TR2026.tax.stampContract, stampPayroll: TR2026.tax.stampPayroll,
+      accountant: {
+        none: { feeDaily: 0, mult: 1 + TR2026.tax.noAccountantPenalty },
+        basic: { feeDaily: c(TR2026.tax.accountantMonthly.basic / 30), mult: 1 },
+        pro: { feeDaily: c(TR2026.tax.accountantMonthly.pro / 30), mult: 1 - TR2026.tax.proSaving }
+      }
     },
     busFare: Math.max(1, Math.round(c(TR2026.busFare))), busTopups: [10, 20, 50],
     deliveryKm: DELIVERY_KM,

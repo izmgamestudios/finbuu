@@ -310,3 +310,6 @@ body.noAdv #advChip:not([hidden]) { display: block }
 .prodPrice { font-size: .85rem; color: var(--muted) } .prodPrice s { opacity: .7 }
 .prodPrice .disc { color: var(--good); font-style: normal; font-weight: 700 }
 .prodActs { display: flex; gap: 6px } .prodActs button { min-height: 38px; padding: 4px 10px }
+
+/* ---- Sprint 8b: selected state for option buttons (accountant level, utility switches) ---- */
+button.sel { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--panel-2)); font-weight: 700 }

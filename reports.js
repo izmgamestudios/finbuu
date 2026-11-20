@@ -1,7 +1,7 @@
 // reports.js
 const DAYS_PER_MONTH = 30, MONTHS_PER_YEAR = 12, DAYS_PER_YEAR = DAYS_PER_MONTH * MONTHS_PER_YEAR;
 const EXIT_CASH = 50000;
-const blankDay = () => ({ revenue: 0, investment: 0, expenses: 0, losses: 0, dividends: 0, units: 0, km: 0, fuel: 0 });
+const blankDay = () => ({ revenue: 0, investment: 0, expenses: 0, losses: 0, dividends: 0, units: 0, km: 0, fuel: 0, tax: 0, utilities: 0, stampTax: 0, accounting: 0 });
 
 function calendar(day) {
   const year = Math.floor((day - 1) / DAYS_PER_YEAR) + 1;
@@ -30,7 +30,7 @@ function closeDay(st) {
     if (f.daily.length > 90) f.daily.shift();
     const m = f.monthly[cal.monthKey] ||= { key: cal.monthKey, year: cal.year, quarter: cal.quarter, month: cal.month, ...blankDay(), closingCash: 0, employees: 0, days: 0 };
     m.days = (m.days || 0) + 1;
-    for (const k of Object.keys(blankDay())) m[k] += f.today[k];
+    for (const k of Object.keys(blankDay())) m[k] = (m[k] || 0) + (f.today[k] || 0);
     m.closingCash = c.cash;
     m.employees = c.employees.length;
     f.today = blankDay();
@@ -47,7 +47,7 @@ function aggregate(fin, period = 'month') {
   for (const m of Object.values(fin?.monthly || {}).sort((a, b) => a.key.localeCompare(b.key))) {
     const key = period === 'year' ? `Y${m.year}` : period === 'quarter' ? `Y${m.year}-Q${m.quarter}` : m.key;
     const g = groups[key] ||= { period: key, ...blankDay(), closingCash: 0, employees: 0 };
-    for (const k of Object.keys(blankDay())) g[k] += m[k];
+    for (const k of Object.keys(blankDay())) g[k] += m[k] || 0;
     g.closingCash = m.closingCash;
     g.employees = m.employees;
   }
@@ -130,11 +130,11 @@ function fullReport(rooms, { roomId, period = 'month' } = {}) {
 
 const csvCell = v => { const s = v == null ? '' : String(v); return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 function toCSV(report) {
-  const lines = [['type', 'room', 'name', 'status', 'score', 'period', 'revenue', 'investment', 'expenses', 'losses', 'dividends', 'profit', 'closingCash', 'employees', 'coins', 'xp', 'level', 'knowledge', 'success'].join(',')];
+  const lines = [['type', 'room', 'name', 'status', 'score', 'period', 'revenue', 'investment', 'expenses', 'losses', 'dividends', 'tax', 'utilities', 'stampTax', 'accounting', 'profit', 'closingCash', 'employees', 'coins', 'xp', 'level', 'knowledge', 'success'].join(',')];
   for (const c of report.companies) for (const s of c.series)
-    lines.push(['company', c.room, c.name || c.nameKey, c.analysis.status, c.analysis.score, s.period, s.revenue, s.investment, s.expenses, s.losses, s.dividends, s.profit, s.closingCash, s.employees, '', '', '', '', ''].map(csvCell).join(','));
+    lines.push(['company', c.room, c.name || c.nameKey, c.analysis.status, c.analysis.score, s.period, s.revenue, s.investment, s.expenses, s.losses, s.dividends, s.tax || 0, s.utilities || 0, s.stampTax || 0, s.accounting || 0, s.profit, s.closingCash, s.employees, '', '', '', '', ''].map(csvCell).join(','));
   for (const e of report.employees) for (const s of e.series)
-    lines.push(['employee', e.room, e.name, e.role, '', s.period, '', '', '', '', '', '', '', '', s.coins, s.xp, s.level, s.knowledge, s.success].map(csvCell).join(','));
+    lines.push(['employee', e.room, e.name, e.role, '', s.period, '', '', '', '', '', '', '', '', '', '', '', '', s.coins, s.xp, s.level, s.knowledge, s.success].map(csvCell).join(','));
   return '\uFEFF' + lines.join('\n');
 }
 

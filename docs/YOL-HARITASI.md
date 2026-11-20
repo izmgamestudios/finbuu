@@ -10,7 +10,7 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **6 — Sohbet & sosyal** | Yakınlık konuşması ("Ahmet'ten Ayşe'ye mesaj") herkese açık sohbete düşer · mobilde mavi "Gir" yanında yeşil "Konuş" (masaüstünde T) · kafa üstü konuşma baloncuğu · hızlı emoji · açılır/kapanır paneller (başlığa tıkla, ▤ yan panel, ▾ üst göstergeler) | ✅ Tamam |
 | **7 — Zaman & finans kontrolleri** | Oyun hızı 0.5x/1x/2x/3x (oda sahibi değiştirir, odaya özel) · yatırım ve kâr payı çekmede 1–100 çubuk + elle rakam · pazarlama bütçe çubuğu (10–100, 50 = standart) · gün bazlı timeline (Cadde Olayları) · öneri çubuğunda ◀ önceki, sayaç, küçült | ✅ Tamam |
 | **8a — Ürünler & sihirbaz** | Şirket başına en fazla 8 ürün/hizmet (ad, liste fiyatı, %0–90 indirim) · satışta ürün seçimi · sihirbaz: ⚡ Hızlı (2 adım), 🧭 Standart (4), 🔬 Ayrıntılı (7: ek ürün, indirim, özet) | ✅ Tamam |
-| **8b — Vergiler & giderler** | Gelir vergisi, damga vergisi, muhasebe · dükkânda elektrik/su/doğalgaz/internet faturaları, sabit ve değişken giderler | ⬜ |
+| **8b — Vergiler & giderler** | Yıl sonu (360. gün) kademeli gelir vergisi (2026 dilimleri) · damga vergisi (kira binde 9,48, bordro binde 7,59) · muhasebeci seviyesi (yok +%15 ceza / temel / pro −%7) · dükkânda elektrik, su, doğalgaz, internet faturaları (sabit %60 + değişken %40, doğalgaz mevsimsel) ve kapatmanın satışa etkisi | ✅ Tamam |
 | **9 — Reklam sistemi** | Billboard, otobüs durağı, otobüs giydirme, mobil meta reklam, bina duvarı/çatı · görsel URL veya metin (font boyutu, renk) · admin ve şirket sahibi yönetir · **her reklam yayına girmeden admin onayından geçer** | ⬜ |
 | **10 — Araç** | Galeriden sıfır/ikinci el araç · bina kapısında sabit park, otopark · kiralık aracın kalan süresi (üst bar) | ⬜ |
 | **11 — Harita & şehirler** | Minimap (M tuşu, mobilde harita ikonu) · Türkiye haritasından şehir seçimi (bazıları Premium/"pek yakında") · otobüs terminali, şehirler arası seyahat (maliyet + süre), özel/kiralık araçla seyahat · aynı odada farklı şehirler | ⬜ |
@@ -33,6 +33,13 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - `c.price` birincil ürünün liste fiyatı olarak kaldı; Öneri, raporlar ve sunum eskisi gibi çalışır. Ürünler `c.products` içinde.
 - Pasif (çalışan) satışlarda indirim talebi artırır (esneklik 1.5), her ek ürün pazarı %5 genişletir; yani %10–30 indirim hafif kazançlıdır, %40+ zarar yazar. Elle satışta ve alışta indirimli fiyat ödenir.
 - Ürün ekleme/düzenleme/silme yalnızca kurucular içindir; son ürün silinemez.
+
+## Sprint 8b notları
+- Vergi oranları `economy.js` içinde, 2026 TR verisine göre; gelir vergisi dilimleri (190.000 / 400.000 / 1,5 M / 5,3 M ₺) ve muhasebe ücretleri **tahmini** işaretli (arayüzde `*`) ve resmî kaynaktan doğrulanmalı.
+- Vergi yıl sonunda, o yılın net kârı (11 kapanmış ay + son gün) üzerinden ödenir; gelir vergisi kendi matrahından düşülmez. Zarar devri (önceki yıl zararı) yok.
+- NPC şirketleri vergi, damga, muhasebe ve fatura kalemlerinden muaftır; böylece cadde dengesi değişmedi.
+- Fatura kalemleri yalnızca oyuncu dükkânlarında. Kapatmanın etkisi: elektrik −%60 satış, internet −%15, su −%5, doğalgaz (kışın) −%10.
+- Gider dökümü raporlara eklendi (vergi, fatura, damga, muhasebe; CSV sütunları dahil). Bunlar toplam `expenses` içinde bir alt kırılımdır.
 
 ## Kararlar
 - **Veri saklama:** Şimdilik tarayıcıda (localStorage/çerez) yönetilir. SQLite/PostgreSQL daha sonra bağlanacak; bunun için durum okuma/yazma tek bir katmandan geçmeli (depolama arayüzü), böylece geçiş tek yerde yapılır.
