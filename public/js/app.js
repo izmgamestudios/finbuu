@@ -113,7 +113,7 @@ function applyTheme() {
   const root = document.documentElement;
   if (themeMode === 'system') root.removeAttribute('data-theme'); else root.dataset.theme = themeMode;
   const dark = themeMode === 'dark' || (themeMode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#171a22' : '#f4f6fb');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0a1029' : '#1d2b53');
   const b = $('themeBtn'); b.textContent = THEME_ICON[themeMode];
   b.title = b.ariaLabel = t('ui.theme' + themeMode[0].toUpperCase() + themeMode.slice(1));
 }
