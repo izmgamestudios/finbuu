@@ -605,3 +605,19 @@ nav button.active { color: var(--accent) !important; background: rgba(255, 183, 
 /* Sprint 32b: Guide button, reachable from anywhere */
 #guideBtn { position: absolute; top: 8px; right: 96px; z-index: 3; min-height: 30px; padding: 2px 10px; opacity: .9 }
 #guideBtn[hidden] { display: none }
+
+/* Sprint 33: accessibility — color-blind-safe palette (Okabe-Ito), high contrast, text size, reduced motion, strong focus ring */
+html:root[data-cb] { --good: #0072b2; --bad: #d55e00; --warn: #9a6a00; --accent: #e69f00; --accent-deep: #8a5d00; --series-1: #0072b2; --series-2: #d55e00 }
+@media (prefers-color-scheme: dark) { html:root[data-cb]:not([data-theme="light"]) { --good: #56b4e9; --bad: #f0a060; --warn: #f0e442; --accent: #f0b429 } }
+html:root[data-cb][data-theme="dark"] { --good: #56b4e9; --bad: #f0a060; --warn: #f0e442; --accent: #f0b429 }
+html:root[data-hc] { --bg: #ffffff; --panel: #ffffff; --panel-2: #f1f1f1; --line: #1a1a1a; --text: #000000; --muted: #1f1f1f; --accent-deep: #6b4600; --nav: #000000; --nav-ink: #ffffff; --nav-dim: #ffffff }
+@media (prefers-color-scheme: dark) { html:root[data-hc]:not([data-theme="light"]) { --bg: #000000; --panel: #0b0b0b; --panel-2: #1a1a1a; --line: #ffffff; --text: #ffffff; --muted: #e6e6e6 } }
+html:root[data-hc][data-theme="dark"] { --bg: #000000; --panel: #0b0b0b; --panel-2: #1a1a1a; --line: #ffffff; --text: #ffffff; --muted: #e6e6e6 }
+html[data-hc] button, html[data-hc] input, html[data-hc] select, html[data-hc] textarea, html[data-hc] .card { border: 2px solid var(--line) }
+html[data-text="l"] { font-size: 17px } html[data-text="xl"] { font-size: 19.5px }
+html[data-motion="reduce"] *, html[data-motion="reduce"] *::before, html[data-motion="reduce"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important }
+:focus-visible { outline: 3px solid var(--accent-deep); outline-offset: 2px; border-radius: 6px }
+html[data-hc] :focus-visible { outline: 4px solid var(--text) }
+.skipLink { position: fixed; left: 8px; top: -60px; z-index: 100; background: var(--accent); color: var(--accent-ink); padding: 8px 14px; border-radius: 10px; font-weight: 800; text-decoration: none } .skipLink:focus { top: 8px }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+.a11yRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line) } .a11yRow .opts { display: flex; gap: 6px; flex-wrap: wrap }

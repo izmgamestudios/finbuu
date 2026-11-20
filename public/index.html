@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/css/game.css">
 </head>
 <body>
+<a class="skipLink" href="#stage" id="skipLink" data-i18n="a11y.skip"></a>
 <header>
   <h1><span data-i18n="ui.title"></span><small id="slogan" data-i18n="ui.slogan"></small></h1>
   <span id="day"></span>
@@ -154,6 +155,7 @@
     <button id="openIdeas"><span>💡</span><b data-i18n="ui.ideaBox"></b></button>
     <button id="openGuide"><span>📘</span><b data-i18n="ui.guide"></b></button>
     <button id="dwClass" hidden><span>🎓</span><b data-i18n="class.menu"></b></button>
+    <button id="dwA11y"><span>♿</span><b data-i18n="a11y.menu"></b></button>
     <button id="dwAccount"><span>👤</span><b></b></button>
     <button id="openModes"><span>🎮</span><b data-i18n="ui.dwMode"></b></button>
   </div>
@@ -174,7 +176,7 @@
 <div id="modal"><div class="card" id="modalBody" role="dialog" aria-modal="true"></div></div>
 <div id="mapOverlay" hidden></div>
 <div id="travelOverlay" hidden></div>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script src="/vendor/i18next/i18next.min.js"></script>
 <script src="/vendor/chart.js/chart.umd.js"></script>

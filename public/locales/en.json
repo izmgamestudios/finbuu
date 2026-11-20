@@ -2238,5 +2238,27 @@
         ]
       ]
     }
+  },
+  "a11y": {
+    "menu": "Accessibility",
+    "title": "♿ Accessibility",
+    "skip": "Skip to the game area",
+    "intro": "Settings are stored on this device.",
+    "cb": "Color-blind friendly colors",
+    "cbHint": "Uses blue/orange instead of green/red.",
+    "hc": "High contrast",
+    "text": "Text size",
+    "textN": "Normal",
+    "textL": "Large",
+    "textXL": "Extra large",
+    "motion": "Reduce motion",
+    "motionHint": "Animations and transitions are turned off.",
+    "lowData": "Low data / low performance mode",
+    "lowDataHint": "Less graphic detail and fewer NPCs; smoother on slow connections and older phones.",
+    "kbd": "Keyboard: Tab to navigate, Esc closes a window, G opens the Guide, +/- zoom.",
+    "reset": "Reset to defaults",
+    "on": "On",
+    "off": "Off",
+    "closed": "Window closed"
   }
 }

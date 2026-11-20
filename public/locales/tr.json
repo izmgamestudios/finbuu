@@ -2238,5 +2238,27 @@
         ]
       ]
     }
+  },
+  "a11y": {
+    "menu": "Erişilebilirlik",
+    "title": "♿ Erişilebilirlik",
+    "skip": "Oyun alanına geç",
+    "intro": "Ayarlar bu cihazda saklanır.",
+    "cb": "Renk körlüğü dostu renkler",
+    "cbHint": "Yeşil/kırmızı yerine mavi/turuncu kullanır.",
+    "hc": "Yüksek kontrast",
+    "text": "Yazı boyutu",
+    "textN": "Normal",
+    "textL": "Büyük",
+    "textXL": "Çok büyük",
+    "motion": "Hareketi azalt",
+    "motionHint": "Animasyonlar ve geçişler kapanır.",
+    "lowData": "Düşük veri / düşük performans modu",
+    "lowDataHint": "Daha az grafik detayı ve NPC; yavaş bağlantıda ve eski telefonlarda daha akıcı.",
+    "kbd": "Klavye: Tab ile gez, Esc ile pencereyi kapat, G Rehber, +/- zoom.",
+    "reset": "Varsayılana dön",
+    "on": "Açık",
+    "off": "Kapalı",
+    "closed": "Pencere kapatıldı"
   }
 }

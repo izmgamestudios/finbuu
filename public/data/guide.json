@@ -951,6 +951,43 @@
    "related": []
   },
   {
+   "id": "a11y",
+   "cat": "ui-panels",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Erişilebilirlik ayarları",
+    "en": "Accessibility settings"
+   },
+   "body": {
+    "tr": "Menü › Erişilebilirlik: renk körlüğü dostu renkler (mavi/turuncu), yüksek kontrast, yazı boyutu (normal/büyük/çok büyük), hareketi azalt ve düşük veri/performans modu. Ayarlar cihazda saklanır; işletim sisteminin \"hareketi azalt\" ve veri tasarrufu ayarları varsayılan olarak dikkate alınır. Klavyede Tab ile gezilir, Esc pencereyi kapatır.",
+    "en": "Menu › Accessibility: color-blind friendly colors (blue/orange), high contrast, text size (normal/large/extra large), reduce motion and a low data/performance mode. Settings are stored on the device; the OS \"reduce motion\" and data-saver settings are respected by default. Use Tab to navigate and Esc to close a window."
+   },
+   "tags": [
+    "erisilebilirlik",
+    "renk korlugu",
+    "kontrast",
+    "yazi boyutu",
+    "klavye",
+    "ekran okuyucu"
+   ],
+   "steps": {
+    "tr": [
+     "Menü (☰) › ♿ Erişilebilirlik",
+     "Anahtarları aç/kapat, yazı boyutunu seç"
+    ],
+    "en": [
+     "Menu (☰) › ♿ Accessibility",
+     "Toggle the switches and pick a text size"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "menu"
+   },
+   "related": []
+  },
+  {
    "id": "mobile-sheet",
    "cat": "ui-panels",
    "type": "menu",

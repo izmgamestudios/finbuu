@@ -931,6 +931,47 @@ function renderClassReport(box) {
 }
 $('dwClass').onclick = () => { openDrawer(false); openClassroom(); };
 socket.on('classDone', e => { toast(t('class.toastDone', { title: e.title, reward: e.reward ? t('class.toastReward', { n: e.reward }) : '' })); profSig = ''; });
+
+// ---------- Accessibility (Sprint 33): color-blind palette, high contrast, text size, reduced motion, low-data mode; focus handling for dialogs ----------
+const A11Y_DEFAULT = { cb: false, hc: false, text: 'n', motion: false, low: false };
+ui.a11y = { ...A11Y_DEFAULT, ...(ui.a11y || {}) };
+if (ui.a11y.motion === false && matchMedia('(prefers-reduced-motion: reduce)').matches && ui.a11y.motionAuto !== false) ui.a11y.motion = true;       // respect the OS setting by default
+if (ui.a11y.low === false && ui.a11y.lowAuto !== false && (navigator.connection?.saveData || (navigator.deviceMemory && navigator.deviceMemory <= 2))) ui.a11y.low = true;   // data saver / very low memory
+function applyA11y() {
+  const r = document.documentElement, a = ui.a11y, set = (k, on) => (on ? r.setAttribute('data-' + k, '1') : r.removeAttribute('data-' + k));
+  set('cb', a.cb); set('hc', a.hc); r.setAttribute('data-motion', a.motion ? 'reduce' : 'full');
+  if (a.text === 'n') r.removeAttribute('data-text'); else r.setAttribute('data-text', a.text);
+  perf.forceLow = !!a.low; if (a.low) perf.low = true; else if (perf.quality !== 'low') perf.low = false;
+  try { resize(); } catch { /* before first layout */ }
+}
+function openA11y() {
+  openModal(body => {
+    body.append(el('h3', t('a11y.title')), el('small', t('a11y.intro'), 'muted'));
+    const row = (label, hint, ctrl) => { const r = el('div', null, 'a11yRow'), l = el('div'); l.append(el('b', label)); if (hint) l.append(el('br'), el('small', hint, 'muted')); r.append(l, ctrl); body.append(r); };
+    const toggle = key => { const b = el('button', ui.a11y[key] ? t('a11y.on') : t('a11y.off'), ui.a11y[key] ? 'primary' : ''); b.type = 'button'; b.setAttribute('role', 'switch'); b.setAttribute('aria-checked', String(!!ui.a11y[key]));
+      b.onclick = () => { ui.a11y[key] = !ui.a11y[key]; if (key === 'motion') ui.a11y.motionAuto = false; if (key === 'low') ui.a11y.lowAuto = false; saveUi(); applyA11y(); openA11y(); }; return b; };
+    row(t('a11y.cb'), t('a11y.cbHint'), toggle('cb')); row(t('a11y.hc'), '', toggle('hc'));
+    const opts = el('div', null, 'opts'); [['n', 'textN'], ['l', 'textL'], ['xl', 'textXL']].forEach(([v, k]) => { const b = el('button', t('a11y.' + k), ui.a11y.text === v ? 'primary' : ''); b.type = 'button'; b.setAttribute('aria-pressed', String(ui.a11y.text === v)); b.onclick = () => { ui.a11y.text = v; saveUi(); applyA11y(); openA11y(); }; opts.append(b); });
+    row(t('a11y.text'), '', opts); row(t('a11y.motion'), t('a11y.motionHint'), toggle('motion')); row(t('a11y.lowData'), t('a11y.lowDataHint'), toggle('low'));
+    body.append(el('small', '⌨ ' + t('a11y.kbd'), 'muted'), btn(t('a11y.reset'), () => { ui.a11y = { ...A11Y_DEFAULT, motionAuto: false, lowAuto: false }; saveUi(); applyA11y(); openA11y(); }));
+  });
+}
+$('dwA11y').onclick = () => { openDrawer(false); openA11y(); };
+$('skipLink').onclick = e => { e.preventDefault(); cv.focus?.(); };
+cv.tabIndex = 0; cv.setAttribute('aria-label', 'Finbuu');
+// dialogs: Esc closes, Tab stays inside, focus returns to the element that opened it
+let modalReturnFocus = null;
+new MutationObserver(() => { const open = $('modal').style.display === 'flex'; if (open && !modalReturnFocus) { modalReturnFocus = document.activeElement; setTimeout(() => ($('modalBody').querySelector('[data-default], input, select, textarea, button:not(.modalX)'))?.focus?.({ preventScroll: true }), 40); } else if (!open && modalReturnFocus) { try { modalReturnFocus.focus?.({ preventScroll: true }); } catch { /* gone */ } modalReturnFocus = null; } }).observe($('modal'), { attributes: true, attributeFilter: ['style'] });
+addEventListener('keydown', e => {
+  if ($('modal').style.display !== 'flex') return;
+  if (e.key === 'Escape' && modalClosable) { e.preventDefault(); closeModal(); return; }
+  if (e.key !== 'Tab') return;
+  const f = [...$('modalBody').querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
+  if (!f.length) return; const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && (document.activeElement === first || !$('modalBody').contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && (document.activeElement === last || !$('modalBody').contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+}, true);
+applyA11y();
 // ---------- Taxi (Sprint 24b): click a taxi, it pulls up, haggle over the fare, ride anywhere ----------
 let taxiHail = null;                       // { car, t0 } while a taxi is on its way / waiting
 function hailTaxi(car) {
@@ -1169,7 +1210,7 @@ function renderInterior(now) {
 function adaptQuality(now) {
   if (perf.quality !== 'auto') return;
   if (perf.fps < 40) { perf.highSince = 0; perf.lowSince ||= now; if (!perf.low && now - perf.lowSince > 3000) { perf.low = true; resize(); } }
-  else if (perf.fps > 56) { perf.lowSince = 0; perf.highSince ||= now; if (perf.low && now - perf.highSince > 8000) { perf.low = false; resize(); } }
+  else if (perf.fps > 56) { perf.lowSince = 0; perf.highSince ||= now; if (perf.low && !perf.forceLow && perf.quality !== 'low' && now - perf.highSince > 8000) { perf.low = false; resize(); } }
 }
 function renderStatus() {
   const st = $('status'); st.hidden = !showStatus;
