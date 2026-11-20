@@ -1,0 +1,90 @@
+# .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      PM2_APP: ${{ secrets.PM2_APP }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard deploy target
+        run: |
+          # Never rsync --delete into a path outside the Finbuu app directory
+          case "$DEPLOY_PATH" in
+            /home/ortakofis-finbuu/finbuu|/home/ortakofis-finbuu/finbuu/) ;;
+            *) echo "::error::DEPLOY_PATH must be /home/ortakofis-finbuu/finbuu (got: $DEPLOY_PATH)"; exit 1 ;;
+          esac
+          if [ "$SSH_USER" != "ortakofis-finbuu" ]; then
+            echo "::error::SSH_USER must be ortakofis-finbuu"; exit 1
+          fi
+
+      - name: Check required secrets
+        run: |
+          for v in SSH_HOST SSH_USER DEPLOY_PATH; do
+            if [ -z "${!v}" ]; then echo "::error::Missing repo secret $v"; exit 1; fi
+          done
+          if [ -z "${{ secrets.SSH_KEY }}" ]; then echo "::error::Missing repo secret SSH_KEY"; exit 1; fi
+
+      - name: Prepare SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      # .env and data/ (admin.json etc.) live only on the server; never overwrite or delete them.
+      - name: Upload source
+        run: |
+          rsync -az --delete \
+            --exclude='.git/' --exclude='.github/' --exclude='Dockerfile' --exclude='.dockerignore' \
+            --exclude='node_modules/' --exclude='.env' --exclude='.env.*' --exclude='data/' \
+            -e "ssh -i ~/.ssh/id_deploy -p ${SSH_PORT:-22}" \
+            ./ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+
+      - name: Install dependencies and restart pm2
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' PM2_APP='${PM2_APP:-finbuu}' bash -l -s" <<'REMOTE'
+          set -euo pipefail
+          # Non-interactive SSH may not load Node/pm2 into PATH (nvm, fnm, volta)
+          export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          export PATH="$HOME/.local/share/fnm:$HOME/.volta/bin:$HOME/.npm-global/bin:$PATH"
+          command -v npm >/dev/null || { echo "npm not found in PATH: $PATH"; exit 127; }
+          command -v pm2 >/dev/null || { echo "pm2 not found in PATH: $PATH"; exit 127; }
+          cd "$DEPLOY_PATH"
+          npm ci --omit=dev
+          if pm2 describe "$PM2_APP" >/dev/null 2>&1; then
+            pm2 restart "$PM2_APP" --update-env
+          else
+            pm2 start server.js --name "$PM2_APP"
+          fi
+          pm2 save
+          REMOTE
+
+      - name: Smoke test
+        run: |
+          sleep 3
+          ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
+            "PM2_APP='${PM2_APP:-finbuu}' bash -l -s" <<'REMOTE'
+          export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          pm2 describe "$PM2_APP" | grep -E 'status|restarts'
+          REMOTE
