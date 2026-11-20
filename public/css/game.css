@@ -538,3 +538,12 @@ nav button.active { color: var(--accent) !important; background: rgba(255, 183, 
 /* Sprint 21b: tool install */
 .ossInstall { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line) } .ossInstall select { flex: 1 1 140px } .ossInstall small { flex-basis: 100% }
 .ossTool.dim { opacity: .6 }
+
+/* Fix: cards in the scrolling lists were shrinking to thin lines (flex items default to shrink) */
+.ossList > .ossTool { flex: 0 0 auto; min-height: min-content }
+.ossList { flex: 0 1 auto; min-height: 0 }
+.ossDetail { overflow: visible }
+#modalBody > * { flex-shrink: 0 }                 /* modal content must scroll as a whole, never get squeezed */
+.ossList { max-height: none; overflow: visible }
+.gfTower { max-height: none }
+@media (max-width: 640px) { .gfTower { max-height: none } }
