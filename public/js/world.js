@@ -28,7 +28,7 @@ export function layout(state) {
   const lots = state?.lots || [];
   const list = [
     { kind: 'home', id: 'home', seed: 900, x: HOME.x, w: HOME.w, h: 150 },
-    { kind: 'guide', id: 'guide', seed: 901, x: GUIDE.x, w: GUIDE.w, h: heightOf(1) },
+    { kind: 'guide', id: 'guide', seed: 901, x: GUIDE.x, w: GUIDE.w, h: heightOf(2) },
     { kind: 'plaza', id: 'plaza', seed: 902, x: PLAZA.x, w: PLAZA.w, h: heightOf(4) }
   ];
   lots.forEach(lot => {
@@ -233,6 +233,15 @@ function shell(ctx, b, body, roof) {
   ctx.fillStyle = roof; ctx.fillRect(b.x - 6, top, b.w + 12, ROOF_H);
   ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(b.x, GROUND - GROUND_H - 2, b.w, 3);
 }
+// A banner across one upper floor (floor 0 = first floor above the ground floor): used for quests, extra tenants and apartment flats
+function floorSign(ctx, b, floor, text, bg, fg = '#fff', mine = false) {
+  const fy = GROUND - GROUND_H - (floor + 1) * FLOOR_H, w = b.w - 24, x = b.x + 12, y = fy + FLOOR_H / 2 - 9;
+  ctx.fillStyle = bg; rr(ctx, x, y, w, 18, 6); ctx.fill();
+  if (mine) { ctx.strokeStyle = '#ffb703'; ctx.lineWidth = 2; rr(ctx, x, y, w, 18, 6); ctx.stroke(); }
+  ctx.font = '700 11px system-ui, sans-serif'; ctx.fillStyle = fg; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(fitText(ctx, text, w - 12), b.x + b.w / 2, y + 9.5);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
 function signBoard(ctx, b, text, color, fg = '#fff') {
   const gy = GROUND - GROUND_H;
   ctx.fillStyle = color; rr(ctx, b.x + 8, gy + 4, b.w - 16, 22, 5); ctx.fill();
@@ -313,6 +322,12 @@ function drawLot(ctx, b, env) {
     pill(ctx, b.x + 46, GROUND - b.h - (hash(b.seed, 3) < 0.5 ? 16 : 4), `💰 ${env.money ? env.money(b.cash, true) : k} ${trend > 0 ? '▲' : trend < 0 ? '▼' : '•'}`,
       b.cash < 0 ? '#c0453f' : 'rgba(35,40,55,.72)', '#fff', 10);
   }
+  // extra tenants get their own banner on an upper floor (the ground-floor sign shows the first one)
+  if (tenants.length > 1 && visibleFloors > 0) {
+    const byFloor = new Map();
+    tenants.slice(1).forEach((c, i) => { const f = i % visibleFloors; (byFloor.get(f) || byFloor.set(f, []).get(f)).push(c); });
+    for (const [f, list] of byFloor) floorSign(ctx, b, f, list.map(c => env.name(c)).join(' · '), 'rgba(35,40,55,.82)', '#fff', list.some(c => c.founders.includes(me) || c.employees.includes(me)));
+  }
   const label = lot.type === 'coworking' && !tenants.length ? env.t('ui.coworkingSign')
     : tenants.length ? env.name(tenants[0]) + (tenants.length > 1 ? ` +${tenants.length - 1}` : '') : `${lot.size} m²`;
   signBoard(ctx, b, label, color, mine ? '#3a2a05' : '#fff');
@@ -357,7 +372,8 @@ function drawHome(ctx, b, env) {
 }
 function drawGuide(ctx, b, env) {
   shell(ctx, b, '#f6d77a', '#c99a3c');
-  drawUpperFloors(ctx, b, 1, env.time);
+  drawUpperFloors(ctx, b, 2, env.time);
+  floorSign(ctx, b, 1, '🎯 ' + env.t('quest.sign'), '#1d2b53', '#ffb703');   // upper floor: daily quests
   signBoard(ctx, b, env.t('ui.guideSign'), '#d89a1c');
   const books = ['#ef6f6c', '#4f8ff7', '#5cc08a', '#9b7be0', '#f2b84b'];
   interior(ctx, b, { empty: false, staff: [npcLook(42)], goods: books, wall: '#fff6dc' });

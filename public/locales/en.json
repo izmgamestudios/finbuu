@@ -1117,7 +1117,13 @@
     "campaign": "Start a marketing campaign",
     "hire": "Hire an employee",
     "topup": "Top up your transit card",
-    "chat": "Post a chat message"
+    "chat": "Post a chat message",
+    "sign": "QUESTS",
+    "upper": "🎯 Upper floor: Quests",
+    "ground": "📘 Ground floor: Guide",
+    "none": "No active quests right now.",
+    "done": "{{n}}/{{total}} quests done",
+    "guideTitle": "Guide Building"
   },
   "real": {
     "title": "📚 Real Data (Türkiye 2026)",

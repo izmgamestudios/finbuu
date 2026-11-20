@@ -1288,6 +1288,26 @@ socket.on('teamCall', c => {
   openModal(body => { body.append(el('h3', '📣 ' + msg), btn('🏃 ' + t('team.goTo'), () => goToPlayer(c.from, c), { primary: true, isDefault: true })); });
 });
 // ---------- Quests, teams, badges (profile card) ----------
+// ---- Guide building (Sprint 23a): ground floor = guide text, upper floor = daily quests ----
+function openGuideBuilding(tab = 'ground') {
+  openModal(body => {
+    body.append(el('h3', '📘 ' + t('quest.guideTitle')));
+    const row = el('div', null, 'row');
+    [['ground', 'quest.ground'], ['upper', 'quest.upper']].forEach(([k, key]) => { const b = btn(t(key), () => openGuideBuilding(k)); if (k === tab) b.classList.add('primary'); row.append(b); });
+    body.append(row);
+    if (tab === 'ground') { seed.tutorial.forEach(k => body.append(el('p', t(k)))); return; }
+    const p = me(), list = p?.quests || [];
+    if (!list.length) return body.append(el('p', t('quest.none'), 'muted'));
+    body.append(el('small', t('quest.done', { n: list.filter(q => q.done).length, total: list.length }), 'muted'));
+    list.forEach(q => {
+      const d = el('div', null, 'quest' + (q.done ? ' done' : '')), r1 = el('div', null, 'row1');
+      r1.append(el('span', (q.done ? '✅ ' : '🎯 ') + t('quest.' + q.id, { goal: q.goal })), el('b', `${Math.min(q.progress, q.goal)}/${q.goal}`));
+      const bar = el('div', null, 'bar'), fill = el('i'); fill.style.width = `${(Math.min(q.progress, q.goal) / q.goal) * 100}%`; bar.append(fill);
+      d.append(r1, bar, el('small', t('quest.reward', { amount: q.coins, xp: q.xp }), 'muted')); body.append(d);
+    });
+    body.append(el('small', t('quest.resets'), 'muted'));
+  });
+}
 // ---- Sprint 20: support buildings (Open Source hub, Grants hall, GamFed tower) ----
 const L10 = o => (o && (o[i18next.language?.startsWith('tr') ? 'tr' : 'en'] ?? o.tr ?? o.en)) ?? '';
 const dataCache = {};
@@ -1967,7 +1987,7 @@ function openBuilding(b) {
   tutFlag('entered');
   cancelPlan();
   const forThis = ranked.find(s => buildingOf(s.target)?.id === b.id);
-  if (b.kind === 'guide') return openModal(body => { body.append(el('h3', t('ui.guide'))); seed.tutorial.forEach(k => body.append(el('p', t(k)))); });
+  if (b.kind === 'guide') return openGuideBuilding();
   if (b.kind === 'demoday') return openDemoDay();
   if (b.kind === 'oss') return openOss();
   if (b.kind === 'grants') return openGrants();

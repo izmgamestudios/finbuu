@@ -194,6 +194,7 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
   presentation: publicPresentation(st) || null,
+  flats: (st.flats || []).map(f => ({ id: f.id, name: f.name, open: !!f.open })),
   city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(),
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 // ---------- PREMIUM FLAGS (Sprint 16): admin switches Premium features on/off globally; persisted in data/premium.json ----------
@@ -366,6 +367,14 @@ function idleTick(st) {
   }
 }
 // Player ids are socket ids: when a player comes back on a new socket, every reference in the whole world is renamed
+// ---------- Apartment (Sprint 23b): every player of a room gets one flat (= one floor of the home building) ----------
+// st.flats = [{ id: playerId, name, open }] in order of arrival; `open` = door open to visitors. Persisted with the room.
+function ensureFlat(st, p) {
+  st.flats ||= []; let f = st.flats.find(x => x.id === p.id);
+  if (!f) { f = { id: p.id, name: p.name, open: true }; st.flats.push(f); } else f.name = p.name;
+  return f;
+}
+const flatCid = ownerId => 'home:' + ownerId;
 function remapPlayerId(worldId, oldId, newId) {
   for (const r of Object.values(rooms)) {
     if (r.worldId !== worldId) continue;
@@ -375,6 +384,7 @@ function remapPlayerId(worldId, oldId, newId) {
       if (c.investors && Object.hasOwn(c.investors, oldId)) { c.investors[newId] = c.investors[oldId]; delete c.investors[oldId]; }
     }
     if (r.ownerId === oldId) r.ownerId = newId;
+    for (const f of r.flats || []) if (f.id === oldId) f.id = newId;
     if (r.presentation?.muted && r.presentation.muted[oldId]) { r.presentation.muted[newId] = true; delete r.presentation.muted[oldId]; }
     delete r.pastPlayers[oldId];
   }
@@ -408,7 +418,9 @@ const knowBonus = p => 1 + Math.min(0.15, (p?.stats?.knowledge || 0) * 0.0005);
 function lifeTick(st, p) {
   const L = ensureLife(p), month = R.calendar((st.day || 0) + 1).month;
   let due = LIFE.housing[L.housing].perDay * cityRentFactor(st);
-  if (L.housing !== 'family') for (const k of UTIL_KEYS) if (L.utilities[k]) due += LIFE.utilitiesPerDay[k] * (k === 'gas' ? (isWinter(month) ? 1.8 : 0.3) : 1);
+  // every flat has its own meters (Sprint 23b); living with family shares the bills (50 %)
+  const share = L.housing === 'family' ? 0.5 : 1;
+  for (const k of UTIL_KEYS) if (L.utilities[k]) due += LIFE.utilitiesPerDay[k] * share * (k === 'gas' ? (isWinter(month) ? 1.8 : 0.3) : 1);
   L.billAcc = Math.min(L.billAcc + due, due * 10);
   const pay = Math.floor(L.billAcc);
   if (pay > 0) {
@@ -416,7 +428,7 @@ function lifeTick(st, p) {
     else { L.unpaid++; L.happiness -= 5; if (L.unpaid >= 3) { L.housing = 'family'; L.unpaid = 0; L.billAcc = 0; addLog(st, 'log.evicted', { player: p.name }); } }
   }
   L.happiness += LIFE.housing[L.housing].comfort - 1.2; L.health -= 0.4;
-  if (L.housing !== 'family') {
+  {
     if (!L.utilities.electricity) L.happiness -= 2;
     if (!L.utilities.internet) L.happiness -= 1;
     if (!L.utilities.water) L.health -= 2;
@@ -636,7 +648,7 @@ io.on('connection', socket => {
   function arrive(st) {
     street = st; myWorld = st.worldId; me.x = terminalX(st); me.dir = 1; me.counters ||= {};
     delete st.pastPlayers[socket.id]; ensureQuests(st, me);
-    st.players[socket.id] = me;
+    st.players[socket.id] = me; ensureFlat(st, me);
     if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
     socket.join(st.id);
     addLog(st, 'log.arrivedCity', { player: me.name });
@@ -650,7 +662,7 @@ io.on('connection', socket => {
       coins: SEED.startCoins, role: 'role.candidate', stats: newStats(),
       x: SPAWN_X, dir: 1, avatar: crypto.randomInt(0, 1000), busCard: 0, badges: {}, counters: {}, team: null, life: newLife(), resumeToken: crypto.randomBytes(16).toString('hex') };
     ensureQuests(st, me);
-    st.players[socket.id] = me;
+    st.players[socket.id] = me; ensureFlat(st, me);
     if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
     socket.join(st.id);
     addLog(st, 'log.joined', { player: me.name });
@@ -1112,7 +1124,7 @@ io.on('connection', socket => {
     me = p; me.id = socket.id; me.afk = false; me.loc = null; delete me.offlineSince;
     street = st; myWorld = st.worldId;
     for (const r of Object.values(rooms)) if (r.worldId === st.worldId) delete r.dormantAt;
-    st.players[socket.id] = me; if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
+    st.players[socket.id] = me; ensureFlat(st, me); if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
     socket.join(st.id); addLog(st, 'log.rejoined', { player: me.name });
     socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null, city: st.city, token: me.resumeToken, resumed: true });
     socket.emit('chatHistory', st.chat || []);
@@ -1124,6 +1136,23 @@ io.on('connection', socket => {
     if (!street || !me || !street.companies[cid] || street.mode === 'presentation') return;
     me.loc = { cid, floor: 0, x: 380, dir: 1 }; sync();
   });
+  // ---- Sprint 23b: apartment flats: visit friends, open/close your door ----
+  socket.on('enterFlat', ({ owner } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r);
+    if (!street || !me || street.mode === 'presentation' || typeof owner !== 'string') return reply({ ok: false });
+    const f = (street.flats || []).find(x => x.id === owner); if (!f) return reply({ ok: false });
+    if (owner !== me.id && !f.open) return reply({ ok: false, key: 'toast.flatClosed' });
+    me.loc = { cid: flatCid(owner), floor: 0, x: 380, dir: 1 };
+    if (owner !== me.id && street.players[owner]) io.to(owner).emit('flatGuest', { name: me.name });
+    sync(); reply({ ok: true });
+  });
+  socket.on('setFlatDoor', ({ open } = {}, cb) => {
+    if (!street || !me) return; const f = (street.flats || []).find(x => x.id === me.id); if (!f) return;
+    f.open = !!open;
+    if (!f.open) for (const p of Object.values(street.players)) if (p.id !== me.id && p.loc?.cid === flatCid(me.id)) { p.loc = null; io.to(p.id).emit('flatClosed', { name: me.name }); }
+    sync(); if (typeof cb === 'function') cb({ ok: true, open: f.open });
+  });
+
   socket.on('leaveBuilding', () => { if (!street || !me?.loc) return; me.loc = null; sync(); });
   let lastInner = 0;
   socket.on('innerMove', ({ floor, x, dir } = {}) => {
@@ -2010,6 +2039,7 @@ function loadRooms() {
     if (!st || !Array.isArray(st.lots) || typeof st.companies !== 'object' || rooms[id]) continue;
     const rid = clean(id, 40);
     rooms[rid] = { ...st, id: rid, players: {}, pastPlayers: st.pastPlayers || {}, archive: st.archive || [], ideas: st.ideas || [], log: st.log || [], ads: st.ads || {}, worldId: st.worldId || rid, tickAt: Date.now() };
+    rooms[rid].flats ||= Object.entries(rooms[rid].pastPlayers).filter(([, p]) => p).map(([pid, p]) => ({ id: pid, name: p.name, open: true }));
     for (const p of Object.values(rooms[rid].pastPlayers)) { if (p) { p.loc = null; p.afk = false; if (p.offlineSince == null) p.offlineSince = st.day || 0; if (!p.away) p.away = awayBaseline(rooms[rid], p); } }
     n++;
   }

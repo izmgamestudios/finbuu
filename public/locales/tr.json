@@ -1117,7 +1117,13 @@
     "campaign": "Pazarlama kampanyası başlat",
     "hire": "Bir çalışan işe al",
     "topup": "Ulaşım kartını yükle",
-    "chat": "Sohbete bir mesaj yaz"
+    "chat": "Sohbete bir mesaj yaz",
+    "sign": "GÖREVLER",
+    "upper": "🎯 Üst kat: Görevler",
+    "ground": "📘 Zemin: Kılavuz",
+    "none": "Şu an aktif görev yok.",
+    "done": "{{n}}/{{total}} görev tamam",
+    "guideTitle": "Kılavuz Binası"
   },
   "real": {
     "title": "📚 Gerçek Veriler (Türkiye 2026)",
