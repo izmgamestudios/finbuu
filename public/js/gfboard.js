@@ -8,10 +8,17 @@ export const boardLabels = () => ({
   toyLabels: tt('toyLabels', { returnObjects: true }), bmc: Object.fromEntries(BMC_KEYS.map(k => [k, i18next.t('bmc.' + k)])), deck: tt('deckTitles', { returnObjects: true })
 });
 
-export function createBoardUi({ el, btn, toast, loadJSON, saveJSON, onChange }) {
+export function createBoardUi({ el, btn, toast, loadJSON, saveJSON, onChange, facts }) {
   let board = cleanBoard(loadJSON('gamfedBoard', null)), share = loadJSON('gamfedShare', null), slideIdx = 0, saveTimer = null;
   const persist = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveJSON('gamfedBoard', board); onChange?.(); }, 300); };
   const U = k => tt('ui.' + k);
+  // ✨ draft suggestions: fill only EMPTY fields from templates, using the player's own company facts (or neutral placeholders)
+  const S = (k, o) => i18next.t('gfBoard.suggest.' + k, o);
+  const F = () => ({ company: S('myProject'), product: S('myProduct'), sector: S('mySector'), city: S('myCity'), founders: S('myFounders'), price: '—', sales: 0, month: 0, cash: 0, staff: 0, ...(facts?.() || {}) });
+  const fillToy = () => { const f = F(); let n = 0; board.toy = board.toy.map((v, i) => { if (v.trim()) return v; n++; return S('toy.' + i, f).slice(0, LIMITS.toy); }); return n; };
+  const fillBmc = () => { const f = F(); let n = 0; BMC_KEYS.forEach(k => { if (!board.bmc[k].trim()) { board.bmc[k] = i18next.t('bmcSuggest.' + k, f).slice(0, LIMITS.bmc); n++; } }); return n; };
+  const fillDeck = () => { const f = F(); let n = 0; board.deck.forEach(s => { if (!s.body.trim() && DECK_IDS.includes(s.id)) { s.body = S('deck.' + s.id, f).slice(0, LIMITS.slideBody); n++; } }); return n; };
+  const suggestBtn = (fill, box, tab) => { const row = el('div', null, 'row'); row.style.cssText = 'align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0'; row.append(btn(S('btn'), () => { const n = fill(); if (!n) return toast(S('nothing')); persist(); toast(S('filled', { n })); renderTab(tab, box); }, { primary: true }), el('small', S('hint'), 'muted')); return row; };
 
   // a textarea bound to a getter/setter with a char counter
   function field(max, get, set, { rows = 3, placeholder = '' } = {}) {
@@ -22,8 +29,9 @@ export function createBoardUi({ el, btn, toast, loadJSON, saveJSON, onChange }) 
   }
   // used inside each floor of the tower: step n (1..10) of the TOY sentence
   const floorField = n => {
-    const box = el('div'); box.append(el('h4', `✍ ${U('yours')} — ${tt('toyLabels', { returnObjects: true })[n - 1]}`), el('small', tt('toyHints', { returnObjects: true })[n - 1], 'muted'),
-      field(LIMITS.toy, () => board.toy[n - 1], v => { board.toy[n - 1] = v; }, { rows: 3, placeholder: U('yoursPh') }), el('small', U('autosave'), 'muted'));
+    const box = el('div'), fld = field(LIMITS.toy, () => board.toy[n - 1], v => { board.toy[n - 1] = v; }, { rows: 3, placeholder: U('yoursPh') });
+    const sug = btn(S('floorBtn'), () => { const ta = fld.querySelector('textarea'); if (ta.value.trim()) return toast(S('nothing')); ta.value = S('toy.' + (n - 1), F()).slice(0, LIMITS.toy); ta.dispatchEvent(new Event('input')); }); sug.type = 'button';
+    box.append(el('h4', `✍ ${U('yours')} — ${tt('toyLabels', { returnObjects: true })[n - 1]}`), el('small', tt('toyHints', { returnObjects: true })[n - 1], 'muted'), fld, sug, el('small', U('autosave'), 'muted'));
     return box;
   };
   const titleRow = () => {
@@ -56,7 +64,7 @@ export function createBoardUi({ el, btn, toast, loadJSON, saveJSON, onChange }) 
   const exportBar = ctx => { const bar = el('div', null, 'row'); bar.style.cssText = 'flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px'; renderBar(bar, ctx); return bar; };
 
   function renderToy(box) {
-    box.append(el('p', tt('toyTitle'), 'muted'), titleRow());
+    box.append(el('p', tt('toyTitle'), 'muted'), titleRow(), suggestBtn(fillToy, box, 'toy'));
     const list = el('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin:8px 0';
     for (let i = 0; i < TOY_N; i++) {
       const row = el('div', null, 'bmcCell'); const head = el('div', null, 'row'); head.style.alignItems = 'center';
@@ -74,13 +82,13 @@ export function createBoardUi({ el, btn, toast, loadJSON, saveJSON, onChange }) 
     prev(); box.append(el('h4', U('preview')), preview, list, exportBar({ name: 'toy', page: () => drawToy(board, boardLabels()) }));
   }
   function renderBmc(box) {
-    box.append(el('p', tt('bmcTitle'), 'muted'), titleRow());
+    box.append(el('p', tt('bmcTitle'), 'muted'), titleRow(), suggestBtn(fillBmc, box, 'bmc'));
     const grid = el('div', null, 'bmc');
     BMC_KEYS.forEach(k => { const cell = el('div', null, 'bmcCell bmc-' + k); cell.append(el('b', `${BMC_ICON[k]} ${i18next.t('bmc.' + k)}`), el('small', i18next.t('bmcHint.' + k), 'muted'), field(LIMITS.bmc, () => board.bmc[k], v => { board.bmc[k] = v; }, { rows: 3 })); grid.append(cell); });
     box.append(grid, exportBar({ name: 'canvas', page: () => drawBmc(board, boardLabels()) }));
   }
   function renderDeck(box) {
-    box.append(el('p', tt('ui.tabDeck'), 'muted'), titleRow());
+    box.append(el('p', tt('ui.tabDeck'), 'muted'), titleRow(), suggestBtn(fillDeck, box, 'deck'));
     const nav = el('div', null, 'others'), edit = el('div', null, 'co');
     const draw = () => {
       slideIdx = Math.max(0, Math.min(slideIdx, board.deck.length - 1));

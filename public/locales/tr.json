@@ -1900,6 +1900,42 @@
       "openGame": "Finbuu'yu oyna",
       "readonly": "Salt okunur pano",
       "allPages": "Tüm sayfalar"
+    },
+    "suggest": {
+      "btn": "✨ Taslak öner",
+      "hint": "Boş alanları örnek metinlerle doldurur (kendi şirketinin bilgileriyle); sonra düzenleyebilirsin.",
+      "filled": "{{n}} alan için taslak eklendi",
+      "nothing": "Dolduracak boş alan kalmadı",
+      "floorBtn": "✨ Öneri",
+      "myProject": "Projem",
+      "myProduct": "ürünüm",
+      "mySector": "sektörüm",
+      "myCity": "şehrim",
+      "myFounders": "kurucu ekip",
+      "toy": [
+        "{{company}} için ilk 3 ayda satışları ve müşteri memnuniyetini artırmak; ekibin motivasyonunu yükseltmek",
+        "Düzenli müşteri ziyareti, günlük en az 10 satış, ekip içinde bilgi paylaşımı",
+        "{{sector}} alanında çalışan, rekabeti seven, 20–35 yaş girişimci adayları",
+        "Çırak girişimci → ilk satış → ekip kurucu → pazar lideri hikâyesi",
+        "Merak, başarı hissi, gurur ve sağlıklı rekabet",
+        "Puan (XP), rozetler, günlük görevler, liderlik tablosu, seviye atlama",
+        "Coin, yeni bina katları, rozetler ve statü; ortak hedeflerde takım ödülü",
+        "Finbuu oyunu, CRM/KPI panosu, takvim ve Gantt, açık kaynak araçlar",
+        "Günlük görev bildirimi, haftalık yarış, seri bozulmadan hatırlatma",
+        "Haftalık satış adedi, giriş serisi, görev tamamlama oranı, aylık ciro ({{price}} birim fiyat)"
+      ],
+      "deck": {
+        "problem": "{{city}} bölgesinde {{sector}} alanında müşteriler hızlı ve uygun fiyatlı {{product}} bulmakta zorlanıyor.",
+        "solution": "{{company}}, {{product}} ürününü kolay sipariş, adil fiyat ({{price}}) ve güvenilir teslimatla sunar.",
+        "market": "{{city}} ve çevresinde {{sector}} alanında geniş ve büyüyen bir müşteri tabanı; ilk hedef yerel müşteriler.",
+        "product": "{{product}}: basit kullanım, hızlı teslim ve müşteri geri bildirimiyle sürekli gelişen ürün.",
+        "model": "Birim satış geliri ({{price}}), tekrar eden müşteriler ve paket/indirim kampanyaları.",
+        "traction": "Şimdiye kadar {{sales}} satış, bu ay net {{month}}, {{staff}} kişilik ekip.",
+        "competition": "Yerel rakipler benzer ürünü sunuyor; biz hız, fiyat/performans ve müşteri ilişkisiyle ayrışıyoruz.",
+        "team": "{{founders}} ve {{staff}} kişilik ekip; satış, operasyon ve müşteri ilişkileri.",
+        "finance": "Kasada {{cash}}; aylık gelirin %30'u büyümeye (reklam, personel), kalanı işletme giderlerine ayrılır.",
+        "ask": "Büyümek için yatırım, hibe ve stratejik ortak arıyoruz; kullanım alanı: ekip, pazarlama ve stok."
+      }
     }
   },
   "acct": {

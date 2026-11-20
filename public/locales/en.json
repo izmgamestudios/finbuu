@@ -814,7 +814,7 @@
     "guestOnly": "You are a guest: only the host can use the rooms.",
     "apt": {
       "title": "Apartment block",
-      "intro": "Every player in the room has a flat (one floor): {{n}} flats right now. You can visit friends whose door is open.",
+      "intro": "Every player in the room has a flat (one floor). Flats right now: {{n}}. You can visit friends whose door is open.",
       "floor": "Floor {{n}}",
       "you": "you",
       "open": "Door open",
@@ -1900,6 +1900,42 @@
       "openGame": "Play Finbuu",
       "readonly": "Read-only board",
       "allPages": "All pages"
+    },
+    "suggest": {
+      "btn": "✨ Suggest a draft",
+      "hint": "Fills the empty fields with sample text based on your own company; edit it afterwards.",
+      "filled": "Draft added for {{n}} fields",
+      "nothing": "No empty fields left to fill",
+      "floorBtn": "✨ Suggest",
+      "myProject": "My project",
+      "myProduct": "my product",
+      "mySector": "my sector",
+      "myCity": "my city",
+      "myFounders": "the founding team",
+      "toy": [
+        "Increase sales and customer satisfaction at {{company}} within 3 months and raise team motivation",
+        "Regular customer visits, at least 10 sales a day, knowledge sharing inside the team",
+        "Competitive entrepreneurs aged 20–35 working in {{sector}}",
+        "Apprentice entrepreneur → first sale → team founder → market leader story",
+        "Curiosity, sense of achievement, pride and healthy rivalry",
+        "Points (XP), badges, daily quests, leaderboard, level-ups",
+        "Coins, new building floors, badges and status; team rewards for shared goals",
+        "The Finbuu game, CRM/KPI dashboard, calendar and Gantt, open-source tools",
+        "Daily quest notification, weekly race, a reminder before the streak breaks",
+        "Weekly sales count, login streak, quest completion rate, monthly revenue (unit price {{price}})"
+      ],
+      "deck": {
+        "problem": "In {{city}} customers struggle to find fast and fairly priced {{product}} in {{sector}}.",
+        "solution": "{{company}} offers {{product}} with easy ordering, a fair price ({{price}}) and reliable delivery.",
+        "market": "A broad, growing customer base in {{sector}} in and around {{city}}; local customers come first.",
+        "product": "{{product}}: simple to use, fast delivery and continuously improved with customer feedback.",
+        "model": "Revenue per unit sold ({{price}}), repeat customers and bundle/discount campaigns.",
+        "traction": "{{sales}} sales so far, {{month}} net this month, a team of {{staff}}.",
+        "competition": "Local competitors offer a similar product; we stand out on speed, value for money and customer relationships.",
+        "team": "{{founders}} and a team of {{staff}}; sales, operations and customer relations.",
+        "finance": "{{cash}} in cash; 30% of monthly revenue goes to growth (ads, staff), the rest to running costs.",
+        "ask": "We are looking for investment, grants and strategic partners to grow; use of funds: team, marketing and stock."
+      }
     }
   },
   "acct": {

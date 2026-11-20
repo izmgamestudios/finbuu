@@ -396,7 +396,7 @@ function updateControls() {
   $('budgetBtn').hidden = $('doorBtn').hidden = !inOwnFlat();
   $('advisor').hidden = !joined || scene.name !== 'street';
   $('advChip').hidden = $('advisor').hidden;
-  const mapOk = !!joined && scene.name === 'street' && !isPres(); $('dwClass').hidden = !(joined && joined.mode === 'multiplayer'); $('mapBtn').hidden = !mapOk; $('zoomBox').hidden = !joined || isPres(); $('guideBtn').hidden = !joined || isPres(); ['zoomIn', 'zoomOut', 'worldBtn'].forEach(id => { $(id).hidden = !mapOk; }); if (!mapOk && minimapOpen) toggleMinimap(false);
+  const mapOk = !!joined && scene.name === 'street' && !isPres(); document.body.classList.toggle('inBuilding', scene.name !== 'street'); $('dwClass').hidden = !(joined && joined.mode === 'multiplayer'); $('mapBtn').hidden = !mapOk; $('zoomBox').hidden = !joined || isPres(); $('guideBtn').hidden = !joined || isPres(); ['zoomIn', 'zoomOut', 'worldBtn'].forEach(id => { $(id).hidden = !mapOk; }); if (!mapOk && minimapOpen) toggleMinimap(false);
 }
 
 // ---------- Input: keyboard ----------
@@ -1842,7 +1842,7 @@ function openGrants() {
 }
 let gfUi = null;
 function openGamFed(startFloor = 1, startTab = 'floors') {
-  gfUi ||= createBoardUi({ el, btn, toast, loadJSON, saveJSON, onChange: () => acctUi?.pushBoard() });
+  gfUi ||= createBoardUi({ el, btn, toast, loadJSON, saveJSON, onChange: () => acctUi?.pushBoard(), facts: () => { const c = Object.values(state?.companies || {}).find(x => x.founders.includes(myId())); return c ? demoFacts(c) : {}; } });
   loadData('gamfed', g => openModal(body => {
     body.classList.add('wideBody'); body.append(el('h3', '🎮 ' + g.title[i18next.language?.startsWith('tr') ? 'tr' : 'en']), el('p', L10(g.intro), 'muted'));
     const seen = new Set(loadJSON('gamfedSeen', [])); let cur = startFloor;
@@ -2219,12 +2219,12 @@ function openModal(fill, { closable = true, onClose = null } = {}) {
   modalClosable = closable; modalOpen = true; modalOnClose = onClose;
   const body = $('modalBody'); body.replaceChildren(); body.classList.remove('wideBody'); delete body.dataset.npc; delete body.dataset.modes; fill(body);
   if (closable) { const b = el('button', t('ui.close')); b.onclick = closeModal; body.append(b); const x = el('button', '✕', 'modalX'); x.type = 'button'; x.setAttribute('aria-label', t('ui.close')); x.onclick = closeModal; body.prepend(x); }
-  $('modal').style.display = 'flex';
+  $('modal').style.display = 'flex'; document.body.classList.add('modalOn');
   const def = body.querySelector('[data-default]');
   if (def && !touch && !body.querySelector('input:focus')) setTimeout(() => def.focus(), 30);
 }
 function closeModal() {
-  $('modal').style.display = 'none'; modalOpen = false;
+  $('modal').style.display = 'none'; modalOpen = false; document.body.classList.remove('modalOn');
   if (modalOnClose) { const cb = modalOnClose; modalOnClose = null; cb(); }
 }
 $('modal').onclick = e => { if (e.target.id === 'modal' && modalClosable) closeModal(); };
