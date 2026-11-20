@@ -28,6 +28,7 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
 if (!ADMIN_TOKEN || ADMIN_TOKEN.length < 12) { console.error('ADMIN_TOKEN env (min 12 chars) is required'); process.exit(1); }
 
 const app = express();
+app.set('trust proxy', 1); // behind nginx: req.ip = real client (rate limits)
 app.disable('x-powered-by');
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -40,6 +41,14 @@ const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 1e6, perMessageDeflate: { threshold: 1024 } });
 // building content (Open Source catalog, Grants, GamFed): admin override first, committed default otherwise
 app.get('/data/:name.json', (req, res, next) => { const doc = CONTENT.NAMES.includes(req.params.name) ? CONTENT.read(req.params.name) : null; if (!doc) return next(); res.set('Cache-Control', 'no-cache'); res.json(doc); });
+// Sprint 28: GamFed boards shared by link (read-only page /b/:id)
+const BOARDS = require('./boards');
+const boardApi = express.Router(); boardApi.use(express.json({ limit: '40kb' }));
+boardApi.post('/', (req, res) => { if (!BOARDS.allow(req.ip)) return res.status(429).json({ ok: false }); const r = BOARDS.create(req.body?.board); res.status(r ? 200 : 400).json(r ? { ok: true, ...r } : { ok: false }); });
+boardApi.put('/:id', (req, res) => { if (!BOARDS.allow(req.ip)) return res.status(429).json({ ok: false }); const ok = /^[a-z0-9]{8}$/.test(req.params.id) && BOARDS.update(req.params.id, String(req.body?.editKey || ''), req.body?.board); res.status(ok ? 200 : 403).json({ ok: !!ok }); });
+boardApi.get('/:id', (req, res) => { const b = /^[a-z0-9]{8}$/.test(req.params.id) ? BOARDS.get(req.params.id) : null; if (!b) return res.status(404).json({ ok: false }); res.set('Cache-Control', 'no-cache'); res.json({ ok: true, ...b }); });
+app.use('/api/boards', boardApi);
+app.get('/b/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'board.html')));
 app.use(express.static(path.join(__dirname, 'public')));
 // Vendor libs served from node_modules (pinned via package-lock, no CDN dependency)
 app.use('/vendor/i18next', express.static(path.join(__dirname, 'node_modules/i18next/dist/umd')));

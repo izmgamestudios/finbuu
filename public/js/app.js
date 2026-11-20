@@ -7,6 +7,7 @@ import { paintAd, AD_SIZE } from './ads.js';
 import { renderTrMap } from './trmap.js';
 import { rankFaq, searchItems, tutorialState, FAQ_IDS } from './help.js';
 import { suggestions, companyActions, employeeCap, maxTenants, staffOf, floorsFor, floorsOfCompany, deptOpen } from './advisor.js';
+import { createBoardUi } from './gfboard.js';
 import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON, HOME_ROOMS, HOME_FLOORS } from './interior.js';
 
 const { i18next, io, Chart } = window;
@@ -1599,7 +1600,9 @@ function openGrants() {
     if (demo) body.append(btn('🎤 ' + t('grants.demo'), () => { closeModal(); walkTo(demo.x + demo.w / 2, () => openBuilding(demo), demo.id); }, { primary: true }));
   }));
 }
-function openGamFed(startFloor = 1) {
+let gfUi = null;
+function openGamFed(startFloor = 1, startTab = 'floors') {
+  gfUi ||= createBoardUi({ el, btn, toast, loadJSON, saveJSON });
   loadData('gamfed', g => openModal(body => {
     body.classList.add('wideBody'); body.append(el('h3', '🎮 ' + g.title[i18next.language?.startsWith('tr') ? 'tr' : 'en']), el('p', L10(g.intro), 'muted'));
     const seen = new Set(loadJSON('gamfedSeen', [])); let cur = startFloor;
@@ -1609,14 +1612,22 @@ function openGamFed(startFloor = 1) {
       const f = g.floors[n - 1];
       tower.replaceChildren(...[...g.floors].reverse().map(x => { const b = el('button', null, 'gfFloor' + (x.n === cur ? ' on' : '') + (seen.has(x.n) ? ' seen' : '')); b.type = 'button'; b.append(el('i', String(x.n)), el('span', `${x.icon} ${L10(x.title)}`)); b.onclick = () => show(x.n); return b; }));
       panel.replaceChildren(el('small', t('gamfed.step', { n: f.n }), 'muted'), el('h3', `${f.icon} ${L10(f.title)}`), el('p', L10(f.desc)), el('h4', '🎮 ' + t('gamfed.inFinbuu')), el('p', L10(f.game)), el('small', '📚 ' + t('gamfed.ref'), 'muted'));
+      panel.append(gfUi.floorField(f.n));
       const nav = el('div', null, 'row'); const dn = btn('▼ ' + t('gamfed.prev'), () => show(cur - 1)), up = btn('▲ ' + t('gamfed.next'), () => show(cur + 1), { primary: true });
       dn.disabled = cur <= 1; up.disabled = cur >= g.floors.length; nav.append(dn, up); panel.append(nav);
       prog.textContent = t('gamfed.visited', { n: seen.size });
       if (seen.size === g.floors.length && !loadJSON('gamfedDone', false)) { saveJSON('gamfedDone', true); toast(t('gamfed.done')); }
     };
-    wrap.append(tower, panel); body.append(wrap, prog);
+    wrap.append(tower, panel);
+    const tabsBar = el('div', null, 'others'), boardBox = el('div', null, 'co'), floorsBox = el('div'); floorsBox.append(wrap, prog);
+    const setTab = tab => {
+      tabsBar.replaceChildren(...[['floors', 'tabFloors'], ['toy', 'tabToy'], ['bmc', 'tabBmc'], ['deck', 'tabDeck']].map(([k, key]) => btn(t('gfBoard.ui.' + key), () => setTab(k), { primary: k === tab })));
+      floorsBox.hidden = tab !== 'floors'; boardBox.hidden = tab === 'floors';
+      if (tab === 'floors') show(cur); else gfUi.renderTab(tab, boardBox);
+    };
+    body.append(tabsBar, floorsBox, boardBox);
     const src = el('div', null, 'row'); src.append(el('small', '📚 ' + t('gamfed.sources') + ':', 'muted')); g.sources.forEach(x => { const u = safeUrl(x.url); if (u) src.append(extLink(x.label, u)); }); body.append(src);
-    show(startFloor);
+    setTab(startTab);
   }));
 }
 // ---- Sprint 17c: Mini SaaS ERP (stock / capacity + supply orders) ----

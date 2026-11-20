@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Finbuu GamFed Board</title>
+<link rel="stylesheet" href="/css/fonts.css">
+<style>
+  :root { --bg: #f6f3ea; --ink: #1c2233; --panel: #fff; --line: #ddd6c3; --gold: #f5b942 }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0e1424; --ink: #e8ecf6; --panel: #172038; --line: #2b3658 } }
+  * { box-sizing: border-box }
+  body { margin: 0; font-family: Nunito, system-ui, sans-serif; background: var(--bg); color: var(--ink) }
+  header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 14px 16px; background: #0f1b3d; color: #fff; border-bottom: 3px solid var(--gold) }
+  header h1 { margin: 0; font-size: 1.15rem } header small { color: #aab6dd }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px }
+  button, a.btn { font: inherit; font-weight: 700; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; text-decoration: none }
+  .primary { background: var(--gold); border-color: var(--gold); color: #0b0f1a }
+  figure { margin: 0 0 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px }
+  figure canvas { width: 100%; height: auto; display: block; border-radius: 8px }
+  figcaption { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 4px 0; font-size: .85rem; color: var(--ink) }
+  #msg { padding: 30px 0; text-align: center }
+</style>
+</head>
+<body>
+<header><div><h1 id="h">Finbuu</h1><small id="sub"></small></div><a class="btn primary" href="/" id="play">Finbuu</a></header>
+<main>
+  <div id="msg">…</div>
+  <div class="bar" id="bar" hidden></div>
+  <div id="pages"></div>
+</main>
+<script type="module">
+import { cleanBoard, allPages, toBlob, pdfFromCanvases, download, slug } from '/js/board.js';
+const $ = id => document.getElementById(id);
+const lang = (navigator.language || 'tr').toLowerCase().startsWith('tr') ? 'tr' : 'en';
+const id = location.pathname.split('/').pop();
+try {
+  const [loc, res] = await Promise.all([fetch(`/locales/${lang}.json`).then(r => r.json()), fetch(`/api/boards/${encodeURIComponent(id)}`)]);
+  const L = loc.gfBoard, U = L.ui; document.documentElement.lang = lang;
+  if (!res.ok) { $('msg').textContent = U.notFound; throw 0; }
+  const j = await res.json(), board = cleanBoard(j.board);
+  const labels = { brand: L.brand, site: L.site, untitled: L.untitled, toyTitle: L.toyTitle, bmcTitle: L.bmcTitle, slide: L.slide, emptySlide: L.emptySlide, sentence: L.sentence, toyLabels: L.toyLabels, bmc: loc.bmc, deck: L.deckTitles };
+  $('h').textContent = board.title || U.viewTitle; $('sub').textContent = `${U.readonly} · ${L.brand}`; $('play').textContent = U.openGame; document.title = `${board.title || U.viewTitle} · Finbuu`;
+  await Promise.all(['700 20px Nunito', '800 20px Nunito', '600 20px Nunito'].map(f => document.fonts.load(f).catch(() => {})));
+  const pages = allPages(board, labels), names = ['toy', 'canvas', ...board.deck.map((_, i) => `slide-${i + 1}`)];
+  pages.forEach((c, i) => {
+    const f = document.createElement('figure'), cap = document.createElement('figcaption'), b = document.createElement('button');
+    b.textContent = U.png; b.onclick = async () => download(await toBlob(c, 'image/png'), `${slug(board.title)}-${names[i]}.png`);
+    cap.append(document.createTextNode(names[i]), b); f.append(c, cap); $('pages').append(f);
+  });
+  const pdf = document.createElement('button'); pdf.className = 'primary'; pdf.textContent = U.pdf; pdf.onclick = async () => download(await pdfFromCanvases(pages), `${slug(board.title)}.pdf`);
+  $('bar').append(pdf); $('bar').hidden = false; $('msg').hidden = true;
+} catch (e) { if (e) { $('msg').textContent = '⚠'; console.error(e); } }
+</script>
+</body>
+</html>
