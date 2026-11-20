@@ -323,7 +323,8 @@
     "notAtStop": "You need to be at a stop.",
     "saved": "Saved.",
     "teamsFull": "Team limit reached.",
-    "topupOk": "Card topped up."
+    "topupOk": "Card topped up.",
+    "crmCooldown": "This customer was followed up very recently."
   },
   "log": {
     "joined": "{{player}} entered the street.",
@@ -1319,5 +1320,37 @@
         "kw": "premium paid voice video meeting soon locked"
       }
     }
+  },
+  "crm": {
+    "open": "📇 CRM & KPI (Mini SaaS)",
+    "title": "Mini SaaS · CRM & KPI",
+    "intro": "Customers collect here automatically: sales and customer conversations create records. Follow up to win back dormant customers.",
+    "kpiTitle": "Indicators (KPI)",
+    "customers": "Customers",
+    "active": "Active",
+    "dormant": "Dormant (30+ days)",
+    "leads": "Leads",
+    "repeat": "Repeat buyers",
+    "avgOrder": "Avg. order",
+    "ltv": "Customer value (LTV)",
+    "rev30": "Revenue (30 days)",
+    "margin": "Profit margin",
+    "cac": "Acquisition cost (CAC)",
+    "none": "—",
+    "list": "Customer list",
+    "empty": "No customers yet. Make a sale or 🗣 talk to a customer.",
+    "orders": "{{n}} orders",
+    "last": "last: day {{d}}",
+    "follow": "Follow up ({{cost}})",
+    "wait": "Wait",
+    "chance": "{{p}}% chance",
+    "won": "Follow-up worked! +{{amount}}",
+    "lost": "The customer did not come back this time.",
+    "stage": {
+      "lead": "Lead",
+      "active": "Active",
+      "dormant": "Dormant"
+    },
+    "tip": "Tip: following up a dormant customer converts better than an active one."
   }
 }

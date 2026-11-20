@@ -21,6 +21,8 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **14 — Satış roleplay** | Satış bölümünde 🗣 "Müşteriyle konuş": 4 müşteri tipi (güler yüzlü/aceleci/tutumlu/şüpheci, olumlu-kararsız-olumsuz) × 3 tur soru-cevap · her cevap ilgi barını artırır/düşürür · sonuç: büyük satış (5 adet) / normal / yarım kaldı / müşteri gitti · kazanç, XP, bilgi · 3 büyük satış → 🤝 Satış Ustası rozeti · 12 sn bekleme | ✅ Tamam |
 | **15 — Yardım & rehber** | Üstte ❓ (F1 / ?) yardım penceresi: 16 konuluk kural tabanlı sohbet botu (TR+EN, API maliyeti yok) + oyun içi arama (şirket/yer/oyuncu → tıkla, yürü) + sıradaki öneri · sahnede 6 adımlık otomatik işaretlenen başlangıç rehberi (yürü, gir, şirket kur, sat, işe al, finans) | ✅ Tamam |
 | **16 — Premium yönetimi** | Admin panelinde ⭐ Premium sekmesi: Premium şehirleri (Adana, Konya, Gaziantep, Kayseri) tüm oyunculara aç/kapa · anında yansır (`seed` yeniden yayınlanır) · `data/premium.json` ile kalıcı · sesli/görüntülü/online mod "pek yakında" olarak listelenir, açılamaz · denetim kaydı | ✅ Tamam |
+| **17a — Mini SaaS: CRM + KPI** | Bilgi İşlem (IT) bölümünde 📇 CRM & KPI: satışlar ve müşteri görüşmeleri otomatik müşteri kaydı oluşturur (aday/aktif/pasif) · 10 KPI (müşteri sayısı, tekrar alan %, ort. sipariş, LTV, 30 gün gelir, kâr marjı, CAC…) · ₺ karşılığı "Takip et": aday/pasif müşteriyi geri kazanma şansı (%30–50), 10 gün bekleme | ✅ Tamam |
+| 17b — Takvim + Gantt, 17c — ERP (stok/sipariş) | Sonraki | ⏳ |
 | **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ⬜ |
 | **15 — Başlangıç & yardım** | İlk girişte atlanabilir tutorial · chatbot · yardım penceresi · oyun içi ayrıntılı arama (işletme, üye, görev, özellik) | ⬜ |
 | **16 — Premium yönetimi** | Admin Premium'u aç/kapa, şehir ve özellik kilitlerini yönet | ⬜ |
@@ -118,3 +120,9 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - Premium şehirlerin kira verileri **tahmin** (`est`): Adana 300, Konya 260, Gaziantep 280, Kayseri 270 ₺/m²/ay — gerçek veriyle güncellenmeli.
 - Kapatınca şehirdeki mevcut oyuncular atılmaz; yeni oda/seyahat engellenir.
 - Hesap bazlı (ödemeli) Premium için kullanıcı hesabı/DB gerekir; şimdilik küresel bayrak.
+
+## Sprint 17a notları
+- `crm.js` saf yardımcılar; sunucu olayları `crmGet` / `crmFollow` (IT bölümü açık + şirket üyesi şartı). CRM verisi herkese yayınlanan state'e girmez, istek üzerine alınır.
+- Müşteri kaydı: satış tıklamasında %8 olasılık, müşteri görüşmesinde her sonuç. En fazla 40 müşteri (en düşük harcamalı silinir).
+- KPI değerleri son 30 günlük finans kayıtlarından hesaplanır; gelir/marj ilk oyun gününden önce "—" gösterir.
+- Takip: maliyet 10 coin, kazanç ≈ 3 birimlik satış; şans aday %40, pasif %50, aktif %30.

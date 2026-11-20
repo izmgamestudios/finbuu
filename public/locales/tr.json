@@ -323,7 +323,8 @@
     "notAtStop": "Bir durakta olmalısın.",
     "saved": "Kaydedildi.",
     "teamsFull": "Takım sınırına ulaşıldı.",
-    "topupOk": "Kart yüklendi."
+    "topupOk": "Kart yüklendi.",
+    "crmCooldown": "Bu müşteri çok yakın zamanda takip edildi."
   },
   "log": {
     "joined": "{{player}} caddeye girdi.",
@@ -1319,5 +1320,37 @@
         "kw": "premium ucretli sesli goruntulu toplanti yakinda kilit"
       }
     }
+  },
+  "crm": {
+    "open": "📇 CRM & KPI (Mini SaaS)",
+    "title": "Mini SaaS · CRM & KPI",
+    "intro": "Müşterilerin burada otomatik birikir: satışlar ve müşteri görüşmeleri kayıt oluşturur. Takip ederek pasif müşterileri geri kazan.",
+    "kpiTitle": "Göstergeler (KPI)",
+    "customers": "Müşteri",
+    "active": "Aktif",
+    "dormant": "Pasif (30+ gün)",
+    "leads": "Aday",
+    "repeat": "Tekrar alan",
+    "avgOrder": "Ort. sipariş",
+    "ltv": "Müşteri değeri (LTV)",
+    "rev30": "Gelir (30 gün)",
+    "margin": "Kâr marjı",
+    "cac": "Müşteri maliyeti (CAC)",
+    "none": "—",
+    "list": "Müşteri listesi",
+    "empty": "Henüz müşteri yok. Satış yap ya da 🗣 müşteriyle konuş.",
+    "orders": "{{n}} sipariş",
+    "last": "son: gün {{d}}",
+    "follow": "Takip et ({{cost}})",
+    "wait": "Bekle",
+    "chance": "şans %{{p}}",
+    "won": "Takip işe yaradı! +{{amount}}",
+    "lost": "Müşteri bu sefer dönmedi.",
+    "stage": {
+      "lead": "Aday",
+      "active": "Aktif",
+      "dormant": "Pasif"
+    },
+    "tip": "İpucu: pasif müşteriyi takip etmek aktif müşteriden daha yüksek şansla satış getirir."
   }
 }

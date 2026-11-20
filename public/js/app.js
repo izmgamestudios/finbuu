@@ -1241,6 +1241,33 @@ socket.on('teamCall', c => {
   openModal(body => { body.append(el('h3', '📣 ' + msg), btn('🏃 ' + t('team.goTo'), () => goToPlayer(c.from, c), { primary: true, isDefault: true })); });
 });
 // ---------- Quests, teams, badges (profile card) ----------
+// ---- Sprint 17a: Mini SaaS CRM + KPI ----
+function openCrm(c) {
+  socket.emit('crmGet', { cid: c.id }, g => {
+    if (!g) return;
+    openModal(body => {
+      body.append(el('h3', `${t('crm.title')} · ${companyName(c)}`), el('p', t('crm.intro'), 'muted'));
+      const k = g.kpi, na = t('crm.none');
+      const tiles = el('div', null, 'mini');
+      tiles.append(kpi(t('crm.customers'), String(k.customers)), kpi(t('crm.active'), String(k.active), '#16a34a'), kpi(t('crm.dormant'), String(k.dormant), '#f59e0b'), kpi(t('crm.leads'), String(k.leads)),
+        kpi(t('crm.repeat'), k.customers ? k.repeatRate + '%' : na), kpi(t('crm.avgOrder'), k.avgOrder ? fmt(k.avgOrder) : na), kpi(t('crm.ltv'), k.ltv ? fmt(k.ltv) : na),
+        kpi(t('crm.rev30'), k.days ? fmt(k.revenue30) : na), kpi(t('crm.margin'), k.margin == null ? na : k.margin + '%'), kpi(t('crm.cac'), k.cac == null ? na : fmt(k.cac)));
+      body.append(el('h4', t('crm.kpiTitle')), tiles, el('h4', t('crm.list')));
+      if (!g.customers.length) body.append(el('p', t('crm.empty'), 'muted'));
+      const list = el('div', null, 'prodList');
+      g.customers.forEach(cu => {
+        const row = el('div', null, 'prodRow'), info = el('div');
+        info.append(el('b', `${cu.persona ? ({ friendly: '😀', impatient: '⏱', thrifty: '🧐', skeptical: '🤨' }[cu.persona]) + ' ' : ''}${cu.name}`),
+          el('small', ` ${t('crm.stage.' + cu.stage)} · ${t('crm.orders', { n: cu.orders })} · ${fmt(cu.spent)} · ${t('crm.last', { d: cu.last })}`, 'muted'));
+        const act = btn(cu.ready ? t('crm.follow', { cost: fmt(g.cost) }) + ' · ' + t('crm.chance', { p: cu.chance }) : t('crm.wait'), () => {
+          socket.emit('crmFollow', { cid: c.id, id: cu.id }, r => { if (!r) return; if (r.key) toast(t(r.key)); else if (r.ok) toast(r.won ? t('crm.won', { amount: fmt(r.revenue) }) : t('crm.lost')); if (r.ok || r.key) openCrm(c); });
+        });
+        act.disabled = !cu.ready; row.append(info, act); list.append(row);
+      });
+      body.append(list, el('small', t('crm.tip'), 'muted'));
+    });
+  });
+}
 // ---- Sprint 14: sales roleplay (customer conversation) ----
 let pitchCtx = null; // { cid, pid }
 function pitchStart(c, pid) { pitchCtx = { cid: c.id, pid }; socket.emit('pitchStart', { cid: c.id, pid }); }
@@ -2263,6 +2290,7 @@ function openDept(c, d) {
         box.append(el('p', t('dept.itInfo', { lvl, max: it.maxLevel, pct: Math.round(lvl * it.cyberShield * 100) })));
         if (founder && lvl < it.maxLevel) rec(t('dept.itUpgrade', { cost: it.cost }), emit('itUpgrade'), t('dept.itWhy'));
         else if (!founder) visitorNote();
+        if (member) box.append(btn(t('crm.open'), () => openCrm(c)));
         break;
       }
       default: box.append(el('p', t('dept.premium')));

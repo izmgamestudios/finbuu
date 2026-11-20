@@ -14,6 +14,7 @@ try { if (typeof process.loadEnvFile === 'function') process.loadEnvFile(path.jo
 const R = require('./reports');
 const ADS = require('./ads');
 const PITCH = require('./pitch');
+const CRM = require('./crm');
 const { createAuth } = require('./auth');
 const ECON = require('./economy').build(25); // 25 coins = blue-collar daily employer cost (2026 minimum wage)
 
@@ -166,7 +167,7 @@ const addLog = (st, key, params = {}) => { st.log.unshift({ at: Date.now(), day:
 const publicCompany = (c, monthKey) => {
   const f = c.fin || {}, d = f.daily || [];
   const recent = d.slice(-30);
-  const { canvas, pitch, ...rest } = c; // heavy texts are fetched on demand ('pitchGet')
+  const { canvas, pitch, crm, ...rest } = c; // heavy data is fetched on demand ('pitchGet', 'crmGet')
   return { ...rest, canvasFilled: canvasFilled(c), pitchWords: (pitch || '').trim().split(/\s+/).filter(Boolean).length, fin: { today: f.today, foundedDay: f.foundedDay, lastDay: d.at(-1) || null, prevCash: d.at(-2)?.cash ?? null,
     month: f.monthly?.[monthKey] || null, bestUnits: recent.reduce((m, x) => Math.max(m, x.units || 0), 0) } };
 };
@@ -839,6 +840,34 @@ io.on('connection', socket => {
     c.utilities = next; addLog(street, 'log.utilities', { player: me.name, ...cParams(c) }); sync();
   });
 
+  // ---- Sprint 17a: Mini SaaS CRM + KPI (IT department) ----
+  const crmCo = cid => { const c = street?.companies[cid]; return c && !c.isNpc && (c.founders.includes(me?.id) || c.employees.includes(me?.id)) && deptUnlocked(street, c, 'it') ? c : null; };
+  socket.on('crmGet', ({ cid } = {}, cb) => {
+    const c = crmCo(cid); if (!c || typeof cb !== 'function') return;
+    const day = street.day || 0;
+    cb({ day, cost: CRM.FOLLOW_COST, cooldown: CRM.FOLLOW_COOLDOWN_DAYS, kpi: CRM.kpis(c, day),
+      customers: CRM.book(c).customers.map(x => ({ id: x.id, name: x.name, persona: x.persona, orders: x.orders, spent: x.spent, last: x.last, stage: CRM.stageOf(x, day), chance: Math.round(CRM.winChance(x, day) * 100), ready: CRM.canFollow(x, day) }))
+        .sort((a, b) => b.spent - a.spent).slice(0, CRM.CAP) });
+  });
+  socket.on('crmFollow', ({ cid, id } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r);
+    const c = crmCo(cid); if (!c || limited()) return reply({ ok: false });
+    const cu = CRM.book(c).customers.find(x => x.id === id), day = street.day || 0; if (!cu) return reply({ ok: false });
+    if (!CRM.canFollow(cu, day)) return reply({ ok: false, key: 'toast.crmCooldown' });
+    if (c.cash < CRM.FOLLOW_COST) return reply({ ok: false, key: 'toast.noCash' });
+    const chance = CRM.winChance(cu, day);
+    c.cash -= CRM.FOLLOW_COST; R.track(c, 'expenses', CRM.FOLLOW_COST); cu.followAt = day;
+    const won = crypto.randomInt(0, 1000) < chance * 1000; let revenue = 0;
+    if (won) {
+      const perf = c.employees.includes(me.id) ? c.performance : 1;
+      revenue = Math.max(1, Math.round(unitPrice(c) * WS[c.workspace].salesMult * perf * incomeMult(street, c) * 3));
+      c.cash += revenue; c.sales += 2; R.track(c, 'revenue', revenue); R.track(c, 'units', 2); addDelivery(street, c, 2);
+      progress(street, me, 'sales', 2); progress(street, me, 'revenue', revenue); CRM.record(c, day, { id: cu.id, amount: revenue });
+    }
+    me.stats.xp += won ? 2 : 1; me.stats.level = levelOf(me.stats.xp);
+    sync(); reply({ ok: true, won, revenue });
+  });
+
   socket.on('itUpgrade', ({ cid } = {}) => {
     const c = founderOf(cid); if (!c || limited() || !needDept(c, 'it')) return;
     if ((c.security || 0) >= SEED.itUpgrade.maxLevel) return socket.emit('toast', 'toast.maxLevel');
@@ -970,6 +999,7 @@ io.on('connection', socket => {
       revenue = Math.round(click * R_.mult);
       if (revenue > 0) { c.cash += revenue; c.sales += R_.units; R.track(c, 'revenue', revenue); R.track(c, 'units', R_.units); addDelivery(street, c, R_.units); progress(street, me, 'sales', R_.units); progress(street, me, 'revenue', revenue); }
     }
+    if (c && c.status === 'active') CRM.record(c, street.day || 0, { name: CRM.randomName(n => crypto.randomInt(0, n)), persona: pt.persona, amount: revenue });
     me.stats.xp += R_.xp * SEED.progression.xpPerClick; me.stats.knowledge = +(me.stats.knowledge + R_.k).toFixed(1); me.stats.level = levelOf(me.stats.xp);
     if (outcome === 'big') { progress(street, me, 'bigDeals'); if ((me.counters.bigDeals || 0) >= 3) award(street, me, 'closer'); }
     socket.emit('pitchResult', { outcome, interest: pt.interest, revenue, xp: R_.xp, last: { delta, quality }, persona: pt.persona, units: R_.units });
@@ -1342,6 +1372,7 @@ io.on('connection', socket => {
     R.track(c, 'revenue', value); R.track(c, 'units', 1);
     addDelivery(street, c, 1);
     progress(street, me, 'sales'); progress(street, me, 'revenue', value);
+    if (Math.random() < CRM.AUTO_CHANCE) { const known = CRM.book(c).customers; const ex = known.length && Math.random() < 0.4 ? known[crypto.randomInt(0, known.length)] : null; CRM.record(c, street.day || 0, { id: ex?.id ?? null, name: CRM.randomName(n => crypto.randomInt(0, n)), persona: ex ? null : ['friendly', 'impatient', 'thrifty', 'skeptical'][crypto.randomInt(0, 4)], amount: value }); }
     me.stats.xp += SEED.progression.xpPerClick * perf;
     me.stats.knowledge = +(me.stats.knowledge + SEED.progression.knowledgePerClick).toFixed(1);
     me.stats.level = levelOf(me.stats.xp);
