@@ -334,3 +334,9 @@ header h1 small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis
   #clockBox b { display: none }
   header h1 { font-size: 1rem }
 }
+
+/* ---- Sprint 10: rental bar ---- */
+#vehBar { padding: 4px 12px; background: var(--panel); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px }
+#vehBar[hidden] { display: none }
+.vehRow { display: flex; align-items: center; gap: 10px; font-size: .82rem } .vehRow span { white-space: nowrap }
+.vehRow .bar { flex: 1; margin: 0; height: 8px } .vehRow.low .bar > i { background: var(--bad) }

@@ -1095,7 +1095,7 @@ function render() {
   renderFinance();
   renderPoll();
   if (boardOpen) renderBoard();
-  updateSpeedBtn(); updateAdBanner();
+  updateSpeedBtn(); updateAdBanner(); updateVehBar();
   if (state) {
     const sig = `${state.log[0]?.at}|${state.log.length}|${state.ideas.length}|${i18next.language}`;
     if (sig !== logSig) {
@@ -1417,7 +1417,7 @@ function companyBlock(body, c, isDefault) {
     seed.economy.busTopups.forEach(a => r2.append(btn(`💳 ${t('bus.topup', { amount: a })}`, () => { socket.emit('busTopup', { cid: c.id, amount: a }); })));
     box.append(el('small', t('bus.cardInfo', { balance: me()?.busCard || 0, fare: seed.economy.busFare }), 'muted'), r2);
   }
-  if (role === 'carDealer' || role === 'rentACar') box.append(el('small', t('veh.dealerInfo.' + role, { buy: seed.economy.vehicle.buyPrice, rent: seed.economy.vehicle.rentPerDay }), 'muted'));
+  if (role === 'carDealer' || role === 'rentACar') { box.append(el('small', t('veh.dealerInfo.' + role, { buy: seed.economy.vehicle.models.sedan_new.price, rent: seed.economy.vehicle.rentPerDay }), 'muted')); if (!isPres()) box.append(btn('🏁 ' + t('veh.gallery'), () => openGalleryFor())); }
   const rest = list.filter(a => !a.recommended);
   const row = el('div', null, 'others');
   rest.forEach(a => row.append(btn((a.ev === 'invest' ? '🎚 ' + t('ui.investPick') : a.ev === 'withdraw' ? '🎚 ' + t('ui.withdrawPick') : t(a.key, a.payload)), pick(a))));
@@ -1433,6 +1433,7 @@ function openBuilding(b) {
   if (b.kind === 'guide') return openModal(body => { body.append(el('h3', t('ui.guide'))); seed.tutorial.forEach(k => body.append(el('p', t(k)))); });
   if (b.kind === 'demoday') return openDemoDay();
   if (b.kind === 'locked') return toast(t('ui.premiumAlert', { feature: t('locked.skyscraper') }));
+  if (b.kind === 'parking') return openParking();
   if (b.kind === 'lot' && !isPres()) {
     const mine = b.lot.companyIds.map(id => state.companies[id]).find(c => c?.founders.includes(myId()));
     if (mine) return enterCompany(mine); // own HQ: zoom straight into the building
@@ -1475,30 +1476,92 @@ function benefitsEditor(box, c) {
   box.append(wrap);
 }
 // Delivery & company vehicle: courier/taxi per km vs. rented or owned car (fuel + upkeep)
+// ---------- Company vehicle: gallery (new / used), timed rental, parking ----------
+const VEH = () => seed.economy.vehicle;
+const vehName = id => t('veh.model.' + id);
+const vehIcon = id => (id.startsWith('van') ? '🚐' : '🚗');
+const vehLeft = v => (v?.type === 'rent' && v.until != null ? Math.max(0, v.until - (state.day || 0)) : null);
+function openGallery(c) {
+  const V = VEH();
+  openModal(body => {
+    body.append(el('h3', '🏁 ' + t('veh.gallery') + ' · ' + companyName(c)), el('p', t('veh.galleryNote', { cash: money(c.cash) }), 'muted'));
+    const list = el('div', null, 'prodList');
+    Object.entries(V.models).forEach(([id, m]) => {
+      const row = el('div', null, 'prodRow'), label = el('div', null, 'prodName');
+      label.append(el('b', `${vehIcon(id)} ${vehName(id)}`),
+        el('span', `${m.cond === 'new' ? t('veh.new') : t('veh.used', { age: m.ageYears, km: Math.round(m.km / 1000) })} · ${t('veh.upkeep', { amount: money(m.upkeepPerDay) })} · ${t('veh.fuelKm', { amount: money(m.fuelPerKm * 100) })}${m.boost ? ' · ' + t('veh.boost', { pct: Math.round(m.boost * 100) }) : ''}`, 'prodPrice'));
+      const b = btn(money(m.price), () => { closeModal(); socket.emit('vehicle', { cid: c.id, mode: 'buy', model: id }); });
+      b.disabled = !!c.vehicle || c.cash < m.price; if (c.vehicle) b.title = t('veh.hasOne');
+      row.append(label, b); list.append(row);
+    });
+    body.append(list);
+    if (c.vehicle) body.append(el('small', t('veh.hasOne'), 'muted'));
+    body.append(el('h4', t('veh.rentTitle')), el('small', t('veh.rentNote', { rent: money(V.rentPerDay) }), 'muted'));
+    const row = el('div', null, 'others');
+    V.rentDays.forEach(d => { const b = btn(t('veh.rentDays', { n: d }), () => { closeModal(); socket.emit('vehicle', { cid: c.id, mode: 'rent', days: d }); }); b.disabled = !!c.vehicle; row.append(b); });
+    body.append(row);
+  });
+}
+function openGalleryFor() {
+  const mine = Object.values(state.companies).filter(c => c.founders.includes(myId()));
+  if (!mine.length) return toast(t('veh.needCompany'));
+  if (mine.length === 1) return openGallery(mine[0]);
+  openModal(body => { body.append(el('h3', '🏁 ' + t('veh.gallery')), el('p', t('veh.pickCompany'), 'muted')); mine.forEach(c => body.append(btn(companyName(c), () => openGallery(c)))); });
+}
 function vehiclePanel(box, c, founder) {
-  const V = seed.economy.vehicle, km = seed.economy.deliveryKm[sectorOf(c)] ?? 2, f = c.fin || {};
-  const monthKm = (f.month?.km || 0) + (f.today?.km || 0), monthFuel = f.month?.fuel || 0;
+  const V = VEH(), km = seed.economy.deliveryKm[sectorOf(c)] ?? 2, f = c.fin || {};
+  const monthKm = (f.month?.km || 0) + (f.today?.km || 0), monthFuel = f.month?.fuel || 0, v = c.vehicle;
   const wrap = el('div', null, 'co'); wrap.append(el('h4', '🚚 ' + t('veh.title')));
   wrap.append(el('p', t('veh.info', { km, monthKm: Math.round(monthKm), fuel: monthFuel })));
   const k = el('div', null, 'mini');
-  k.append(kpi(t('veh.courier'), money(V.courierPerKm * Math.max(1, km))), kpi(t('veh.ownFuel'), money(V.fuelPerKm * Math.max(1, km))),
-    kpi(t('veh.rentDay'), money(V.rentPerDay)), kpi(t('veh.buy'), money(V.buyPrice, true)));
+  k.append(kpi(t('veh.courier'), money(V.courierPerKm * Math.max(1, km))), kpi(t('veh.ownFuel'), money(V.models.sedan_new.fuelPerKm * Math.max(1, km))),
+    kpi(t('veh.rentDay'), money(V.rentPerDay)), kpi(t('veh.buy'), money(V.models.sedan_new.price, true)));
   wrap.append(el('small', t('veh.perSale'), 'muted'), k);
-  const status = c.vehicle ? t('veh.has.' + c.vehicle.type) : t('veh.none');
-  wrap.append(el('p', '🚗 ' + status));
+  if (v) {
+    const left = vehLeft(v);
+    wrap.append(el('p', `${vehIcon(v.model)} ${v.type === 'rent' ? t('veh.has.rent') + (left != null ? ' · ' + t('veh.daysLeft', { n: left }) : '') : t('veh.has.own') + ' · ' + vehName(v.model) + ' · ' + t('veh.value', { amount: money(c.vehicleValue || 0) })}`));
+    wrap.append(el('p', '📍 ' + t(v.park === 'lot' ? 'veh.parkedLot' : 'veh.parkedDoor') + ' · ' + (v.park === 'lot' ? t('veh.parkFee', { amount: money(V.parkingPerDay) }) : t('veh.doorRisk', { pct: Math.round(V.damage.chancePerDay * 1000) / 10 })), 'muted'));
+  } else wrap.append(el('p', '🚗 ' + t('veh.none')));
   if (founder) {
-    // recommendation: compare last-30-day courier cost with renting a car
-    const courierMonth = monthKm * V.courierPerKm, rentMonth = V.rentPerDay * 30 + monthKm * V.fuelPerKm;
     const row = el('div', null, 'others');
-    if (!c.vehicle) {
-      const better = courierMonth > rentMonth;
-      row.append(btn((better ? '✓ ' : '') + t('veh.rent', { rent: V.rentPerDay }), () => { socket.emit('vehicle', { cid: c.id, mode: 'rent' }); closeModal(); }, { primary: better, isDefault: better }));
-      row.append(btn(t('veh.buyBtn', { buy: V.buyPrice }), () => { socket.emit('vehicle', { cid: c.id, mode: 'buy' }); closeModal(); }));
+    if (!v) {
+      const courierMonth = monthKm * V.courierPerKm, rentMonth = V.rentPerDay * 30 + monthKm * V.models.sedan_new.fuelPerKm, better = courierMonth > rentMonth;
+      row.append(btn('🏁 ' + t('veh.gallery'), () => openGallery(c), { primary: better, isDefault: better }));
       wrap.append(el('small', better ? t('veh.recRent') : t('veh.recCourier'), 'muted'));
-    } else row.append(btn(t(c.vehicle.type === 'own' ? 'veh.sell' : 'veh.return'), () => { socket.emit('vehicle', { cid: c.id, mode: 'none' }); closeModal(); }));
+    } else {
+      if (v.type === 'rent') V.rentDays.slice(0, 3).forEach(d => row.append(btn('⏩ ' + t('veh.extend', { n: d }), () => { socket.emit('vehicle', { cid: c.id, mode: 'extend', days: d }); closeModal(); })));
+      row.append(btn(v.park === 'lot' ? '🏠 ' + t('veh.toDoor') : '🅿 ' + t('veh.toLot', { amount: money(V.parkingPerDay) }), () => { socket.emit('vehicle', { cid: c.id, mode: 'park', where: v.park === 'lot' ? 'door' : 'lot' }); closeModal(); }));
+      row.append(btn(v.type === 'own' ? t('veh.sellFor', { amount: money(c.vehicleValue || 0) }) : t('veh.return'), () => { socket.emit('vehicle', { cid: c.id, mode: 'none' }); closeModal(); }));
+    }
     wrap.append(row);
   }
   box.append(wrap);
+}
+// Car park building at the end of the street: lists company cars parked there
+function openParking() {
+  const parked = Object.values(state.companies).filter(c => c.vehicle?.park === 'lot');
+  openModal(body => {
+    body.append(el('h3', '🅿 ' + t('veh.parkingSign')), el('p', t('veh.parkingNote', { fee: money(VEH().parkingPerDay) }), 'muted'));
+    if (!parked.length) body.append(el('p', t('veh.parkingEmpty'), 'muted'));
+    parked.forEach(c => { const row = el('div', null, 'prodRow'); row.append(el('div', `${vehIcon(c.vehicle.model)} ${companyName(c)} · ${vehName(c.vehicle.model)}`, 'prodName'));
+      if (c.founders.includes(myId())) row.append(btn('🏠 ' + t('veh.toDoor'), () => { socket.emit('vehicle', { cid: c.id, mode: 'park', where: 'door' }); closeModal(); })); body.append(row); });
+    const mine = Object.values(state.companies).filter(c => c.founders.includes(myId()) && c.vehicle && c.vehicle.park !== 'lot');
+    mine.forEach(c => body.append(btn('🅿 ' + t('veh.toLotFor', { company: companyName(c) }), () => { socket.emit('vehicle', { cid: c.id, mode: 'park', where: 'lot' }); closeModal(); })));
+  });
+}
+// Top bar: remaining time of the rentals of my companies
+function updateVehBar() {
+  const bar = $('vehBar'); if (!bar) return;
+  const rows = state ? Object.values(state.companies).filter(c => c.founders.includes(myId()) && c.vehicle?.type === 'rent' && c.vehicle.until != null) : [];
+  if (!rows.length) { bar.hidden = true; return; }
+  bar.hidden = false;
+  const sig = rows.map(c => `${c.id}:${c.vehicle.until}:${c.vehicle.days}:${state.day}`).join('|') + i18next.language;
+  if (bar.dataset.sig === sig) return; bar.dataset.sig = sig;
+  bar.replaceChildren(...rows.slice(0, 2).map(c => {
+    const v = c.vehicle, left = vehLeft(v), total = v.days || 1, pct = Math.max(0, Math.min(100, Math.round((left / total) * 100)));
+    const row = el('div', null, 'vehRow' + (left <= 1 ? ' low' : '')); row.append(el('span', `🚗 ${companyName(c)} · ${t('veh.daysLeft', { n: left })}`), Object.assign(el('div', null, 'bar'), {}));
+    const fill = el('i'); fill.style.width = pct + '%'; row.lastChild.append(fill); return row;
+  }));
 }
 // Real estate: rent vs. buy for the lot the company occupies
 function estatePanel(box, c, founder) {

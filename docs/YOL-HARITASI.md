@@ -12,7 +12,7 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **8a — Ürünler & sihirbaz** | Şirket başına en fazla 8 ürün/hizmet (ad, liste fiyatı, %0–90 indirim) · satışta ürün seçimi · sihirbaz: ⚡ Hızlı (2 adım), 🧭 Standart (4), 🔬 Ayrıntılı (7: ek ürün, indirim, özet) | ✅ Tamam |
 | **8b — Vergiler & giderler** | Yıl sonu (360. gün) kademeli gelir vergisi (2026 dilimleri) · damga vergisi (kira binde 9,48, bordro binde 7,59) · muhasebeci seviyesi (yok +%15 ceza / temel / pro −%7) · dükkânda elektrik, su, doğalgaz, internet faturaları (sabit %60 + değişken %40, doğalgaz mevsimsel) ve kapatmanın satışa etkisi | ✅ Tamam |
 | **9 — Reklam sistemi** | Billboard (4), durak (her durak), otobüs giydirme, bina duvarı ve çatısı, mobil banner (3) · metin (başlık, yazı boyutu, renk, hizalama, kalın) veya https görsel adresi · şirket sahibi kiralar ve düzenler, **admin onaylar**; admin kendi reklamını onaysız yerleştirebilir · canlı reklam satışı en fazla +%15 artırır, günlük kira gider olarak yazılır | ✅ Tamam |
-| **10 — Araç** | Galeriden sıfır/ikinci el araç · bina kapısında sabit park, otopark · kiralık aracın kalan süresi (üst bar) | ⬜ |
+| **10 — Araç** | Galeri: binek/ticari van × sıfır/ikinci el (4 model) · kiralama 1/3/7/14/30 gün, süre bitince otomatik iade, uzatma (en fazla 60 gün) · üstte kalan süre barı · araç bina kapısında park eder (ücretsiz, günlük %0,4 hasar riski) ya da caddenin sonundaki otoparka çekilir (günlük ücret, risk yok) | ✅ Tamam |
 | **11 — Harita & şehirler** | Minimap (M tuşu, mobilde harita ikonu) · Türkiye haritasından şehir seçimi (bazıları Premium/"pek yakında") · otobüs terminali, şehirler arası seyahat (maliyet + süre), özel/kiralık araçla seyahat · aynı odada farklı şehirler | ⬜ |
 | **12 — Ev** | Kılavuzun solunda ev · kişisel harcamalar · ev içi: kişisel faturalar, hobi, kendini geliştirme | ⬜ |
 | **13 — Çok oyunculu iç sahne** | Aynı binaya giren oyuncular iç sahnede birbirini görür · takım arkadaşını yanına çağır / yanına git · açık odalar listesi (şifre ile giriş) · AFK ve offline devam (tarayıcı tarafında saklanır) | ⬜ |
@@ -47,6 +47,12 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - **Ekonomi:** Günlük kira: billboard 6, durak 3, otobüs 8, duvar 2, çatı 3, mobil 4 jeton. Şirket başına en fazla 6 alan. Bina duvarı/çatısı yalnızca o binadaki şirketler içindir. Şirket kapanırsa alanları boşalır.
 - **Mobil banner** yalnızca dokunmatik (telefon) cihazlarda, canlı mobil reklamlar arasında 8 sn'de bir dönerek gösterilir.
 - Ortak çizim modülü: `public/js/ads.js` (cadde, düzenleyici önizleme ve admin listesi aynı kodu kullanır).
+
+## Sprint 10 notları
+- Araç fiyatları, bakım ve yakıt tüketimi `economy.js` içinde, **tahmini** (ikinci el ve ticari model fiyatları gerçek piyasa verisiyle doğrulanmalı). Ticari van satışları +%4 artırır ama daha çok yakar.
+- Elde tutulan aracın değeri aylık ~%1 düşer; yeni araç %80, ikinci el %65 ile başlar, taban %40. Satışta bu değer geri alınır.
+- Bir şirket aynı anda tek araç tutar (satın alma veya kiralama). Şehirler arası seyahatte (Sprint 11) araç kullanımı bu alt yapıya bağlanacak.
+- Otopark, dünyanın sonunda ayrı bir bina (`parking`): içinde otoparka çekilen şirket araçları görünür.
 
 ## Kararlar
 - **Veri saklama:** Şimdilik tarayıcıda (localStorage/çerez) yönetilir. SQLite/PostgreSQL daha sonra bağlanacak; bunun için durum okuma/yazma tek bir katmandan geçmeli (depolama arayüzü), böylece geçiş tek yerde yapılır.

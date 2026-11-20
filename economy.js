@@ -16,6 +16,16 @@ const TR2026 = {
   },
   fuel: { gasoline: 80.45, diesel: 100.5, asOf: '2026-10-28', where: 'İstanbul (Avrupa)' },
   car: { consumptionL100: 7, buyPrice: 1250000, upkeepMonthly: 7500, rentDaily: 1800, est: true },
+  // Araç galerisi: binek / ticari, sıfır / ikinci el (fiyatlar tahmini). Ticari araç daha çok mal taşır (satış +%4) ama daha çok yakar.
+  models: {
+    sedan_new:  { cond: 'new',  body: 'sedan', buyPrice: 1250000, upkeepMonthly: 7500,  consumptionL100: 7,    boost: 0,    resaleBase: 0.80 },
+    sedan_used: { cond: 'used', body: 'sedan', buyPrice: 780000,  upkeepMonthly: 9500,  consumptionL100: 7.8,  boost: 0,    resaleBase: 0.65, ageYears: 3, km: 62000 },
+    van_new:    { cond: 'new',  body: 'van',   buyPrice: 1650000, upkeepMonthly: 9500,  consumptionL100: 9.5,  boost: 0.04, resaleBase: 0.80 },
+    van_used:   { cond: 'used', body: 'van',   buyPrice: 1000000, upkeepMonthly: 11500, consumptionL100: 10.5, boost: 0.04, resaleBase: 0.65, ageYears: 4, km: 110000 }
+  },
+  parkingDaily: 150,          // otopark günlük ücreti (₺, est); kapı önü park ücretsizdir ama hasar riski vardır
+  rentDays: [1, 3, 7, 14, 30],
+  damage: { chancePerDay: 0.004, share: 0.03 }, // kapı önünde park eden aracın günlük hasar olasılığı ve araç değerine oranı
   // Vergiler: gelir vergisi tarifesi (₺, yıllık net kâr dilimleri). 2026 dilimleri 190.000 / 400.000 / 1.500.000 / 5.300.000 ₺ olarak alındı;
   // resmi Tebliğ ile doğrulanmalı (est). Damga vergisi: kira sözleşmesi binde 9,48, ücret bordrosu binde 7,59.
   tax: {
@@ -69,7 +79,11 @@ function build(blueSalaryCoins) {
       fuelPerKm: c((car.consumptionL100 / 100) * TR2026.fuel.gasoline),  // own / rented car
       courierPerKm: c(TR2026.courierPerKm),                              // no company car
       rentPerDay: Math.round(c(car.rentDaily)), buyPrice: Math.round(c(car.buyPrice)), upkeepPerDay: Math.round(c(car.upkeepMonthly / 30) * 10) / 10,
-      resale: 0.6
+      resale: 0.6,
+      models: Object.fromEntries(Object.entries(TR2026.car.models || TR2026.models).map(([k, m]) => [k, {
+        cond: m.cond, body: m.body, price: Math.round(c(m.buyPrice)), upkeepPerDay: Math.round(c(m.upkeepMonthly / 30) * 10) / 10,
+        fuelPerKm: c((m.consumptionL100 / 100) * TR2026.fuel.gasoline), boost: m.boost, resaleBase: m.resaleBase, ageYears: m.ageYears || 0, km: m.km || 0 }])),
+      parkingPerDay: Math.round(c(TR2026.parkingDaily) * 10) / 10, rentDays: TR2026.rentDays, damage: TR2026.damage
     },
     tax: {
       brackets: TR2026.tax.income.map(([limit, rate]) => ({ limit: limit === Infinity ? null : limit, rate })), est: true,

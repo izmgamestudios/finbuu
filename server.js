@@ -182,7 +182,7 @@ const publicPlayer = p => ({ id: p.id, name: p.name, coins: p.coins, role: p.rol
   team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {} });
 const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: st.day ? R.calendar(st.day) : null,
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
-  companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c) }])),
+  companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
   presentation: publicPresentation(st) || null,
   city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(),
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
@@ -284,13 +284,25 @@ function costPerTick(st, c) {
 const cityOf = st => (ECON.cities[st.city] ? st.city : 'istanbul');
 const lotRent = (st, lot) => ECON.lotRent(cityOf(st), lot.size);
 const lotPrice = (st, lot) => ECON.lotPrice(cityOf(st), lot.size);
-const vehicleDaily = c => (c.vehicle?.type === 'rent' ? ECON.vehicle.rentPerDay : c.vehicle?.type === 'own' ? ECON.vehicle.upkeepPerDay : 0);
+// ---------- Company vehicles (Sprint 10): gallery models (new / used), timed rentals, parking ----------
+const VM = id => ECON.vehicle.models[id] || null;
+const vehModel = v => VM(v?.model) || ECON.vehicle.models.sedan_new;
+const parkFee = v => (v?.park === 'lot' ? ECON.vehicle.parkingPerDay : 0);
+const vehicleDaily = c => !c.vehicle ? 0 : (c.vehicle.type === 'rent' ? ECON.vehicle.rentPerDay : vehModel(c.vehicle).upkeepPerDay) + parkFee(c.vehicle);
+const vehicleFuelPerKm = c => (c.vehicle ? vehModel(c.vehicle).fuelPerKm : ECON.vehicle.courierPerKm);
+const vehicleBoost = c => (c.vehicle ? vehModel(c.vehicle).boost || 0 : 0);
+// Resale value of an owned car: what was paid, minus ~1% per game month down to a floor (new cars start higher than used ones)
+const vehicleValue = (st, c) => {
+  const v = c.vehicle; if (v?.type !== 'own') return 0;
+  const m = vehModel(v), months = Math.max(0, ((st.day || 0) - (v.since || 0)) / 30);
+  return Math.round(v.paid * Math.max(0.4, m.resaleBase - 0.01 * months));
+};
 const roleCompany = (st, role) => Object.values(st.companies).find(x => SEED.templates.find(t => t.key === x.nameKey)?.role === role || SEED.npcCompanies.find(n => n.key === x.nameKey)?.role === role);
 // Every sale has a delivery distance (sector) -> fuel with a company vehicle, courier / taxi without one
 function addDelivery(st, c, units = 1) {
   const km = (ECON.deliveryKm[c.sector] ?? 2) * units;
   if (!km) return;
-  const perKm = c.vehicle ? ECON.vehicle.fuelPerKm : ECON.vehicle.courierPerKm;
+  const perKm = vehicleFuelPerKm(c);
   c.fuelAcc = (c.fuelAcc || 0) + km * perKm;
   R.track(c, 'km', km);
 }
@@ -354,7 +366,7 @@ function createStreet(id, mode, pin, city) {
 }
 const crisisActive = (st, c) => c.crisis && c.crisis.until > (st.day || 0);
 const marketingActive = (st, c) => c.marketing && c.marketing.until > (st.day || 0);
-const incomeMult = (st, c) => (1 + adBoost(st, c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
+const incomeMult = (st, c) => (1 + adBoost(st, c)) * (1 + vehicleBoost(c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
 // Mirrors the client: building height (floors) follows the lot's total cash. Virtual companies use their own cash.
 const floorsFor = cash => Math.max(1, Math.min(6, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
 function floorsOf(st, c) {
@@ -766,25 +778,34 @@ io.on('connection', socket => {
     sync();
   });
 
-  // ---------- Company vehicle: rent (daily fee) or buy (one-off + upkeep); paid to a dealer / rent-a-car on the street ----------
-  socket.on('vehicle', ({ cid, mode } = {}) => {
+  // ---------- Company vehicle: buy from the gallery (new / used), rent for N days, extend, park (door / car park), sell ----------
+  socket.on('vehicle', ({ cid, mode, model, days, where } = {}) => {
     const c = founderOf(cid); if (!c || limited()) return;
-    const V = ECON.vehicle;
+    const V = ECON.vehicle, day = street.day || 0;
     if (mode === 'buy') {
-      if (c.vehicle?.type === 'own') return;
-      if (c.cash < V.buyPrice) return socket.emit('toast', 'toast.noCash');
-      c.cash -= V.buyPrice; R.track(c, 'expenses', V.buyPrice);
+      const m = VM(model); if (!m) return;
+      if (c.vehicle) return socket.emit('toast', 'toast.hasVehicle');
+      if (c.cash < m.price) return socket.emit('toast', 'toast.noCash');
+      c.cash -= m.price; R.track(c, 'expenses', m.price);
       const dealer = roleCompany(street, 'carDealer');
-      if (dealer && dealer !== c) { dealer.cash += V.buyPrice; dealer.sales++; R.track(dealer, 'revenue', V.buyPrice); }
-      c.vehicle = { type: 'own', since: street.day || 0 };
+      if (dealer && dealer !== c) { dealer.cash += m.price; dealer.sales++; R.track(dealer, 'revenue', m.price); }
+      c.vehicle = { type: 'own', model, paid: m.price, since: day, park: 'door' };
     } else if (mode === 'rent') {
-      if (c.vehicle) return;
-      c.vehicle = { type: 'rent', since: street.day || 0 };
+      const d = Number(days); if (!V.rentDays.includes(d)) return;
+      if (c.vehicle) return socket.emit('toast', 'toast.hasVehicle');
+      c.vehicle = { type: 'rent', model: 'sedan_new', since: day, until: day + d, days: d, park: 'door' };
+    } else if (mode === 'extend') {
+      const d = Number(days); if (!V.rentDays.includes(d) || c.vehicle?.type !== 'rent') return;
+      if (c.vehicle.until - day + d > 60) return socket.emit('toast', 'toast.rentMax');
+      c.vehicle.until += d; c.vehicle.days += d;
+    } else if (mode === 'park') {
+      if (!c.vehicle || !['door', 'lot'].includes(where)) return;
+      c.vehicle.park = where;
     } else if (mode === 'none') {
-      if (c.vehicle?.type === 'own') { const back = Math.round(V.buyPrice * V.resale); c.cash += back; R.track(c, 'revenue', back); }
+      if (c.vehicle?.type === 'own') { const back = vehicleValue(street, c); c.cash += back; R.track(c, 'revenue', back); }
       c.vehicle = null;
     } else return;
-    if (c.vehicle) award(street, me, 'driver');
+    if (c.vehicle && mode !== 'park') award(street, me, 'driver');
     addLog(street, 'log.vehicle', { player: me.name, modeKey: 'vehmode.' + mode, ...cParams(c) });
     sync();
   });
@@ -1081,7 +1102,16 @@ function economyTick(only) {
         c.acctAcc = (c.acctAcc || 0) + accountantOf(c).feeDaily;
         acctFee = Math.floor(c.acctAcc); c.acctAcc -= acctFee;
       }
-      const cost = rentPart + ub.total + payroll + fuel + vehicle + stamp + acctFee;
+      let repair = 0;
+      if (c.vehicle && !c.isNpc) {
+        // street parking can get a car scratched / hit; a paid car park cannot
+        if (c.vehicle.park !== 'lot' && Math.random() < ECON.vehicle.damage.chancePerDay) {
+          const base = c.vehicle.type === 'own' ? vehicleValue(st, c) : Math.round(ECON.vehicle.models.sedan_new.price * 0.5);
+          repair = Math.max(1, Math.round(base * ECON.vehicle.damage.share)); addLog(st, 'log.carDamaged', { amount: repair, ...cParams(c) });
+        }
+        if (c.vehicle.type === 'rent' && c.vehicle.until != null && (st.day || 0) + 1 >= c.vehicle.until) { c.vehicle = null; addLog(st, 'log.rentEnded', cParams(c)); }
+      }
+      const cost = rentPart + ub.total + payroll + fuel + vehicle + stamp + acctFee + repair;
       c.cash -= cost;
       R.track(c, 'expenses', cost); R.track(c, 'utilities', ub.total); R.track(c, 'stampTax', stamp); R.track(c, 'accounting', acctFee);
       c.employees.forEach(pid => {

@@ -14,7 +14,7 @@ const GROUND_H = 86, FLOOR_H = 48, ROOF_H = 12;
 export const MAX_FLOORS = 6;
 
 export const lotX = i => LOTS_X + i * (LOT_W + LOT_GAP);
-export const worldWidth = lots => lotX(lots) + 860;
+export const worldWidth = lots => lotX(lots) + 1280; // +420: the car park at the end of the street
 // Building height follows the tenants' finances: big cash = tall tower, losses = it shrinks.
 // 1 floor < 250c, then one floor per doubling (500, 1k, 2k, 4k, 8k+).
 export const floorsFor = cash => Math.max(1, Math.min(MAX_FLOORS, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
@@ -33,6 +33,7 @@ export function layout(state) {
   });
   list.push({ kind: 'demoday', id: 'demoday', seed: 904, x: lotX(lots.length || 12) + 10, w: 360, h: heightOf(3) });
   list.push({ kind: 'locked', id: 'locked', seed: 903, x: lotX(lots.length || 12) + 410, w: 380, h: 320 });
+  list.push({ kind: 'parking', id: 'parking', seed: 905, x: lotX(lots.length || 12) + 830, w: 380, h: 70 });
   return list;
 }
 
@@ -387,6 +388,19 @@ function drawDemoDay(ctx, b, env) {
   ctx.restore();
   ctx.strokeStyle = '#f2b84b'; ctx.lineWidth = 3; ctx.strokeRect(ix, iy, iw, ih);
 }
+// A company car as a parked vehicle (colour from the company id; vans are bigger)
+const carOf = (c, x, y) => { const van = c.vehicle.model?.startsWith('van'); let h = 0; for (const ch of c.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return { kind: 'car', body: van ? 'van' : 'car', x, y, dir: 1, w: van ? 68 : 58, h: van ? 26 : 22, color: CAR_COLORS[h % CAR_COLORS.length] }; };
+function drawParking(ctx, b, env) {
+  ctx.fillStyle = '#9aa0ad'; ctx.fillRect(b.x, GROUND - 6, b.w, 30);
+  ctx.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i <= 6; i++) ctx.fillRect(b.x + 10 + i * 60, GROUND - 4, 3, 24);
+  ctx.fillStyle = '#4b5563'; ctx.fillRect(b.x + 20, GROUND - 74, 4, 70); ctx.fillRect(b.x + b.w - 24, GROUND - 74, 4, 70);
+  ctx.fillStyle = '#1d70f5'; rr(ctx, b.x + 10, GROUND - 92, b.w - 20, 24, 6); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = '700 14px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🅿 ' + env.t('veh.parkingSign'), b.x + b.w / 2, GROUND - 75); ctx.textAlign = 'left';
+  const parked = Object.values(env.state?.companies || {}).filter(c => c.vehicle?.park === 'lot');
+  parked.slice(0, 6).forEach((c, i) => drawVehicle(ctx, carOf(c, b.x + 40 + i * 60, GROUND + 18)));
+  if (parked.length > 6) pill(ctx, b.x + b.w / 2, GROUND - 100, `+${parked.length - 6}`, 'rgba(35,40,55,.78)', '#fff', 11);
+}
 function drawLocked(ctx, b, env) {
   ctx.save();
   ctx.globalAlpha = 0.45;
@@ -495,8 +509,10 @@ function drawVehicle(ctx, v) {
     else { ctx.fillStyle = '#fff'; ctx.font = '700 8px system-ui'; ctx.textAlign = 'center';
       ctx.save(); ctx.scale(dir, 1); ctx.fillText(v.text || '', 0, -6); ctx.restore(); ctx.textAlign = 'left'; }
   } else {
-    ctx.fillStyle = v.color; rr(ctx, -w / 4, -h - 9, w / 2, 11, 5); ctx.fill();
-    ctx.fillStyle = '#cfe8f7'; ctx.fillRect(-w / 4 + 3, -h - 7, w / 4 - 4, 7); ctx.fillRect(2, -h - 7, w / 4 - 5, 7);
+    if (v.body === 'van') { ctx.fillStyle = v.color; rr(ctx, -w / 2 + 2, -h - 12, w * 0.62, 16, 4); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-w / 2 + 8, -h - 6, w * 0.62 - 14, 3);
+      ctx.fillStyle = '#cfe8f7'; ctx.fillRect(w / 2 - 22, -h - 8, 14, 9); }
+    else { ctx.fillStyle = v.color; rr(ctx, -w / 4, -h - 9, w / 2, 11, 5); ctx.fill();
+      ctx.fillStyle = '#cfe8f7'; ctx.fillRect(-w / 4 + 3, -h - 7, w / 4 - 4, 7); ctx.fillRect(2, -h - 7, w / 4 - 5, 7); }
     if (kind === 'taxi') { ctx.fillStyle = '#2b2f3a'; ctx.fillRect(-7, -h - 13, 14, 4); }
   }
   ctx.fillStyle = '#ffe9a8'; ctx.fillRect(w / 2 - 3, -h + 8, 3, 4);
@@ -636,6 +652,7 @@ export function draw(ctx, env) {
     else if (b.kind === 'plaza') drawPlaza(ctx, b, env);
     else if (b.kind === 'lot') drawLot(ctx, b, env);
     else if (b.kind === 'demoday') drawDemoDay(ctx, b, env);
+    else if (b.kind === 'parking') drawParking(ctx, b, env);
     else drawLocked(ctx, b, env);
     if (env.near?.id === b.id) { ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3; rr(ctx, b.x - 3, GROUND - b.h - 3, b.w + 6, b.h + 3, 6); ctx.stroke(); }
     if (env.targetId === b.id) {
@@ -671,6 +688,16 @@ export function draw(ctx, env) {
     drawPerson(ctx, p.x, p.y, p.look, p.o);
   }
   if (env.traffic) { env.traffic.bus.ad = env.ads?.['bus:0']?.live || null; env.traffic.draw(ctx, camX, viewWorldW, env.riding); }
+  for (const b of env.buildings) { // company cars parked at the building door (free, but street parking can get damaged)
+    if (b.kind !== 'lot' || b.x > camX + viewWorldW + 80 || b.x + b.w < camX - 80) continue;
+    let k = 0;
+    for (const id of b.lot.companyIds) {
+      const c = env.state.companies[id]; if (!c?.vehicle || c.vehicle.park === 'lot' || k > 1) continue;
+      const x = b.x + b.w - 52 - k * 78, y = GROUND + 46; k++;
+      drawVehicle(ctx, carOf(c, x, y));
+      if (c.vehicle.type === 'rent' && c.vehicle.until != null) { const left = Math.max(0, c.vehicle.until - (env.state.day || 0)); pill(ctx, x, y - 38, `🚗 ${left}${env.t('veh.dayShort')}`, 'rgba(35,40,55,.75)', '#fff', 9); }
+    }
+  }
   if (meP && env.keyHint && (env.near || env.nearNpc || env.nearStop != null) && !env.riding) pill(ctx, env.player.x, FEET - 70, env.keyHint, '#2f6fe4', '#fff', 11);
   if (NIGHT > 0) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = `rgba(10,20,50,${0.22 * NIGHT})`; ctx.fillRect(0, 0, w, h); }
 }
