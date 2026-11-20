@@ -934,7 +934,8 @@
     "pitcher": "Sahneye Çıktı",
     "funded": "Yatırım Aldı",
     "grantee": "Hibe Aldı",
-    "stockMaster": "Stok Ustası"
+    "stockMaster": "Stok Ustası",
+    "stackPro": "Araç Ustası"
   },
   "badgeDesc": {
     "firstCompany": "İlk şirketini kur",
@@ -961,7 +962,8 @@
     "pitcher": "Demo Day'de ya da melek yatırımcıya sun",
     "funded": "Bir yatırım teklifini kabul et",
     "grantee": "Hibe al",
-    "stockMaster": "30 gün boyunca hiç stoksuz kalma"
+    "stockMaster": "30 gün boyunca hiç stoksuz kalma",
+    "stackPro": "5 farklı kategoriden açık kaynak araç kur"
   },
   "bus": {
     "arrived": "Durağa vardın.",
@@ -1530,7 +1532,12 @@
       "employeeProductivity": "Çalışan verimliliği",
       "operatingCostReduction": "Operasyon gideri düşüşü",
       "customerRetention": "Müşteri sadakati",
-      "conversionRate": "Satışa dönüşüm"
+      "conversionRate": "Satışa dönüşüm",
+      "marketResearch": "Pazar araştırması",
+      "brandReach": "Marka erişimi",
+      "securityLevel": "Siber direnç",
+      "onlineSalesChannel": "Online satış kanalı",
+      "xpGain": "XP kazanımı"
     },
     "capNote": "Aynı etkiye eklenen her araç %80 değer katar (azalan getiri)."
   }

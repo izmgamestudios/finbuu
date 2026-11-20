@@ -934,7 +934,8 @@
     "pitcher": "On Stage",
     "funded": "Funded",
     "grantee": "Grantee",
-    "stockMaster": "Stock Master"
+    "stockMaster": "Stock Master",
+    "stackPro": "Stack Pro"
   },
   "badgeDesc": {
     "firstCompany": "Found your first company",
@@ -961,7 +962,8 @@
     "pitcher": "Pitch at Demo Day or to an angel",
     "funded": "Accept an investment offer",
     "grantee": "Receive a grant",
-    "stockMaster": "Never run out of stock for 30 days"
+    "stockMaster": "Never run out of stock for 30 days",
+    "stackPro": "Install open-source tools from 5 different categories"
   },
   "bus": {
     "arrived": "You arrived at the stop.",
@@ -1530,7 +1532,12 @@
       "employeeProductivity": "Employee productivity",
       "operatingCostReduction": "Operating cost reduction",
       "customerRetention": "Customer retention",
-      "conversionRate": "Conversion rate"
+      "conversionRate": "Conversion rate",
+      "marketResearch": "Market research",
+      "brandReach": "Brand reach",
+      "securityLevel": "Cyber resilience",
+      "onlineSalesChannel": "Online sales channel",
+      "xpGain": "XP gain"
     },
     "capNote": "Each extra tool on the same effect adds 80% of the previous (diminishing returns)."
   }

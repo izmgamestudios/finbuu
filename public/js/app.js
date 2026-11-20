@@ -1300,7 +1300,7 @@ const extLink = (label, url) => { const a = el('a', label, 'extLink'); a.href = 
 const badgeEl = (text, cls) => el('span', text, 'tag ' + (cls || ''));
 
 const founderCos = () => Object.values(state?.companies || {}).filter(c => c.founders.includes(myId()) && !c.isNpc && c.status === 'active');
-const WIRED_FALLBACK = ['employeeProductivity', 'operatingCostReduction', 'customerRetention', 'conversionRate'];
+const WIRED_FALLBACK = ['employeeProductivity', 'operatingCostReduction', 'customerRetention', 'conversionRate', 'marketResearch', 'brandReach', 'securityLevel', 'onlineSalesChannel', 'xpGain'];
 function fetchToolStates(cb) {
   const cos = founderCos(), out = {}; if (!cos.length) return cb(out);
   let left = cos.length; const done = () => { if (--left === 0) cb(out); };
@@ -1370,7 +1370,7 @@ function openMyTools(c, data) {
     const again = r => { if (!r) return; if (r.key) toast(t(r.key)); if (r.ok) openMyTools(c, r); };
     body.classList.add('wideBody'); body.append(el('h3', `${t('tools.title')} · ${companyName(c)}`));
     const tiles = el('div', null, 'mini'); tiles.append(kpi(t('tools.monthly'), fmt(data.monthly)), kpi(t('tools.cash'), fmt(data.cash), data.cash < data.monthly ? '#dc2626' : undefined)); body.append(tiles);
-    const fx = Object.entries(data.effects || {}); if (fx.length) body.append(el('p', '⚡ ' + t('tools.effects') + ': ' + fx.map(([k, v]) => `${t('tools.stat.' + k) || k} +%${Math.round(v * 100)}`).join(' · ')));
+    const fx = Object.entries(data.effects || {}); if (fx.length) body.append(el('p', '⚡ ' + t('tools.effects') + ': ' + fx.map(([k, v]) => k === 'onlineSalesChannel' ? `${t('tools.stat.' + k)} ✓` : `${t('tools.stat.' + k)} +%${Math.round(v * 100)}`).join(' · ')));
     if (!data.installed.length) body.append(el('p', t('tools.empty'), 'muted'));
     const list = el('div', null, 'prodList');
     data.installed.forEach(x => {
@@ -1640,7 +1640,7 @@ $('helpBtn').onclick = openHelp;
 addEventListener('keydown', e => { if ((e.key === 'F1' || (e.key === '?' && !typing(e))) && !modalOpen) { e.preventDefault(); openHelp(); } });
 
 const BADGE_ICON = { hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
-  social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗', closer: '🤝', stockMaster: '📦' };
+  social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗', closer: '🤝', stockMaster: '📦', stackPro: '🧰' };
 let extraSig = '';
 function renderExtras(p) {
   const teams = state?.teams || {};

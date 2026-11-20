@@ -120,7 +120,7 @@ const SEED = {
     { id: 'chat', metric: 'chat', goal: 1, xp: 5, coins: 10, shared: true }
   ],
   badges: ['firstCompany', 'sales10', 'sales100', 'sales1000', 'floor3', 'floor6', 'firstHire', 'marketer', 'secure', 'social',
-    'commuter', 'teamPlayer', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster'],
+    'commuter', 'teamPlayer', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
   demoDay: { canvasMax: 300, pitchMax: 900, demoCooldown: 30, angelCooldown: 15, offerDays: 3, grantAmount: 2000, grantMinDays: 10, grantMinBlocks: 7, demoMin: 60, angelMin: 45 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3, sector: 'sector.food' },
@@ -207,6 +207,11 @@ function loadPremium() {
 function savePremium() { try { fs.mkdirSync(path.dirname(PREMIUM_FILE), { recursive: true, mode: 0o700 }); fs.writeFileSync(PREMIUM_FILE, JSON.stringify(PREMIUM), { mode: 0o600 }); } catch (e) { console.warn('premium save failed:', e.message); } }
 loadPremium();
 
+// ---------- TOOLS BALANCE CONFIG (Sprint 21c): admin can tune the open-source tools economy; persisted in data/tools-config.json ----------
+const TOOLS_CFG_FILE = path.join(__dirname, 'data', 'tools-config.json');
+try { TOOLS.setConfig(JSON.parse(fs.readFileSync(TOOLS_CFG_FILE, 'utf8'))); } catch { /* defaults */ }
+function saveToolsCfg() { try { fs.mkdirSync(path.dirname(TOOLS_CFG_FILE), { recursive: true, mode: 0o700 }); fs.writeFileSync(TOOLS_CFG_FILE, JSON.stringify(TOOLS.CFG), { mode: 0o600 }); } catch (e) { console.warn('tools config save failed:', e.message); } }
+
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
   busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, cityMap: ECON.cityMap, intercity: ECON.intercity, life: ECON.life, tax: ECON.tax });
 const publicAdConfig = () => ({ kinds: ADS.KINDS, maxBoost: ADS.MAX_BOOST, maxSlots: ADS.MAX_SLOTS_PER_COMPANY, limits: ADS.LIMITS });
@@ -244,7 +249,7 @@ function adBoost(st, c) {
   if (c.isNpc || !st.ads) return 0;
   let b = 0;
   for (const [id, a] of Object.entries(st.ads)) { if (a.owner !== c.id || !a.live) continue; const s = adSlot(st, id); if (s) b += s.boost; }
-  return Math.min(ADS.MAX_BOOST, b);
+  return Math.min(ADS.MAX_BOOST, b) * (1 + TOOLS.effectOf(c, 'brandReach'));   // brand tools amplify paid ads
 }
 const publicAds = st => Object.fromEntries(Object.entries(st.ads).filter(([, a]) => a.owner).map(([id, a]) => [id,
   { owner: a.owner, live: a.live, pending: !!a.pending, rejected: a.rejected || null }]));
@@ -508,7 +513,7 @@ const crisisActive = (st, c) => c.crisis && c.crisis.until > (st.day || 0);
 const marketingActive = (st, c) => c.marketing && c.marketing.until > (st.day || 0);
 // employees get the productivity tools bonus (Sprint 21a); founders sell at base performance
 const perfFor = (c, who) => (c.employees.includes(who.id) ? c.performance * (1 + TOOLS.effectOf(c, 'employeeProductivity')) : 1);
-const incomeMult = (st, c) => (1 + TOOLS.effectOf(c, 'conversionRate')) * (1 + adBoost(st, c)) * (1 + vehicleBoost(c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
+const incomeMult = (st, c) => (1 + TOOLS.effectOf(c, 'conversionRate')) * (1 + 0.5 * TOOLS.effectOf(c, 'brandReach')) * (TOOLS.effectOf(c, 'onlineSalesChannel') ? 1 + TOOLS.CFG.onlineBoost : 1) * (1 + adBoost(st, c)) * (1 + vehicleBoost(c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
 // Mirrors the client: building height (floors) follows the lot's total cash. Virtual companies use their own cash.
 const floorsFor = cash => Math.max(1, Math.min(6, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
 function floorsOf(st, c) {
@@ -532,14 +537,14 @@ function readiness(st, c) {
     growth: Math.max(0, Math.min(10, Math.round(growth * 20))),                // 10
     team: Math.min(14, c.founders.length * 4 + staffCount(c) * 2)             // 14
   };
-  const score = Math.min(100, Object.values(parts).reduce((a, b) => a + b, 0));
+  const score = Math.min(100, Object.values(parts).reduce((a, b) => a + b, 0) + Math.round(TOOLS.effectOf(c, 'marketResearch') * 50));
   const yearly = Math.max(last, month.revenue || 0) * 12;
   const valuation = Math.max(5000, Math.round(yearly * 3 + Math.max(0, c.cash)));
   return { score, parts, valuation };
 }
 function applyCrisis(st, c, type) {
   const cr = CRISES[type];
-  const shield = type === 'cyberAttack' ? 1 - (c.security || 0) * SEED.itUpgrade.cyberShield : 1;
+  const shield = type === 'cyberAttack' ? Math.max(0.2, 1 - (c.security || 0) * SEED.itUpgrade.cyberShield - TOOLS.effectOf(c, 'securityLevel')) : 1;
   const loss = Math.round((Math.floor(Math.max(0, c.cash) * cr.hit) + cr.fixed) * shield);
   c.cash -= loss;
   R.track(c, 'losses', loss);
@@ -877,7 +882,7 @@ io.on('connection', socket => {
       c.cash += revenue; c.sales += 2; R.track(c, 'revenue', revenue); R.track(c, 'units', 2); addDelivery(street, c, 2);
       progress(street, me, 'sales', 2); progress(street, me, 'revenue', revenue); CRM.record(c, day, { id: cu.id, amount: revenue });
     }
-    me.stats.xp += won ? 2 : 1; me.stats.level = levelOf(me.stats.xp);
+    me.stats.xp += (won ? 2 : 1) * (1 + TOOLS.effectOf(c, 'xpGain')); me.stats.level = levelOf(me.stats.xp);
     sync(); reply({ ok: true, won, revenue });
   });
 
@@ -919,7 +924,7 @@ io.on('connection', socket => {
 
   // ---- Sprint 21a: open-source tools installed on a company (founders only) ----
   const toolCo = cid => { const c = street?.companies[cid]; return c && !c.isNpc && c.status === 'active' && c.founders.includes(me?.id) ? c : null; };
-  const toolsReply = (c, extra = {}) => ({ ok: true, day: street.day || 0, scale: TOOLS.SETUP_SCALE, max: TOOLS.MAX_TOOLS, wired: [...TOOLS.WIRED], cash: Math.round(c.cash), monthly: TOOLS.hostingMonthly(c), effects: TOOLS.effects(c),
+  const toolsReply = (c, extra = {}) => ({ ok: true, day: street.day || 0, scale: TOOLS.CFG.setupScale, max: TOOLS.MAX_TOOLS, wired: [...TOOLS.WIRED], cash: Math.round(c.cash), monthly: TOOLS.hostingMonthly(c), effects: TOOLS.effects(c),
     installed: TOOLS.book(c).map(x => ({ id: x.id, day: x.day, suspended: !!x.suspended })), level: founderLevel(c), ...extra });
   const founderLevel = c => Math.max(1, ...c.founders.map(f => street.players[f]?.stats.level || 1));
   socket.on('toolsGet', ({ cid } = {}, cb) => { const c = toolCo(cid); if (c && typeof cb === 'function') cb(toolsReply(c)); });
@@ -928,6 +933,7 @@ io.on('connection', socket => {
     const chk = TOOLS.checkInstall(c, id, founderLevel(c)); if (!chk.ok) return reply(chk);
     c.cash -= chk.cost; R.track(c, 'expenses', chk.cost); TOOLS.place(c, id, street.day || 0);
     const xp = Math.round(chk.tool.game.xpReward / TOOLS.XP_DIV); me.stats.xp += xp; me.stats.level = levelOf(me.stats.xp);
+    if (TOOLS.categories(c).size >= 5) award(street, me, 'stackPro');
     progress(street, me, 'tools'); addLog(street, 'log.toolInstalled', { player: me.name, tool: chk.tool.name, ...cParams(c) });
     sync(); reply(toolsReply(c, { xp }));
   });
@@ -1074,7 +1080,7 @@ io.on('connection', socket => {
       if (revenue > 0) { c.cash += revenue; c.sales += R_.units; R.track(c, 'revenue', revenue); R.track(c, 'units', R_.units); addDelivery(street, c, R_.units); progress(street, me, 'sales', R_.units); progress(street, me, 'revenue', revenue); }
     }
     if (c && c.status === 'active') CRM.record(c, street.day || 0, { name: CRM.randomName(n => crypto.randomInt(0, n)), persona: pt.persona, amount: revenue });
-    me.stats.xp += R_.xp * SEED.progression.xpPerClick; me.stats.knowledge = +(me.stats.knowledge + R_.k).toFixed(1); me.stats.level = levelOf(me.stats.xp);
+    me.stats.xp += R_.xp * SEED.progression.xpPerClick * (1 + (c ? TOOLS.effectOf(c, 'xpGain') : 0)); me.stats.knowledge = +(me.stats.knowledge + R_.k).toFixed(1); me.stats.level = levelOf(me.stats.xp);
     if (outcome === 'big') { progress(street, me, 'bigDeals'); if ((me.counters.bigDeals || 0) >= 3) award(street, me, 'closer'); }
     socket.emit('pitchResult', { outcome, interest: pt.interest, revenue, xp: R_.xp, last: { delta, quality }, persona: pt.persona, units: R_.units });
     sync();
@@ -1448,7 +1454,7 @@ io.on('connection', socket => {
     addDelivery(street, c, 1);
     progress(street, me, 'sales'); progress(street, me, 'revenue', value);
     if (Math.random() < CRM.AUTO_CHANCE) { const known = CRM.book(c).customers; const ex = known.length && Math.random() < 0.4 ? known[crypto.randomInt(0, known.length)] : null; CRM.record(c, street.day || 0, { id: ex?.id ?? null, name: CRM.randomName(n => crypto.randomInt(0, n)), persona: ex ? null : ['friendly', 'impatient', 'thrifty', 'skeptical'][crypto.randomInt(0, 4)], amount: value }); }
-    me.stats.xp += SEED.progression.xpPerClick * perf;
+    me.stats.xp += SEED.progression.xpPerClick * perf * (1 + TOOLS.effectOf(c, 'xpGain'));
     me.stats.knowledge = +(me.stats.knowledge + SEED.progression.knowledgePerClick).toFixed(1);
     me.stats.level = levelOf(me.stats.xp);
     me.stats.performance = perf;
@@ -1872,6 +1878,12 @@ admin.on('connection', socket => {
     audit('premium', `${feature}: ${on ? 'on' : 'off'}`);
     io.emit('seed', publicSeed()); push();
     if (typeof cb === 'function') cb({ ok: true, on });
+  });
+  socket.on('adminGetToolsCfg', (_, cb) => { if (typeof cb === 'function') cb({ cfg: { ...TOOLS.CFG }, ranges: TOOLS.RANGES }); });
+  socket.on('adminSetToolsCfg', (patch, cb) => {
+    if (typeof patch !== 'object' || !patch) return typeof cb === 'function' && cb({ ok: false });
+    const cfg = TOOLS.setConfig(patch); saveToolsCfg(); audit('toolsConfig', JSON.stringify(cfg));
+    if (typeof cb === 'function') cb({ ok: true, cfg });
   });
   socket.on('adminListAds', ({ roomId } = {}, cb) => { const st = room(roomId); if (st && typeof cb === 'function') cb({ slots: adList(st) }); });
   socket.on('adminAdDecision', ({ roomId, slot, approve, reason } = {}) => {

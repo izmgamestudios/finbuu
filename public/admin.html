@@ -79,6 +79,7 @@
     <button data-tab="ideas">Fikirler</button>
     <button data-tab="ads">📢 Reklamlar <b id="adsBadge" class="pill s-atRisk" hidden></b></button>
     <button data-tab="premium">⭐ Premium</button>
+    <button data-tab="toolcfg">🧰 Araç Dengesi</button>
     <button data-tab="audit">Denetim Kaydı</button>
   </div>
 
@@ -172,6 +173,14 @@
   </main>
 
   <main id="ideas"><div class="card"><table><thead><tr><th>Oda</th><th>Kim</th><th>Fikir</th><th>Tarih</th><th></th></tr></thead><tbody id="ideaBody"></tbody></table></div></main>
+  <main id="toolcfg">
+    <div class="card">
+      <h3>Açık Kaynak Araç Dengesi</h3>
+      <p class="muted">Oyuncuların şirkete kurduğu araçların ekonomisi. Değişiklik anında geçerlidir ve sunucuda saklanır (aralık dışı değerler sınırlanır).</p>
+      <table><thead><tr><th>Ayar</th><th>Açıklama</th><th>Değer</th></tr></thead><tbody id="tcBody"></tbody></table>
+      <div class="row" style="margin-top:10px"><button id="tcSave" class="primary">Kaydet</button><span id="tcMsg" class="muted"></span></div>
+    </div>
+  </main>
   <main id="premium">
     <div class="card">
       <h3>Premium Yönetimi</h3>
@@ -291,8 +300,30 @@ $('tabs').onclick = e => {
   if (b.dataset.tab === 'reports' && !report) loadReport();
   if (b.dataset.tab === 'ads') loadAds();
   if (b.dataset.tab === 'premium') loadPremium();
+  if (b.dataset.tab === 'toolcfg') loadToolCfg();
 };
 
+
+
+// ---------- Open-source tools balance ----------
+const TC_TXT = {
+  setupScale: ['Kurulum bedeli çarpanı', 'Katalog kurulum bedeli × bu değer (0,4 = tier 1 için 200 coin)'],
+  diminish: ['Azalan getiri', 'Aynı etkideki her ek araç öncekinin bu kadarını katar (0,8 = %80)'],
+  cap: ['Etki üst sınırı', 'Tek bir etkinin toplamı en fazla bu kadar olur (0,35 = %35)'],
+  capOpCost: ['Gider düşüşü üst sınırı', 'Operasyon gideri düşüşü için ayrı sınır (0,2 = %20)'],
+  onlineBoost: ['Online kanal bonusu', 'Online satış kanalı açan araçlarda gelir artışı (0,15 = %15)']
+};
+function loadToolCfg() {
+  socket.emit('adminGetToolsCfg', {}, res => {
+    if (!res) return;
+    $('tcBody').replaceChildren(...Object.keys(TC_TXT).map(k => {
+      const tr = document.createElement('tr'), [n, d] = TC_TXT[k], inp = document.createElement('input'); inp.type = 'number'; inp.step = '0.01'; inp.dataset.k = k; inp.value = res.cfg[k]; inp.min = res.ranges[k][0]; inp.max = res.ranges[k][1]; inp.style.width = '90px';
+      const td = document.createElement('td'); td.append(inp, Object.assign(document.createElement('small'), { className: 'muted', textContent: ` (${res.ranges[k][0]}–${res.ranges[k][1]})` }));
+      tr.append(Object.assign(document.createElement('td'), { textContent: n }), Object.assign(document.createElement('td'), { textContent: d }), td); return tr;
+    }));
+  });
+}
+$('tcSave').onclick = () => { const patch = {}; document.querySelectorAll('#tcBody input').forEach(i => { patch[i.dataset.k] = Number(i.value); }); socket.emit('adminSetToolsCfg', patch, r => { $('tcMsg').textContent = r?.ok ? '✓ Kaydedildi' : 'Hata'; loadToolCfg(); }); };
 
 // ---------- Premium flags ----------
 const PREM_TXT = {
