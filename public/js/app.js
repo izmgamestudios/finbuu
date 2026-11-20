@@ -1241,6 +1241,63 @@ socket.on('teamCall', c => {
   openModal(body => { body.append(el('h3', '📣 ' + msg), btn('🏃 ' + t('team.goTo'), () => goToPlayer(c.from, c), { primary: true, isDefault: true })); });
 });
 // ---------- Quests, teams, badges (profile card) ----------
+// ---- Sprint 17b: Mini SaaS planner (tasks + Gantt + calendar) ----
+const PLAN_COLOR = { planned: '#94a3b8', active: '#2563eb', overdue: '#dc2626', done: '#16a34a' };
+let planTab = 'gantt', planMonth = null;
+function openPlan(c, data) {
+  if (!data) return socket.emit('planGet', { cid: c.id }, g => { if (g) openPlan(c, g); });
+  const { day, tasks } = data, again = r => { if (!r) return; if (r.key) toast(t(r.key)); if (r.ok) openPlan(c, r); };
+  const todayAbs = day, monthOf = d => Math.floor((Math.max(1, d) - 1) / 30);
+  if (planMonth == null) planMonth = monthOf(day);
+  openModal(body => {
+    body.append(el('h3', `${t('plan.title')} · ${companyName(c)}`), el('p', t('plan.intro'), 'muted'));
+    // add form
+    const f = el('div', null, 'row'), nm = el('input'), st = el('input'), du = el('input');
+    nm.placeholder = t('plan.name'); nm.maxLength = 40; st.type = du.type = 'number'; st.min = 0; st.max = data.maxAhead; st.value = 0; du.min = 1; du.max = data.maxDur; du.value = 5;
+    st.title = t('plan.start'); du.title = t('plan.dur'); st.style.width = du.style.width = '84px';
+    const addB = btn('➕ ' + t('plan.add'), () => socket.emit('planAdd', { cid: c.id, name: nm.value, start: day + Number(st.value || 0), dur: Number(du.value || 1) }, again), { primary: true });
+    const lab = (txt, input) => { const l = el('label', null, 'planF'); l.append(el('small', txt, 'muted'), input); return l; };
+    nm.style.minWidth = '160px'; f.append(lab(t('plan.name'), nm), lab(t('plan.start'), st), lab(t('plan.dur'), du), addB); f.style.alignItems = 'flex-end'; body.append(f);
+    // tabs
+    const tabs = el('div', null, 'row');
+    ['gantt', 'calendar'].forEach(k => { const b = btn(t('plan.' + k), () => { planTab = k; openPlan(c, data); }); if (planTab === k) b.classList.add('primary'); tabs.append(b); });
+    tabs.append(el('small', t('plan.today', { d: todayAbs }), 'muted')); body.append(tabs);
+    if (!tasks.length) body.append(el('p', t('plan.empty'), 'muted'));
+    if (planTab === 'gantt' && tasks.length) {
+      const DW = 18, from = Math.min(day - 2, ...tasks.map(x => x.start)), to = Math.max(day + 14, ...tasks.map(x => x.start + x.dur)), n = to - from + 1;
+      const wrap = el('div', null, 'gantt');
+      const head = el('div', null, 'gRow gHead'); head.append(el('span', '', 'gLabel'));
+      const hTrack = el('div', null, 'gTrack'); hTrack.style.width = n * DW + 'px';
+      for (let d = from; d <= to; d++) if (d % 5 === 0) { const m = el('i', String(d), 'gTick'); m.style.left = (d - from) * DW + 'px'; hTrack.append(m); }
+      head.append(hTrack); wrap.append(head);
+      tasks.forEach(tk => {
+        const row = el('div', null, 'gRow'), lab = el('span', null, 'gLabel'); lab.append(el('b', tk.name), el('small', ` ${t('plan.status.' + tk.status)} · ${t('plan.range', { a: tk.start, b: tk.start + tk.dur })}`, 'muted'));
+        const tr_ = el('div', null, 'gTrack'); tr_.style.width = n * DW + 'px';
+        const bar = el('i', null, 'gBar'); bar.style.cssText = `left:${(tk.start - from) * DW}px;width:${tk.dur * DW}px;background:${PLAN_COLOR[tk.status]}`; bar.title = tk.name;
+        const tl = el('i', null, 'gToday'); tl.style.left = (day - from) * DW + 'px'; tr_.append(tl, bar);
+        const acts = el('span', null, 'gActs');
+        if (!tk.done) acts.append(btn('✓', () => socket.emit('planDone', { cid: c.id, id: tk.id }, r => { if (r?.ok) toast(t(r.onTime ? 'plan.onTime' : 'plan.late', { xp: r.xp })); again(r); }), {}));
+        acts.append(btn('🗑', () => socket.emit('planDel', { cid: c.id, id: tk.id }, again)));
+        acts.children[0].title = t('plan.done'); acts.lastChild.title = t('plan.del');
+        row.append(lab, tr_, acts); wrap.append(row);
+      });
+      body.append(wrap);
+    }
+    if (planTab === 'calendar') {
+      const nav = el('div', null, 'row'); nav.append(btn('◀', () => { planMonth = Math.max(0, planMonth - 1); openPlan(c, data); }), el('b', t('plan.year', { y: Math.floor(planMonth / 12) + 1, m: (planMonth % 12) + 1 })), btn('▶', () => { planMonth++; openPlan(c, data); })); body.append(nav);
+      const grid = el('div', null, 'calGrid'), detail = el('div', null, 'calDetail');
+      for (let i = 1; i <= 30; i++) {
+        const d = planMonth * 30 + i, on = tasks.filter(x => d >= x.start && d <= x.start + x.dur);
+        const cell = el('button', null, 'calCell' + (d === day ? ' today' : '')); cell.append(el('span', String(i)));
+        const dots = el('em'); on.slice(0, 4).forEach(x => { const dot = el('i'); dot.style.background = PLAN_COLOR[x.status]; dots.append(dot); }); cell.append(dots);
+        cell.onclick = () => detail.replaceChildren(el('b', t('plan.pick', { d })), ...(on.length ? on.map(x => el('div', `• ${x.name} — ${t('plan.status.' + x.status)}`)) : [el('small', '—', 'muted')]));
+        grid.append(cell);
+      }
+      body.append(grid, detail);
+    }
+    body.append(el('small', t('plan.tip'), 'muted'));
+  });
+}
 // ---- Sprint 17a: Mini SaaS CRM + KPI ----
 function openCrm(c) {
   socket.emit('crmGet', { cid: c.id }, g => {
@@ -2290,7 +2347,7 @@ function openDept(c, d) {
         box.append(el('p', t('dept.itInfo', { lvl, max: it.maxLevel, pct: Math.round(lvl * it.cyberShield * 100) })));
         if (founder && lvl < it.maxLevel) rec(t('dept.itUpgrade', { cost: it.cost }), emit('itUpgrade'), t('dept.itWhy'));
         else if (!founder) visitorNote();
-        if (member) box.append(btn(t('crm.open'), () => openCrm(c)));
+        if (member) box.append(btn(t('crm.open'), () => openCrm(c)), btn(t('plan.open'), () => openPlan(c)));
         break;
       }
       default: box.append(el('p', t('dept.premium')));

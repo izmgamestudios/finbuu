@@ -15,6 +15,7 @@ const R = require('./reports');
 const ADS = require('./ads');
 const PITCH = require('./pitch');
 const CRM = require('./crm');
+const PLAN = require('./planner');
 const { createAuth } = require('./auth');
 const ECON = require('./economy').build(25); // 25 coins = blue-collar daily employer cost (2026 minimum wage)
 
@@ -167,7 +168,7 @@ const addLog = (st, key, params = {}) => { st.log.unshift({ at: Date.now(), day:
 const publicCompany = (c, monthKey) => {
   const f = c.fin || {}, d = f.daily || [];
   const recent = d.slice(-30);
-  const { canvas, pitch, crm, ...rest } = c; // heavy data is fetched on demand ('pitchGet', 'crmGet')
+  const { canvas, pitch, crm, plan, ...rest } = c; // heavy data is fetched on demand ('pitchGet', 'crmGet')
   return { ...rest, canvasFilled: canvasFilled(c), pitchWords: (pitch || '').trim().split(/\s+/).filter(Boolean).length, fin: { today: f.today, foundedDay: f.foundedDay, lastDay: d.at(-1) || null, prevCash: d.at(-2)?.cash ?? null,
     month: f.monthly?.[monthKey] || null, bestUnits: recent.reduce((m, x) => Math.max(m, x.units || 0), 0) } };
 };
@@ -866,6 +867,25 @@ io.on('connection', socket => {
     }
     me.stats.xp += won ? 2 : 1; me.stats.level = levelOf(me.stats.xp);
     sync(); reply({ ok: true, won, revenue });
+  });
+
+  // ---- Sprint 17b: Mini SaaS planner (tasks, Gantt, calendar) ----
+  const planReply = (c, extra = {}) => ({ ok: true, day: street.day || 0, max: PLAN.MAX_TASKS, maxDur: PLAN.MAX_DUR, maxAhead: PLAN.MAX_AHEAD, tasks: PLAN.view(c, street.day || 0), ...extra });
+  socket.on('planGet', ({ cid } = {}, cb) => { const c = crmCo(cid); if (c && typeof cb === 'function') cb(planReply(c)); });
+  socket.on('planAdd', ({ cid, name, start, dur } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = crmCo(cid); if (!c || limited()) return reply({ ok: false });
+    const r = PLAN.add(c, street.day || 0, { name, start, dur }); if (!r.ok) return reply(r);
+    reply(planReply(c));
+  });
+  socket.on('planDone', ({ cid, id } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = crmCo(cid); if (!c || limited()) return reply({ ok: false });
+    const r = PLAN.complete(c, street.day || 0, Number(id)); if (!r.ok) return reply(r);
+    me.stats.xp += r.xp; me.stats.knowledge = +(me.stats.knowledge + r.k).toFixed(1); me.stats.level = levelOf(me.stats.xp);
+    progress(street, me, 'tasks'); sync(); reply(planReply(c, { onTime: r.onTime, xp: r.xp }));
+  });
+  socket.on('planDel', ({ cid, id } = {}, cb) => {
+    const c = crmCo(cid); if (!c || limited()) return typeof cb === 'function' && cb({ ok: false });
+    PLAN.remove(c, Number(id)); if (typeof cb === 'function') cb(planReply(c));
   });
 
   socket.on('itUpgrade', ({ cid } = {}) => {

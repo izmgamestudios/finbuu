@@ -22,7 +22,8 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **15 — Yardım & rehber** | Üstte ❓ (F1 / ?) yardım penceresi: 16 konuluk kural tabanlı sohbet botu (TR+EN, API maliyeti yok) + oyun içi arama (şirket/yer/oyuncu → tıkla, yürü) + sıradaki öneri · sahnede 6 adımlık otomatik işaretlenen başlangıç rehberi (yürü, gir, şirket kur, sat, işe al, finans) | ✅ Tamam |
 | **16 — Premium yönetimi** | Admin panelinde ⭐ Premium sekmesi: Premium şehirleri (Adana, Konya, Gaziantep, Kayseri) tüm oyunculara aç/kapa · anında yansır (`seed` yeniden yayınlanır) · `data/premium.json` ile kalıcı · sesli/görüntülü/online mod "pek yakında" olarak listelenir, açılamaz · denetim kaydı | ✅ Tamam |
 | **17a — Mini SaaS: CRM + KPI** | Bilgi İşlem (IT) bölümünde 📇 CRM & KPI: satışlar ve müşteri görüşmeleri otomatik müşteri kaydı oluşturur (aday/aktif/pasif) · 10 KPI (müşteri sayısı, tekrar alan %, ort. sipariş, LTV, 30 gün gelir, kâr marjı, CAC…) · ₺ karşılığı "Takip et": aday/pasif müşteriyi geri kazanma şansı (%30–50), 10 gün bekleme | ✅ Tamam |
-| 17b — Takvim + Gantt, 17c — ERP (stok/sipariş) | Sonraki | ⏳ |
+| **17b — Mini SaaS: Takvim + Gantt** | IT bölümünde 📅 Takvim & Gantt: görev ekle (ad, başlangıç, süre ≤30 gün, en fazla 20) · Gantt çubukları (planlı/devam/gecikti/tamam renkleri, bugün çizgisi) · 30 günlük ay takvimi · görev başladıktan ≥1 oyun günü sonra bitirilebilir; süre içinde +3 XP/+1 bilgi, geç +1 XP | ✅ Tamam |
+| 17c — ERP (stok/sipariş) | Sonraki | ⏳ |
 | **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ⬜ |
 | **15 — Başlangıç & yardım** | İlk girişte atlanabilir tutorial · chatbot · yardım penceresi · oyun içi ayrıntılı arama (işletme, üye, görev, özellik) | ⬜ |
 | **16 — Premium yönetimi** | Admin Premium'u aç/kapa, şehir ve özellik kilitlerini yönet | ⬜ |
@@ -126,3 +127,8 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - Müşteri kaydı: satış tıklamasında %8 olasılık, müşteri görüşmesinde her sonuç. En fazla 40 müşteri (en düşük harcamalı silinir).
 - KPI değerleri son 30 günlük finans kayıtlarından hesaplanır; gelir/marj ilk oyun gününden önce "—" gösterir.
 - Takip: maliyet 10 coin, kazanç ≈ 3 birimlik satış; şans aday %40, pasif %50, aktif %30.
+
+## Sprint 17b notları
+- `planner.js` saf yardımcılar; olaylar `planGet/planAdd/planDone/planDel` (IT bölümü açık + şirket üyesi). Plan verisi herkese yayınlanan state'e girmez.
+- Anti-farm: görev anında bitirilemez (başladıktan ≥1 oyun günü), 20 görev sınırı, işlem hız limiti.
+- Takvim 30 günlük ay × 12 ay (oyunun takvimiyle aynı). Görevler şirkete ait, tüm üyeler görür/düzenler.

@@ -324,7 +324,10 @@
     "saved": "Saved.",
     "teamsFull": "Team limit reached.",
     "topupOk": "Card topped up.",
-    "crmCooldown": "This customer was followed up very recently."
+    "crmCooldown": "This customer was followed up very recently.",
+    "planBad": "Invalid task details.",
+    "planFull": "Task list is full (max 20).",
+    "planTooEarly": "This task cannot be completed yet; at least 1 day must pass after it starts."
   },
   "log": {
     "joined": "{{player}} entered the street.",
@@ -1352,5 +1355,32 @@
       "dormant": "Dormant"
     },
     "tip": "Tip: following up a dormant customer converts better than an active one."
+  },
+  "plan": {
+    "open": "📅 Calendar & Gantt",
+    "title": "Mini SaaS · Calendar & Gantt",
+    "intro": "Plan your work: add tasks, see their span on the Gantt chart, finish on time to earn XP.",
+    "gantt": "Gantt",
+    "calendar": "Calendar",
+    "name": "Task name",
+    "start": "Start (days from now)",
+    "dur": "Duration (days)",
+    "add": "Add",
+    "done": "Done",
+    "del": "Delete",
+    "empty": "No tasks yet. Add one above.",
+    "today": "Today: day {{d}}",
+    "range": "day {{a}}–{{b}}",
+    "status": {
+      "planned": "Planned",
+      "active": "In progress",
+      "overdue": "Overdue",
+      "done": "Done"
+    },
+    "year": "Year {{y}} · Month {{m}}",
+    "onTime": "Finished on time! +{{xp}} XP",
+    "late": "Finished late. +{{xp}} XP",
+    "tip": "A task can be completed at least 1 game day after it starts. Finish within its duration for more XP.",
+    "pick": "Day {{d}}"
   }
 }

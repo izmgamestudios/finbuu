@@ -324,7 +324,10 @@
     "saved": "Kaydedildi.",
     "teamsFull": "Takım sınırına ulaşıldı.",
     "topupOk": "Kart yüklendi.",
-    "crmCooldown": "Bu müşteri çok yakın zamanda takip edildi."
+    "crmCooldown": "Bu müşteri çok yakın zamanda takip edildi.",
+    "planBad": "Görev bilgileri geçersiz.",
+    "planFull": "Görev listesi dolu (en fazla 20).",
+    "planTooEarly": "Bu görev henüz bitirilemez; başladıktan en az 1 gün geçmeli."
   },
   "log": {
     "joined": "{{player}} caddeye girdi.",
@@ -1352,5 +1355,32 @@
       "dormant": "Pasif"
     },
     "tip": "İpucu: pasif müşteriyi takip etmek aktif müşteriden daha yüksek şansla satış getirir."
+  },
+  "plan": {
+    "open": "📅 Takvim & Gantt",
+    "title": "Mini SaaS · Takvim & Gantt",
+    "intro": "İşlerini planla: görev ekle, Gantt'ta süresini gör, zamanında bitirince XP kazan.",
+    "gantt": "Gantt",
+    "calendar": "Takvim",
+    "name": "Görev adı",
+    "start": "Başlangıç (kaç gün sonra)",
+    "dur": "Süre (gün)",
+    "add": "Ekle",
+    "done": "Bitti",
+    "del": "Sil",
+    "empty": "Henüz görev yok. Yukarıdan ekle.",
+    "today": "Bugün: gün {{d}}",
+    "range": "gün {{a}}–{{b}}",
+    "status": {
+      "planned": "Planlı",
+      "active": "Devam ediyor",
+      "overdue": "Gecikti",
+      "done": "Tamamlandı"
+    },
+    "year": "Yıl {{y}} · Ay {{m}}",
+    "onTime": "Zamanında bitti! +{{xp}} XP",
+    "late": "Geç bitti. +{{xp}} XP",
+    "tip": "Görev başladıktan en az 1 oyun günü sonra bitirilebilir. Süre içinde bitirirsen daha çok XP alırsın.",
+    "pick": "Gün {{d}}"
   }
 }

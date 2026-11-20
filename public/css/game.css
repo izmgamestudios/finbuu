@@ -396,3 +396,18 @@ header h1 small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis
 #tutBox .tutHead { display: flex; align-items: center; gap: 8px } #tutBox .tutHead small { margin-left: auto } #tutBox .tutHead button { padding: 0 6px; min-height: 24px }
 #tutBox ul { list-style: none; margin: 6px 0 0; padding: 0 } #tutBox li { padding: 2px 0 } #tutBox li.done { opacity: .55; text-decoration: line-through }
 @media (max-width: 760px) { #tutBox { bottom: 150px; width: 210px; font-size: .78rem } }
+
+/* Sprint 17b: planner */
+.gantt { overflow-x: auto; max-height: 40vh; overflow-y: auto; margin: 8px 0; border: 1px solid rgba(127,127,127,.25); border-radius: 10px }
+.gRow { display: flex; align-items: center; border-bottom: 1px solid rgba(127,127,127,.15); min-height: 34px }
+.gLabel { flex: 0 0 150px; position: sticky; left: 0; background: var(--panel, #fff); z-index: 2; padding: 2px 8px; font-size: .8rem; display: flex; flex-direction: column }
+.gTrack { position: relative; height: 26px; flex: 0 0 auto }
+.gBar { position: absolute; top: 5px; height: 16px; border-radius: 6px; opacity: .9 }
+.gToday { position: absolute; top: 0; bottom: 0; width: 2px; background: #f59e0b; z-index: 1 }
+.gTick { position: absolute; top: 4px; font-size: .65rem; opacity: .6; font-style: normal }
+.gActs { flex: 0 0 auto; display: flex; gap: 4px; padding: 0 6px; position: sticky; right: 0; background: var(--panel, #fff); z-index: 2 } .gActs button { padding: 2px 8px; min-height: 26px }
+.calGrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin: 8px 0 }
+.calCell { display: flex; flex-direction: column; align-items: center; min-height: 46px; padding: 4px; font-size: .8rem } .calCell.today { outline: 2px solid #f59e0b }
+.calCell em { display: flex; gap: 2px; margin-top: 2px } .calCell em i { width: 7px; height: 7px; border-radius: 50% }
+.calDetail { min-height: 40px; font-size: .85rem; margin-bottom: 6px }
+.planF { display: flex; flex-direction: column; gap: 2px; flex: 0 1 auto !important }
