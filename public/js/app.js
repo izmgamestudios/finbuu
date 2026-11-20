@@ -5,6 +5,7 @@
 import { layout, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook } from './world.js';
 import { paintAd, AD_SIZE } from './ads.js';
 import { renderTrMap } from './trmap.js';
+import { rankFaq, searchItems, tutorialState, FAQ_IDS } from './help.js';
 import { suggestions, companyActions, employeeCap, maxTenants, staffOf, floorsFor, floorsOfCompany, deptOpen } from './advisor.js';
 import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON, HOME_ROOMS, HOME_FLOORS } from './interior.js';
 
@@ -145,6 +146,7 @@ $('toggleStatus').onclick = () => { showStatus = !showStatus; saveJSON('status',
 $('quality').value = perf.quality;
 $('quality').onchange = e => { perf.quality = e.target.value; perf.low = perf.quality === 'low'; resize(); };
 function showTab(tab) {
+  if (tab === 'finance') tutFlag('finance');
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
   $('side').classList.toggle('open', tab !== 'street');
   document.querySelectorAll('#side .card').forEach(c => c.classList.toggle('active', c.dataset.panel === tab));
@@ -415,6 +417,7 @@ cv.addEventListener('pointermove', e => {
   cv.style.cursor = buildingAt(p.x, p.y) || npcs.at(p.x, p.y) ? 'pointer' : 'default';
 });
 function walkTo(x, onArrive, targetId) {
+  tutFlag('moved');
   player.target = clamp(x, 10, wWidth() - 10); player.onArrive = onArrive; player.targetId = targetId;
   if (near && targetId === near.id && onArrive) { player.target = null; player.targetId = null; onArrive(); }
 }
@@ -725,7 +728,7 @@ function updatePlayer(dt, now) {
     else vx = Math.sign(d) * SPEED;
   }
   player.x = clamp(player.x + vx * dt, 10, wWidth() - 10);
-  player.moving = vx !== 0;
+  player.moving = vx !== 0; if (player.moving) tutFlag("moved");
   if (vx) { player.dir = Math.sign(vx); player.phase += dt * 16 * (Math.abs(vx) > SPEED * 1.2 ? 1.6 : 1); }
   near = state ? buildings.find(b => b.kind !== 'locked' && player.x >= b.x && player.x <= b.x + b.w) || null : null;
   nearNpc = state && !player.moving ? npcs.nearest(player.x) : null;
@@ -1283,6 +1286,61 @@ socket.on('pitchResult', d => {
 });
 const PITCH_MOOD = { friendly: 'positive', impatient: 'neutral', thrifty: 'negative', skeptical: 'negative' };
 
+// ---- Sprint 15: help window (FAQ chatbot + search) and getting-started checklist ----
+let tutFlags = loadJSON('tutflags', {}), tutHidden = loadJSON('tuthidden', false);
+function tutFlag(k) { if (tutFlags[k]) return; tutFlags[k] = 1; saveJSON('tutflags', tutFlags); tutSig = ''; if (typeof renderTutorial === 'function' && state) renderTutorial(); }
+let tutSig = '';
+function renderTutorial() {
+  const box = $('tutBox'); if (!box) return;
+  const p = state && myId() ? state.players[myId()] : null;
+  if (!p || !joined || isPres()) { box.hidden = true; return; }
+  const ts = tutorialState({ me: p, companies: Object.values(state.companies), flags: tutFlags });
+  const finished = ts.doneCount === ts.total;
+  if (finished && !tutFlags.celebrated) { tutFlags.celebrated = 1; saveJSON('tutflags', tutFlags); toast(t('help.tutDone')); }
+  if (tutHidden || finished) { box.hidden = true; return; }
+  const sig = JSON.stringify([ts.steps, i18next.language, tutHidden]); if (sig === tutSig && !box.hidden) return; tutSig = sig;
+  box.hidden = false; box.replaceChildren();
+  const head = el('div', null, 'tutHead');
+  head.append(el('b', '🧭 ' + t('help.tutorial')), el('small', t('help.tutProgress', { done: ts.doneCount, total: ts.total }), 'muted'));
+  const x = el('button', '✕'); x.ariaLabel = t('help.tutHide'); x.onclick = () => { tutHidden = true; saveJSON('tuthidden', true); renderTutorial(); }; head.append(x);
+  const bar = el('div', null, 'bar'), fill = el('i'); fill.style.width = (ts.doneCount / ts.total) * 100 + '%'; bar.append(fill);
+  const ul = el('ul');
+  ts.steps.forEach(s => ul.append(el('li', (s.done ? '✅ ' : '⬜ ') + t('help.step.' + s.id), s.done ? 'done' : '')));
+  box.append(head, bar, ul);
+}
+function helpPlaces(q) { return state ? searchItems(q, placeItems().map(i => ({ ...i, name: i.name.replace(/^⭐\s*/, '') }))) : []; }
+function helpPlayers(q) { return state ? searchItems(q, Object.values(state.players).filter(p => p.id !== myId())).map(p => ({ name: p.name, id: p.id })) : []; }
+function openHelp() {
+  openModal(body => {
+    body.append(el('h3', '❓ ' + t('help.title')));
+    const log = el('div', null, 'helpLog'); body.append(log);
+    const bot = (text, ...extra) => { const m = el('div', null, 'helpMsg bot'); m.append(el('span', text)); extra.forEach(x => m.append(x)); log.append(m); log.scrollTop = log.scrollHeight; };
+    const me_ = text => { log.append(el('div', text, 'helpMsg me')); };
+    const topicChips = (ids) => { const row = el('div', null, 'helpChips'); ids.forEach(id => row.append(btn(t(`help.faq.${id}.q`), () => { me_(t(`help.faq.${id}.q`)); answer(id); }))); return row; };
+    const answer = id => bot(t(`help.faq.${id}.a`), topicChips(FAQ_IDS.filter(x => x !== id).slice(0, 0)));
+    const ask = q => {
+      q = q.trim(); if (!q) return; me_(q);
+      const ids = rankFaq(q, t), places = helpPlaces(q), players = helpPlayers(q);
+      if (!ids.length && !places.length && !players.length) return bot(t('help.noAnswer'), topicChips(FAQ_IDS.slice(0, 6)));
+      if (ids.length) bot(t(`help.faq.${ids[0]}.a`), ...(ids.length > 1 ? [el('small', t('help.related'), 'muted'), topicChips(ids.slice(1, 4))] : []));
+      if (places.length) { const row = el('div', null, 'helpChips'); places.forEach(pl => row.append(btn('📍 ' + pl.name, () => { closeModal(); pl.fn(); }))); bot(t('help.places'), row); }
+      if (players.length) { const row = el('div', null, 'helpChips'); players.forEach(pl => row.append(btn('👤 ' + pl.name, () => { closeModal(); goToPlayer(pl.id); }))); bot(t('help.players'), row); }
+    };
+    const form = el('div', null, 'row'); const input = el('input'); input.placeholder = t('help.ph'); input.maxLength = 80; input.autocomplete = 'off';
+    input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); ask(input.value); input.value = ''; } };
+    const go = btn(t('help.ask'), () => { ask(input.value); input.value = ''; }, { primary: true }); form.append(input, go); body.append(form);
+    bot(t('help.hello'), topicChips(FAQ_IDS.slice(0, 8)));
+    const sug = state && myId() ? suggestions({ state, seed, myId: myId(), name: companyName }) : [];
+    if (sug[0]) bot(t('help.suggest') + ': ' + t(sug[0].labelKey, sug[0].params), el('small', t(sug[0].reasonKey, sug[0].params), 'muted'));
+    const row = el('div', null, 'others');
+    row.append(btn('🧭 ' + t('help.tutShow'), () => { tutHidden = false; tutSig = ''; saveJSON('tuthidden', false); closeModal(); renderTutorial(); }));
+    body.append(row);
+    setTimeout(() => { if (!touch) input.focus(); }, 40);
+  });
+}
+$('helpBtn').onclick = openHelp;
+addEventListener('keydown', e => { if ((e.key === 'F1' || (e.key === '?' && !typing(e))) && !modalOpen) { e.preventDefault(); openHelp(); } });
+
 const BADGE_ICON = { hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
   social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗', closer: '🤝' };
 let extraSig = '';
@@ -1356,7 +1414,7 @@ function renderRealData() {
   box.replaceChildren(wrap);
 }
 function renderProfile(p) {
-  renderExtras(p);
+  renderExtras(p); renderTutorial();
   const box = $('profile');
   const sig = p ? `${p.coins}|${p.busCard}|${Math.round(p.stats.xp)}|${p.stats.knowledge}|${p.stats.success}|${p.role}|${p.life?.happiness}|${p.life?.health}|${i18next.language}` : '';
   if (sig === profSig) return;
@@ -1607,6 +1665,7 @@ function companyBlock(body, c, isDefault) {
 }
 function openBuilding(b) {
   if (!state) return showModes();
+  tutFlag('entered');
   cancelPlan();
   const forThis = ranked.find(s => buildingOf(s.target)?.id === b.id);
   if (b.kind === 'guide') return openModal(body => { body.append(el('h3', t('ui.guide'))); seed.tutorial.forEach(k => body.append(el('p', t(k)))); });
@@ -1919,6 +1978,10 @@ function renderMinimapList() {
   const box = $('mmList'); if (!state) return box.replaceChildren();
   const sig = buildings.map(b => b.id + (b.lot ? b.lot.companyIds.map(id => state.companies[id]?.name || id).join() : '')).join('|') + i18next.language;
   if (sig === mmSig) return; mmSig = sig;
+  const items = placeItems();
+  box.replaceChildren(...items.map(it => { const b = btn(it.name, it.fn); b.style.borderLeft = `4px solid ${it.color}`; b.className = 'mmItem'; return b; }));
+}
+function placeItems() {
   const items = [];
   const go = b => () => { walkTo(b.x + b.w / 2, () => openBuilding(b), b.id); if (touch) toggleMinimap(false); };
   for (const b of buildings) {
@@ -1928,7 +1991,7 @@ function renderMinimapList() {
     if (name) items.push({ name, fn: go(b), color: mmColor(b) });
   }
   (seed.busStops || []).forEach((x, i) => items.push({ name: '🚏 ' + t('map.stop', { n: i + 1 }), fn: () => { walkTo(x, null, null); if (touch) toggleMinimap(false); }, color: css('--accent') }));
-  box.replaceChildren(...items.map(it => { const b = btn(it.name, it.fn); b.style.borderLeft = `4px solid ${it.color}`; b.className = 'mmItem'; return b; }));
+  return items;
 }
 $('mapBtn').onclick = () => toggleMinimap(); $('mmClose').onclick = () => toggleMinimap(false);
 // ---------- Intercity travel: bus terminal, tickets, the road ----------

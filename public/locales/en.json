@@ -137,7 +137,8 @@
     "toggleStatus": "📶 Toggle status panel (F3)",
     "useElevator": "You are at the elevator. Use W/S to change floors.",
     "enterOffice": "Enter office",
-    "visit": "Look inside"
+    "visit": "Look inside",
+    "helpBtn": "❓"
   },
   "tutorial": {
     "welcome": "Guide Building: Welcome! Your starting capital is ready.",
@@ -446,14 +447,28 @@
     "taxEst": "Estimated yearly income tax: {{tax}} (taxable profit {{base}}) · {{days}} days to year end",
     "lastTax": "Last tax paid: Year {{year}} · taxable {{base}} · tax {{tax}}",
     "accountantTitle": "Accountant",
-    "acc": { "none": "None", "basic": "Basic", "pro": "Pro" },
+    "acc": {
+      "none": "None",
+      "basic": "Basic",
+      "pro": "Pro"
+    },
     "free": "free",
     "perMonth": "{{fee}}/mo",
     "taxWord": "tax",
     "accountantNote": "Filing without an accountant adds a 15% penalty; a Pro accountant cuts tax by 7%. Tax is paid on year-end (day 360) profit in progressive brackets.",
     "billsTitle": "Shop utility bills",
-    "util": { "electricity": "Electricity", "water": "Water", "gas": "Natural gas", "internet": "Internet" },
-    "utilOff": { "electricity": "Off: sales drop 60%", "water": "Off: sales drop 5%", "gas": "Off: winter sales drop 10%", "internet": "Off: sales drop 15%" },
+    "util": {
+      "electricity": "Electricity",
+      "water": "Water",
+      "gas": "Natural gas",
+      "internet": "Internet"
+    },
+    "utilOff": {
+      "electricity": "Off: sales drop 60%",
+      "water": "Off: sales drop 5%",
+      "gas": "Off: winter sales drop 10%",
+      "internet": "Off: sales drop 15%"
+    },
     "billDay": "{{amount}}/day",
     "on": "On",
     "off": "Off",
@@ -548,8 +563,16 @@
     "title": "Company Wizard",
     "chooseMode": "How detailed should the setup be?",
     "steps": "{{n}} steps",
-    "mode": { "quick": "⚡ Quick", "standard": "🧭 Standard", "detailed": "🔬 Detailed" },
-    "modeDesc": { "quick": "Pick sector and product, choose a place and name, done.", "standard": "Sector, product, place and name: four short steps.", "detailed": "Extra products/services, discounts, place, name and summary: full control." },
+    "mode": {
+      "quick": "⚡ Quick",
+      "standard": "🧭 Standard",
+      "detailed": "🔬 Detailed"
+    },
+    "modeDesc": {
+      "quick": "Pick sector and product, choose a place and name, done.",
+      "standard": "Sector, product, place and name: four short steps.",
+      "detailed": "Extra products/services, discounts, place, name and summary: full control."
+    },
     "extraNote": "Your main product: {{name}}. Optionally add more products or services (up to 7).",
     "back": "Back",
     "next": "Next",
@@ -582,7 +605,14 @@
     "note": "Rent billboards, bus stops, bus livery, building walls/roofs and mobile banners. Every ad is reviewed by an admin before it goes live.",
     "boostNow": "Live ads boost your sales by +{{pct}}% (max +{{max}}%) · slots rented: {{n}}/{{maxSlots}}",
     "free": "Ad space",
-    "kind": { "billboard": "Billboard", "stop": "Bus stop", "bus": "Bus livery", "wall": "Building wall", "roof": "Building roof", "mobile": "Mobile banner" },
+    "kind": {
+      "billboard": "Billboard",
+      "stop": "Bus stop",
+      "bus": "Bus livery",
+      "wall": "Building wall",
+      "roof": "Building roof",
+      "mobile": "Mobile banner"
+    },
     "statusFree": "Free",
     "statusTaken": "Used by {{who}}",
     "otherCompany": "another company",
@@ -594,7 +624,10 @@
     "rent": "Rent",
     "edit": "Ad",
     "approvalNote": "Your ad goes live after admin approval. Images must be public https URLs.",
-    "type": { "text": "Text", "image": "Image" },
+    "type": {
+      "text": "Text",
+      "image": "Image"
+    },
     "fTitle": "Title",
     "fText": "Text",
     "fFont": "Font size",
@@ -649,10 +682,19 @@
     "certNote": "{{n}}/{{max}} certificates, each +2% sales",
     "housingTitle": "Housing and personal bills",
     "housingNote": "Rent scales with {{city}}'s rent level. Living with family has no bills; a rented home costs daily rent + utilities from your pocket.",
-    "housing": { "family": "Family home", "studio": "Rented studio", "flat": "Rented 2-bed flat" },
+    "housing": {
+      "family": "Family home",
+      "studio": "Rented studio",
+      "flat": "Rented 2-bed flat"
+    },
     "rentDay": "{{amount}}/day",
     "depositNote": "One month's rent was taken as a deposit when you moved in ({{amount}}). If you cannot pay for 3 days you move back with your family.",
-    "utilOff": { "electricity": "Off: happiness −2 per day", "water": "Off: health −2 per day", "gas": "Off: winter health −1.5 per day", "internet": "Off: happiness −1 per day" },
+    "utilOff": {
+      "electricity": "Off: happiness −2 per day",
+      "water": "Off: health −2 per day",
+      "gas": "Off: winter health −1.5 per day",
+      "internet": "Off: happiness −1 per day"
+    },
     "dailyBill": "Daily home cost: {{amount}}",
     "unpaid": "unpaid for {{n}} days",
     "room": {
@@ -663,9 +705,33 @@
       "bedroom": "Rest or see a doctor: look after your health.",
       "balcony": "Fresh air, a walk or a holiday."
     },
-    "spend": { "groceries": "Groceries", "restaurant": "Restaurant meal", "cinema": "Cinema / fun", "clothes": "Clothes", "gift": "Gift", "doctor": "Doctor / check-up", "vacation": "Holiday", "walk": "Walk", "rest": "Rest at home" },
-    "hobby": { "music": "Music (guitar)", "sport": "Sport", "painting": "Painting", "photo": "Photography", "gaming": "Gaming", "garden": "Gardening", "chess": "Chess" },
-    "course": { "book": "Read a book", "online": "Online course", "language": "Language lessons", "mentor": "Mentoring", "cert": "Certificate programme" }
+    "spend": {
+      "groceries": "Groceries",
+      "restaurant": "Restaurant meal",
+      "cinema": "Cinema / fun",
+      "clothes": "Clothes",
+      "gift": "Gift",
+      "doctor": "Doctor / check-up",
+      "vacation": "Holiday",
+      "walk": "Walk",
+      "rest": "Rest at home"
+    },
+    "hobby": {
+      "music": "Music (guitar)",
+      "sport": "Sport",
+      "painting": "Painting",
+      "photo": "Photography",
+      "gaming": "Gaming",
+      "garden": "Gardening",
+      "chess": "Chess"
+    },
+    "course": {
+      "book": "Read a book",
+      "online": "Online course",
+      "language": "Language lessons",
+      "mentor": "Mentoring",
+      "cert": "Certificate programme"
+    }
   },
   "rooms": {
     "title": "Open rooms",
@@ -1056,7 +1122,12 @@
   "veh": {
     "gallery": "Car Gallery",
     "galleryNote": "Buy a new or used vehicle. Company cash: {{cash}}. Your car stays parked at the building door; you can also move it to the car park.",
-    "model": { "sedan_new": "Sedan · New", "sedan_used": "Sedan · Used", "van_new": "Van · New", "van_used": "Van · Used" },
+    "model": {
+      "sedan_new": "Sedan · New",
+      "sedan_used": "Sedan · Used",
+      "van_new": "Van · New",
+      "van_used": "Van · Used"
+    },
     "new": "Brand new",
     "used": "{{age}} yrs old · {{km}}k km",
     "upkeep": "upkeep {{amount}}/day",
@@ -1138,5 +1209,115 @@
     "customerSegments": "Individuals and small businesses in {{city}} looking for {{sector}}",
     "costStructure": "Rent, salaries + SGK, fuel/delivery, marketing",
     "revenueStreams": "Sales of {{product}} (~{{price}} per order), repeat customers"
+  },
+  "help": {
+    "title": "Help",
+    "open": "Help",
+    "ph": "Ask something or search: company, player, 'tax'…",
+    "ask": "Ask",
+    "hello": "Hi! Ask me anything about the game; you can also search company and player names.",
+    "noAnswer": "I did not get that. Pick a topic below or ask using other words.",
+    "topics": "Topics",
+    "related": "Related topics",
+    "places": "Places",
+    "players": "Players",
+    "go": "Go",
+    "you": "You",
+    "suggest": "💡 Suggested next step",
+    "tutorial": "Getting started",
+    "tutProgress": "{{done}}/{{total}} steps",
+    "tutDone": "Congrats, you finished the basics! 🎉",
+    "tutHide": "Hide",
+    "tutShow": "Show guide",
+    "step": {
+      "move": "Walk (A/D, arrow keys or click the screen)",
+      "enter": "Enter a building",
+      "found": "Start a company or get a job",
+      "sell": "Make your first sale",
+      "hire": "Hire your first employee",
+      "finance": "Check the Finance tab"
+    },
+    "faq": {
+      "move": {
+        "q": "How do I move?",
+        "a": "Use A/D or ←/→ to walk, Shift to run. Click the screen to walk there; click a building to walk to its door and enter. On mobile use the joystick. M opens the map.",
+        "kw": "move walk run shift joystick keyboard keys map controls how to play"
+      },
+      "found": {
+        "q": "How do I start a company?",
+        "a": "Enter an empty shop or the Digital Plaza, pick a workspace (home office is cheapest), then set a product and price. Low on money? Start with a home office or virtual office.",
+        "kw": "company start found create business startup founder shop plaza office home"
+      },
+      "sell": {
+        "q": "How do I sell?",
+        "a": "Open your company's Sales department and click 'Sell'. Use 🗣 'Talk to a customer' to persuade a customer for a bigger sale. Price, level and performance raise earnings.",
+        "kw": "sell sales click customer money earn income revenue product price"
+      },
+      "hire": {
+        "q": "How do I hire people?",
+        "a": "Use the HR department to hire NPC staff or make another player an employee or partner. Perks raise performance; salaries are paid daily.",
+        "kw": "hire employee staff worker fire salary hr partner cofounder perks"
+      },
+      "money": {
+        "q": "How do I manage money?",
+        "a": "The Finance tab shows income, expenses and profit. If cash goes negative, invest; if it is high, withdraw profit. Home bills come out of your personal coins.",
+        "kw": "money cash finance profit loss expense income invest withdraw budget debt bankrupt"
+      },
+      "tax": {
+        "q": "How do taxes work?",
+        "a": "There is income tax, stamp tax and an accounting cost; shops also get electricity, water, gas and internet bills. The Accounting department shows a tax estimate.",
+        "kw": "tax income stamp accounting bill electricity water gas internet expense"
+      },
+      "speed": {
+        "q": "How do I change game speed?",
+        "a": "Use the ⏱ button on top for 0.5x–3x. Finance bars fast-forward 1–100 days; the OK / Next suggestions also speed things up.",
+        "kw": "speed fast slow day forward time calendar skip"
+      },
+      "ads": {
+        "q": "How do I advertise?",
+        "a": "In Marketing pick a billboard, bus stop, bus or building ad. Creatives need admin approval, then show on the street and boost sales.",
+        "kw": "ads advertising billboard bus stop poster marketing promotion approval creative"
+      },
+      "vehicle": {
+        "q": "How do I get a vehicle?",
+        "a": "Buy or rent from the gallery; rentals show a time bar. Vehicles park in the car park and help with intercity trips.",
+        "kw": "vehicle car gallery rent rental parking park buy"
+      },
+      "travel": {
+        "q": "How do I travel to another city?",
+        "a": "Go to the street terminal and pick a city and transport (bus, own or rented vehicle). Ticket price and trip time depend on the city.",
+        "kw": "city travel terminal bus ticket trip istanbul ankara izmir another city"
+      },
+      "home": {
+        "q": "What can I do at home?",
+        "a": "Enter your home: personal spending, bills, hobbies and self-development. Hobbies and study give level/XP; spending affects your quality of life.",
+        "kw": "home house hobby bills personal development life quality energy happiness"
+      },
+      "chat": {
+        "q": "How do I chat?",
+        "a": "Talk to nearby players with text (Talk button). Commands: /sat, /yatir 100, /cek, /kur, /oneri, /sira. Use the emoji bar to react.",
+        "kw": "chat talk message command emoji friend player"
+      },
+      "quests": {
+        "q": "What are quests and badges?",
+        "a": "Daily quests give coins and XP. Badges (first company, sales, floors...) show on the 🏆 leaderboard and your profile.",
+        "kw": "quest badge achievement xp level rank reward daily leaderboard"
+      },
+      "save": {
+        "q": "Is my progress saved?",
+        "a": "Yes: a private token is stored in your browser; even after closing the tab you can press 'Resume' on the start screen. While you are away your company keeps selling at half speed.",
+        "kw": "save resume continue exit offline afk return progress"
+      },
+      "pitch": {
+        "q": "Investor pitch and customer talks?",
+        "a": "In the Idea Box fill the business model canvas and prepare an investor pitch. In customer talks, right answers in a 3-round Q&A grow the sale.",
+        "kw": "pitch investor idea canvas demo day customer roleplay persuade"
+      },
+      "premium": {
+        "q": "What is Premium?",
+        "a": "Features like voice/video calls will be Premium; for now they are 'coming soon'. All current gameplay is free.",
+        "kw": "premium paid voice video meeting soon locked"
+      }
+    }
   }
 }

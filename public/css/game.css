@@ -161,7 +161,7 @@ nav { display: none }
 }
 
 /* ---------- Sprint 3 ---------- */
-header #boardBtn { font-size: 1.1rem; padding: 6px 12px }
+header #boardBtn, header #helpBtn { font-size: 1.1rem; padding: 6px 12px }
 #status { position: absolute; right: 10px; bottom: 10px; font: 600 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
   background: rgba(30, 35, 50, .72); color: #e8eaf0; padding: 5px 8px; border-radius: 8px; pointer-events: none; white-space: nowrap }
 #status .warn { color: #ffd166 } #status .bad { color: #ff8a80 }
@@ -329,7 +329,7 @@ header h1 small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis
 @media (max-width: 480px) {
   header { gap: 6px; padding: 6px 8px; flex-wrap: nowrap }
   header button { padding: 6px 8px; min-width: 38px; min-height: 38px }
-  header #boardBtn, #themeBtn, #menuBtn { font-size: 1rem }
+  header #boardBtn, #helpBtn, #themeBtn, #menuBtn { font-size: 1rem }
   #speedBtn { padding: 6px 6px; font-size: .78rem }
   #clockBox b { display: none }
   header h1 { font-size: 1rem }
@@ -384,3 +384,15 @@ header h1 small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis
 .pitchReward { font-weight: 700; color: #4ade80 }
 #modalBody .prodList button { text-align: left; white-space: normal }
 .pitchHead small { display: block }
+
+/* Sprint 15: help + tutorial */
+.helpLog { max-height: 46vh; overflow: auto; display: flex; flex-direction: column; gap: 8px; margin: 8px 0; padding: 4px }
+.helpMsg { padding: 8px 12px; border-radius: 12px; max-width: 92%; font-size: .92rem }
+.helpMsg.bot { background: rgba(127,127,127,.15); align-self: flex-start }
+.helpMsg.me { background: var(--accent, #2563eb); color: #fff; align-self: flex-end }
+.helpMsg.bot > span { display: block; margin-bottom: 4px }
+.helpChips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px } .helpChips button { font-size: .8rem; padding: 4px 10px; text-align: left }
+#tutBox { position: absolute; left: 10px; bottom: 120px; width: 250px; max-width: calc(100% - 20px); padding: 10px 12px; border-radius: 12px; background: var(--card, rgba(255,255,255,.92)); box-shadow: 0 4px 16px rgba(0,0,0,.2); font-size: .85rem; z-index: 5 }
+#tutBox .tutHead { display: flex; align-items: center; gap: 8px } #tutBox .tutHead small { margin-left: auto } #tutBox .tutHead button { padding: 0 6px; min-height: 24px }
+#tutBox ul { list-style: none; margin: 6px 0 0; padding: 0 } #tutBox li { padding: 2px 0 } #tutBox li.done { opacity: .55; text-decoration: line-through }
+@media (max-width: 760px) { #tutBox { bottom: 150px; width: 210px; font-size: .78rem } }

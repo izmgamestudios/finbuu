@@ -137,7 +137,8 @@
     "toggleStatus": "📶 Durum panelini aç/kapat (F3)",
     "useElevator": "Asansördesin. W/S ile kat değiştir.",
     "enterOffice": "Ofise gir",
-    "visit": "İçeriyi gez"
+    "visit": "İçeriyi gez",
+    "helpBtn": "❓"
   },
   "tutorial": {
     "welcome": "Kılavuz Binası: Hoş geldin! Başlangıç sermayen hazır; Türkçede tutarlar gerçek 2026 ₺ değerleriyle gösterilir.",
@@ -446,14 +447,28 @@
     "taxEst": "Tahmini yıllık gelir vergisi: {{tax}} (matrah {{base}}) · yıl sonuna {{days}} gün",
     "lastTax": "Son ödenen vergi: Yıl {{year}} · matrah {{base}} · vergi {{tax}}",
     "accountantTitle": "Muhasebeci",
-    "acc": { "none": "Yok", "basic": "Temel", "pro": "Pro" },
+    "acc": {
+      "none": "Yok",
+      "basic": "Temel",
+      "pro": "Pro"
+    },
     "free": "ücretsiz",
     "perMonth": "{{fee}}/ay",
     "taxWord": "vergi",
     "accountantNote": "Muhasebecisiz beyan %15 ceza getirir; Pro muhasebeci vergiyi %7 azaltır. Vergi yıl sonunda (360. gün) kâr üzerinden dilimli ödenir.",
     "billsTitle": "Dükkân faturaları",
-    "util": { "electricity": "Elektrik", "water": "Su", "gas": "Doğalgaz", "internet": "İnternet" },
-    "utilOff": { "electricity": "Kapalı: satışlar %60 düşer", "water": "Kapalı: satışlar %5 düşer", "gas": "Kapalı: kışın satışlar %10 düşer", "internet": "Kapalı: satışlar %15 düşer" },
+    "util": {
+      "electricity": "Elektrik",
+      "water": "Su",
+      "gas": "Doğalgaz",
+      "internet": "İnternet"
+    },
+    "utilOff": {
+      "electricity": "Kapalı: satışlar %60 düşer",
+      "water": "Kapalı: satışlar %5 düşer",
+      "gas": "Kapalı: kışın satışlar %10 düşer",
+      "internet": "Kapalı: satışlar %15 düşer"
+    },
     "billDay": "{{amount}}/gün",
     "on": "Açık",
     "off": "Kapalı",
@@ -548,8 +563,16 @@
     "title": "Şirket Kurma Sihirbazı",
     "chooseMode": "Nasıl bir kurulum istersin?",
     "steps": "{{n}} adım",
-    "mode": { "quick": "⚡ Hızlı", "standard": "🧭 Standart", "detailed": "🔬 Ayrıntılı" },
-    "modeDesc": { "quick": "Sektör ve ürünü seç, yer ve isim ver, hemen kur.", "standard": "Sektör, ürün, yer ve isim: dört kısa adım.", "detailed": "Ek ürün/hizmet, indirim, yer, isim ve özet: tam kontrol." },
+    "mode": {
+      "quick": "⚡ Hızlı",
+      "standard": "🧭 Standart",
+      "detailed": "🔬 Ayrıntılı"
+    },
+    "modeDesc": {
+      "quick": "Sektör ve ürünü seç, yer ve isim ver, hemen kur.",
+      "standard": "Sektör, ürün, yer ve isim: dört kısa adım.",
+      "detailed": "Ek ürün/hizmet, indirim, yer, isim ve özet: tam kontrol."
+    },
     "extraNote": "Ana ürününün: {{name}}. İstersen ek ürün veya hizmet ekle (en fazla 7).",
     "back": "Geri",
     "next": "Sonraki",
@@ -582,7 +605,14 @@
     "note": "Billboard, durak, otobüs, bina duvarı/çatısı ve mobil banner alanları kiralayabilirsin. Reklamlar yayına girmeden admin onayından geçer.",
     "boostNow": "Canlı reklamlarla satışların +%{{pct}} (en fazla +%{{max}}) · kiralanan alan: {{n}}/{{maxSlots}}",
     "free": "Reklam alanı",
-    "kind": { "billboard": "Billboard", "stop": "Durak", "bus": "Otobüs giydirme", "wall": "Bina duvarı", "roof": "Bina çatısı", "mobile": "Mobil banner" },
+    "kind": {
+      "billboard": "Billboard",
+      "stop": "Durak",
+      "bus": "Otobüs giydirme",
+      "wall": "Bina duvarı",
+      "roof": "Bina çatısı",
+      "mobile": "Mobil banner"
+    },
     "statusFree": "Boş",
     "statusTaken": "{{who}} kullanıyor",
     "otherCompany": "başka şirket",
@@ -594,7 +624,10 @@
     "rent": "Kirala",
     "edit": "Reklam",
     "approvalNote": "Gönderdiğin reklam admin onayından sonra yayına girer. Görsel için yalnızca herkese açık https adresi kullanılabilir.",
-    "type": { "text": "Metin", "image": "Görsel" },
+    "type": {
+      "text": "Metin",
+      "image": "Görsel"
+    },
     "fTitle": "Başlık",
     "fText": "Metin",
     "fFont": "Yazı boyutu",
@@ -649,10 +682,19 @@
     "certNote": "{{n}}/{{max}} sertifika, her biri satışı +%2 artırır",
     "housingTitle": "Barınma ve kişisel faturalar",
     "housingNote": "Kira, {{city}} şehrinin kira seviyesine göre ölçeklenir. Ailenin evinde fatura yok; kirada günlük kira + faturalar kasandan çıkar.",
-    "housing": { "family": "Ailenin evi", "studio": "Kiralık stüdyo", "flat": "Kiralık 2+1" },
+    "housing": {
+      "family": "Ailenin evi",
+      "studio": "Kiralık stüdyo",
+      "flat": "Kiralık 2+1"
+    },
     "rentDay": "{{amount}}/gün",
     "depositNote": "Taşınırken bir aylık kira depozito olarak alındı ({{amount}}). Faturayı 3 gün ödeyemezsen ailenin evine dönersin.",
-    "utilOff": { "electricity": "Kapalı: mutluluk her gün −2", "water": "Kapalı: sağlık her gün −2", "gas": "Kapalı: kışın sağlık her gün −1,5", "internet": "Kapalı: mutluluk her gün −1" },
+    "utilOff": {
+      "electricity": "Kapalı: mutluluk her gün −2",
+      "water": "Kapalı: sağlık her gün −2",
+      "gas": "Kapalı: kışın sağlık her gün −1,5",
+      "internet": "Kapalı: mutluluk her gün −1"
+    },
     "dailyBill": "Günlük ev gideri: {{amount}}",
     "unpaid": "{{n}} gündür ödenmedi",
     "room": {
@@ -663,9 +705,33 @@
       "bedroom": "Dinlen ya da doktora git: sağlığını koru.",
       "balcony": "Temiz hava, yürüyüş ya da tatil planı."
     },
-    "spend": { "groceries": "Market alışverişi", "restaurant": "Restoranda yemek", "cinema": "Sinema / eğlence", "clothes": "Giyim", "gift": "Hediye", "doctor": "Doktor / check-up", "vacation": "Tatil", "walk": "Yürüyüş", "rest": "Evde dinlen" },
-    "hobby": { "music": "Müzik (gitar)", "sport": "Spor", "painting": "Resim", "photo": "Fotoğrafçılık", "gaming": "Oyun", "garden": "Bahçıvanlık", "chess": "Satranç" },
-    "course": { "book": "Kitap oku", "online": "Online kurs", "language": "Yabancı dil", "mentor": "Mentorluk", "cert": "Sertifika programı" }
+    "spend": {
+      "groceries": "Market alışverişi",
+      "restaurant": "Restoranda yemek",
+      "cinema": "Sinema / eğlence",
+      "clothes": "Giyim",
+      "gift": "Hediye",
+      "doctor": "Doktor / check-up",
+      "vacation": "Tatil",
+      "walk": "Yürüyüş",
+      "rest": "Evde dinlen"
+    },
+    "hobby": {
+      "music": "Müzik (gitar)",
+      "sport": "Spor",
+      "painting": "Resim",
+      "photo": "Fotoğrafçılık",
+      "gaming": "Oyun",
+      "garden": "Bahçıvanlık",
+      "chess": "Satranç"
+    },
+    "course": {
+      "book": "Kitap oku",
+      "online": "Online kurs",
+      "language": "Yabancı dil",
+      "mentor": "Mentorluk",
+      "cert": "Sertifika programı"
+    }
   },
   "rooms": {
     "title": "Açık odalar",
@@ -1056,7 +1122,12 @@
   "veh": {
     "gallery": "Araç Galerisi",
     "galleryNote": "Sıfır ya da ikinci el araç al. Şirket kasası: {{cash}}. Aldığın araç kapının önünde durur; otoparka da çekebilirsin.",
-    "model": { "sedan_new": "Binek · Sıfır", "sedan_used": "Binek · İkinci el", "van_new": "Ticari van · Sıfır", "van_used": "Ticari van · İkinci el" },
+    "model": {
+      "sedan_new": "Binek · Sıfır",
+      "sedan_used": "Binek · İkinci el",
+      "van_new": "Ticari van · Sıfır",
+      "van_used": "Ticari van · İkinci el"
+    },
     "new": "Sıfır km",
     "used": "{{age}} yaşında · {{km}} bin km",
     "upkeep": "bakım {{amount}}/gün",
@@ -1138,5 +1209,115 @@
     "customerSegments": "{{city}}'de {{sector}} hizmeti arayan bireyler ve küçük işletmeler",
     "costStructure": "Kira, maaş + SGK, yakıt/teslimat, pazarlama",
     "revenueStreams": "{{product}} satışı (sipariş başı ~{{price}}), tekrar eden müşteriler"
+  },
+  "help": {
+    "title": "Yardım",
+    "open": "Yardım",
+    "ph": "Bir şey sor ya da ara: şirket, oyuncu, 'vergi'…",
+    "ask": "Sor",
+    "hello": "Merhaba! Oyunla ilgili bir şey sor; ayrıca şirket ve oyuncu adı da arayabilirsin.",
+    "noAnswer": "Bunu anlayamadım. Aşağıdaki konulardan birini seç ya da başka kelimelerle sor.",
+    "topics": "Konular",
+    "related": "İlgili konular",
+    "places": "Yerler",
+    "players": "Oyuncular",
+    "go": "Git",
+    "you": "Sen",
+    "suggest": "💡 Önerilen sonraki adım",
+    "tutorial": "Başlangıç rehberi",
+    "tutProgress": "{{done}}/{{total}} adım",
+    "tutDone": "Tebrikler, temelleri tamamladın! 🎉",
+    "tutHide": "Gizle",
+    "tutShow": "Rehberi göster",
+    "step": {
+      "move": "Yürü (A/D, ok tuşları ya da ekrana tıkla)",
+      "enter": "Bir binaya gir",
+      "found": "Şirket kur ya da bir şirkette çalış",
+      "sell": "İlk satışını yap",
+      "hire": "İlk çalışanını al",
+      "finance": "Finans sekmesine göz at"
+    },
+    "faq": {
+      "move": {
+        "q": "Nasıl hareket ederim?",
+        "a": "A/D veya ←/→ ile yürü, Shift ile koş. Ekrana tıklayarak o noktaya gidebilir, binaya tıklayınca kapısına yürüyüp girebilirsin. Mobilde joystick kullan. M tuşu haritayı açar.",
+        "kw": "hareket yurumek yurume kosmak kosma shift joystick klavye tus harita gitmek nasil oynanir kontrol"
+      },
+      "found": {
+        "q": "Şirketi nasıl kurarım?",
+        "a": "Boş bir dükkâna ya da Dijital Plaza'ya gir, bir çalışma alanı seç (home office en ucuzu), ürün/hizmet ve fiyat belirle. Parası azsa home office ya da sanal ofisle başla.",
+        "kw": "sirket kurmak kurma firma isletme girisim baslamak kurucu dukkan plaza ofis home"
+      },
+      "sell": {
+        "q": "Nasıl satış yaparım?",
+        "a": "Şirketinin Satış bölümüne gir ve 'Satış Yap'a tıkla. Ayrıca 🗣 'Müşteriyle konuş' ile müşteriyi ikna edip daha büyük satış yapabilirsin. Şirketin fiyatı, seviyen ve performansın kazancı artırır.",
+        "kw": "satis satmak sat tikla musteri para kazanmak gelir kazanc urun fiyat"
+      },
+      "hire": {
+        "q": "Çalışan nasıl alırım?",
+        "a": "Şirketinin İK bölümünden NPC çalışan işe al ya da başka oyuncuyu çalışan/ortak yap. Yan hak vermek performansı artırır; maaş her gün ödenir.",
+        "kw": "calisan isci personel ise almak isten cikarmak maas ik ortak cofounder yan hak"
+      },
+      "money": {
+        "q": "Paramı nasıl yönetirim?",
+        "a": "Finans sekmesinde gelir, gider ve kârını görürsün. Kasa eksiye düşerse yatırım yap; kasan yüksekse kâr çek. Ev giderlerin (fatura, kira) kişisel paradan düşer.",
+        "kw": "para kasa nakit finans kar zarar gider gelir yatirim cekmek butce borc iflas"
+      },
+      "tax": {
+        "q": "Vergiler nasıl işliyor?",
+        "a": "Gelir vergisi, damga vergisi ve muhasebe gideri vardır; dükkânlarda elektrik, su, doğalgaz ve internet faturası da gelir. Muhasebe bölümünden vergi tahminini görebilirsin.",
+        "kw": "vergi gelir vergisi damga muhasebe fatura elektrik su dogalgaz internet gider"
+      },
+      "speed": {
+        "q": "Oyun hızını nasıl değiştiririm?",
+        "a": "Üstteki ⏱ düğmesiyle 0.5x–3x arası hız seç. Finans çubuklarıyla 1–100 gün ileri sar; 'Tamam / Sonraki' önerileri de oyunu hızlandırır.",
+        "kw": "hiz hizli yavas gun ileri sarmak zaman saat takvim ileri"
+      },
+      "ads": {
+        "q": "Reklam nasıl veririm?",
+        "a": "Pazarlama bölümünden billboard, durak, otobüs ya da bina reklamı seç. Reklam görselleri admin onayından geçer, onaylanınca sokakta görünür ve satışları artırır.",
+        "kw": "reklam billboard durak otobus afis pazarlama tanitim onay gorsel"
+      },
+      "vehicle": {
+        "q": "Araç nasıl alırım?",
+        "a": "Galeriden araç satın al ya da kirala; kiralıkta süre barı görünür. Araçlar otoparkta durur; araç şehirler arası yolculukta işine yarar.",
+        "kw": "arac araba galeri kiralamak kiralik otopark park motor satin almak"
+      },
+      "travel": {
+        "q": "Başka şehre nasıl giderim?",
+        "a": "Sokaktaki terminale git, şehir ve ulaşım türünü (otobüs, özel ya da kiralık araç) seç. Biletin parası ve yolculuk süresi şehre göre değişir.",
+        "kw": "sehir seyahat terminal otobus bilet yolculuk istanbul ankara izmir baska sehir"
+      },
+      "home": {
+        "q": "Evde neler yapabilirim?",
+        "a": "Eve gir: kişisel harcamalar, faturalar, hobi ve kişisel gelişim burada. Hobi ve eğitim seviye/XP verir; harcamaların yaşam kaliteni etkiler.",
+        "kw": "ev hobi fatura kisisel gelisim yasam kalite enerji mutluluk"
+      },
+      "chat": {
+        "q": "Nasıl sohbet ederim?",
+        "a": "Yakındaki oyuncularla yazıyla konuş ('Konuş' düğmesi). /sat, /yatir 100, /cek, /kur, /oneri, /sira komutları çalışır. Emoji çubuğuyla tepki verebilirsin.",
+        "kw": "sohbet konusmak chat yazmak mesaj komut emoji arkadas oyuncu"
+      },
+      "quests": {
+        "q": "Görev ve rozetler nedir?",
+        "a": "Günlük görevleri tamamlayınca coin ve XP kazanırsın. Rozetler (ilk şirket, satış, kat sayısı vb.) 🏆 sıralamasında ve profilinde görünür.",
+        "kw": "gorev rozet basari xp seviye siralama odul gunluk liderlik"
+      },
+      "save": {
+        "q": "İlerlemem kaydediliyor mu?",
+        "a": "Evet: tarayıcıda gizli bir jeton saklanır, sekmeyi kapatsan bile ana ekranda 'Devam et' ile kaldığın yerden dönersin. Sen yokken şirketin yarım hızla satmaya devam eder.",
+        "kw": "kayit kaydet devam etmek cikis cevrimdisi afk geri donmek ilerleme"
+      },
+      "pitch": {
+        "q": "Yatırımcı sunumu ve müşteri görüşmesi?",
+        "a": "Fikir Kutusu'nda iş modeli kanvasını doldurup yatırımcı pitch'i hazırlayabilirsin. Müşteriyle konuşmada ise 3 turluk soru-cevapta doğru yanıtlar satışı büyütür.",
+        "kw": "pitch sunum yatirimci fikir kanvas demo day musteri roleplay ikna"
+      },
+      "premium": {
+        "q": "Premium nedir?",
+        "a": "Sesli/görüntülü görüşme gibi özellikler Premium olacak; şimdilik 'pek yakında'. Mevcut oyun özelliklerinin hepsi ücretsiz.",
+        "kw": "premium ucretli sesli goruntulu toplanti yakinda kilit"
+      }
+    }
   }
 }
