@@ -277,9 +277,10 @@ function showModes() {
     create.onclick = () => {
       const pin = newPin.value.trim();
       if (pin && !/^\d{4,6}$/.test(pin)) return toast(t('toast.badPin'));
-      socket.emit('createRoom', { name: name.value, pin, city: city.value });
+      socket.emit('createRoom', { name: name.value, pin, city: city.value, listed: listed.checked });
     };
-    multi.append(newPin, create); body.append(multi);
+    const listedBox = el('label', null, 'adField'); const listed = el('input'); listed.type = 'checkbox'; listed.checked = true; listedBox.append(listed, document.createTextNode(' ' + t('rooms.listed')));
+    multi.append(newPin, listedBox, create); body.append(multi);
 
     const join = el('div', null, 'mode');
     join.append(el('b', t('ui.joinTitle')), el('p', t('ui.joinDesc')));
@@ -289,6 +290,15 @@ function showModes() {
     joinBtn.onclick = () => socket.emit('joinRoom', { roomId: rid.value.trim(), pin: pin.value.trim(), name: name.value });
     if (urlRoom) joinBtn.dataset.default = '1';
     join.append(rid, pin, joinBtn); body.append(join);
+    const open = el('div', null, 'mode'), openList = el('div', null, 'prodList');
+    open.append(el('b', '🌐 ' + t('rooms.title')), el('p', t('rooms.desc')));
+    const loadRooms = () => socket.emit('listRooms', null, res => {
+      const rows = (res?.rooms || []).map(r => { const row = el('div', null, 'prodRow'), lab = el('div', null, 'prodName');
+        lab.append(el('b', `🔑 ${r.id}`), el('span', `${t(r.mode === 'presentation' ? 'rooms.pres' : 'rooms.multi')} · 👥 ${r.players}/${r.max} · ${cityName(r.city)}`, 'prodPrice'));
+        row.append(lab, btn(t('rooms.join'), () => { rid.value = r.id; pin.focus(); toast(t('rooms.enterPin')); })); return row; });
+      openList.replaceChildren(...(rows.length ? rows : [el('small', t('rooms.none'), 'muted')]));
+    });
+    open.append(openList, btn('↻ ' + t('rooms.refresh'), loadRooms)); body.append(open); loadRooms();
 
     const online = el('div', null, 'mode disabled');
     online.append(el('b', '☁🔒 ' + t('ui.online')), el('p', t('ui.onlineDesc')));
@@ -470,16 +480,38 @@ function enterCompany(c) {
   Object.assign(scene, { name: 'zoomIn', t0: performance.now(), b, cid: c.id, kind: 'company' });
   Object.assign(inner, { x: ELEV.x - 60, floor: 0, dir: -1, target: null, onArrive: null });
   $('innerTitle').textContent = `🏢 ${companyName(c)}`;
+  innerOthers.clear(); socket.emit('enterBuilding', { cid: c.id });
   updateControls();
 }
 function exitCompany(instant) {
   if (scene.name === 'street') return;
+  if (scene.kind === 'company') socket.emit('leaveBuilding');
   keys.clear(); closeModal();
   if (instant) Object.assign(scene, { name: 'street', b: null, cid: null, kind: null });
   else Object.assign(scene, { name: 'zoomOut', t0: performance.now() });
   updateControls();
 }
 const company = () => state?.companies[scene.cid];
+// ---------- Other players inside the same building ----------
+const innerOthers = new Map(); // id -> { x, tx, floor, tf, dir, phase, moving }
+const lastInnerSent = { x: -1, floor: -1, at: 0 };
+function updateInnerOthers(dt) {
+  for (const [id, p] of Object.entries(state.players)) {
+    if (id === myId() || p.loc !== scene.cid) { innerOthers.delete(id); continue; }
+    let o = innerOthers.get(id); if (!o) { o = { x: ELEV.x - 60, tx: ELEV.x - 60, floor: 0, tf: 0, dir: 1, phase: 0, moving: false }; innerOthers.set(id, o); }
+    const d = o.tx - o.x; o.moving = Math.abs(d) > 1;
+    if (o.moving) { o.x += clamp(d, -SPEED * dt * 1.3, SPEED * dt * 1.3); o.phase += dt * 16; } else o.x = o.tx;
+    o.floor = o.tf;
+  }
+  for (const id of innerOthers.keys()) if (!state.players[id]) innerOthers.delete(id);
+}
+socket.on('innerBatch', list => {
+  for (const [id, cid, floor, x, dir] of list) {
+    if (id === myId() || cid !== scene.cid) continue;
+    const o = innerOthers.get(id); if (o) { o.tx = x; o.tf = floor; o.dir = dir; } else innerOthers.set(id, { x, tx: x, floor, tf: floor, dir, phase: 0, moving: false });
+  }
+});
+const sayFor = id => { const b = bubbles.get(id); return b && b.until > performance.now() ? (b.text ? { say: b.text } : { bubble: b.emoji }) : {}; };
 function enterHome() {
   const b = buildings.find(x => x.kind === 'home'); if (!b || isPres() || !joined) return;
   closeModal(); cancelPlan(); setAuto(false); keys.clear();
@@ -717,6 +749,11 @@ function updateInner(dt) {
   inner.x = clamp(inner.x + vx * dt, 20, IW - 20);
   inner.moving = vx !== 0;
   if (vx) { inner.dir = Math.sign(vx); inner.phase += dt * 16 * (Math.abs(vx) > SPEED * 1.2 ? 1.6 : 1); }
+  if (scene.kind === 'company' && state) {
+    updateInnerOthers(dt);
+    const t0 = performance.now();
+    if ((Math.abs(inner.x - lastInnerSent.x) > 1 || inner.floor !== lastInnerSent.floor) && t0 - lastInnerSent.at > 100) { socket.emit('innerMove', { floor: inner.floor, x: Math.round(inner.x), dir: inner.dir }); Object.assign(lastInnerSent, { x: inner.x, floor: inner.floor, at: t0 }); }
+  }
   $('actBtn').hidden = !touch;
 }
 function renderInterior(now) {
@@ -739,7 +776,8 @@ function renderInterior(now) {
     player: inner, myName: p?.name, myLook: lookFor(p?.avatar ?? 0),
     highlight: roomOf(seed.departments, inner.x, inner.floor)?.key,
     campaign: c.marketing && c.marketing.until > (state.day || 0), campaignText: t('dept.campaignOn'),
-    security: c.security || 0, trend: lotCash
+    security: c.security || 0, trend: lotCash, mySay: sayFor(myId()),
+    others: [...innerOthers].map(([id, o]) => { const pl = state.players[id]; return pl ? { ...o, look: teamLook(lookFor(pl.avatar ?? 0), state.teams?.[pl.team]?.color), label: pl.name, say: sayFor(id) } : null; }).filter(Boolean)
   });
   }
   const fade = clamp(1 - (now - scene.t0) / FADE_MS, 0, 1);
@@ -1155,13 +1193,26 @@ function render() {
   } else { logSig = ''; $('log').replaceChildren(); $('ideas').replaceChildren(); $('hud').replaceChildren(); hudSig = ''; }
 }
 let profSig = '';
+// ---------- Team: walk to a teammate / call a teammate to you ----------
+function goToPlayer(id, hint) {
+  const pl = state?.players[id]; if (!pl || id === myId()) return;
+  if (scene.name !== 'street') exitCompany(true);
+  const o = others.get(id), x = o?.tx ?? hint?.x ?? pl.x ?? 400, cid = pl.loc ?? hint?.cid;
+  closeModal(); manualInput();
+  walkTo(clamp(x, 10, wWidth() - 10), () => { const c = cid && state.companies[cid]; if (c && !isPres()) enterCompany(c); }, null);
+}
+socket.on('teamCall', c => {
+  const msg = t('team.calling', { name: c.name });
+  if (modalOpen) return toast('📣 ' + msg);
+  openModal(body => { body.append(el('h3', '📣 ' + msg), btn('🏃 ' + t('team.goTo'), () => goToPlayer(c.from, c), { primary: true, isDefault: true })); });
+});
 // ---------- Quests, teams, badges (profile card) ----------
 const BADGE_ICON = { hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
   social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗' };
 let extraSig = '';
 function renderExtras(p) {
   const teams = state?.teams || {};
-  const sig = p ? JSON.stringify([p.quests, p.badges, p.team, teams, joined?.mode, i18next.language]) : '';
+  const sig = p ? JSON.stringify([p.quests, p.badges, p.team, teams, joined?.mode, i18next.language, Object.values(state.players).map(x => [x.id, x.team, x.loc, x.name])]) : '';
   if (sig === extraSig) return;
   extraSig = sig;
   const qBox = $('quests'), tBox = $('teams'), bBox = $('badges');
@@ -1189,6 +1240,9 @@ function renderExtras(p) {
       else row.append(btn(t('team.join'), () => socket.emit('joinTeam', { teamId: tm.id }), { primary: !p.team }));
       tBox.append(row);
     });
+    if (p.team) Object.values(state.players).filter(x => x.team === p.team && x.id !== p.id).forEach(x => {
+      const r = el('div', null, 'teamRow'); r.append(el('span', `👤 ${x.name}${x.loc ? ' 🏢' : ''}`), btn('📣 ' + t('team.call'), () => socket.emit('teamCall', { to: x.id })), btn('🏃 ' + t('team.goTo'), () => goToPlayer(x.id)));
+      tBox.append(r); });
     if (joined.mode === 'multiplayer' && list.length < 8) {
       const used = list.map(x => x.color), row = el('div', null, 'row');
       const nm = el('input'); nm.placeholder = t('team.namePh'); nm.maxLength = 24;

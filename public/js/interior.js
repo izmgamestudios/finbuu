@@ -211,8 +211,9 @@ export function drawInterior(ctx, env) {
     }
   }
   // player
+  for (const o of env.others || []) drawPerson(ctx, o.x, floorBase(o.floor) - 8, o.look, { dir: o.dir, moving: o.moving, phase: o.phase, label: o.label, ...(o.say || {}) });
   const p = env.player;
-  drawPerson(ctx, p.x, floorBase(p.floor) - 8, env.myLook, { dir: p.dir, moving: p.moving, phase: p.phase, label: env.myName, mine: true });
+  drawPerson(ctx, p.x, floorBase(p.floor) - 8, env.myLook, { dir: p.dir, moving: p.moving, phase: p.phase, label: env.myName, mine: true, ...(env.mySay || {}) });
 }
 
 export function staffLooks(state, c) {

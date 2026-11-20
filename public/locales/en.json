@@ -310,6 +310,8 @@
     "homeToday": "You already did that today.",
     "homeCooldown": "You cannot do that again yet.",
     "certMax": "You can earn at most 3 certificates.",
+    "notTeammate": "That player is not on your team.",
+    "callSent": "Call sent.",
     "ownerOnly": "Only the room owner can do this.",
     "slowDown": "Slow down a little.",
     "cannotBuy": "You must be the only tenant to buy.",
@@ -661,6 +663,17 @@
     "hobby": { "music": "Music (guitar)", "sport": "Sport", "painting": "Painting", "photo": "Photography", "gaming": "Gaming", "garden": "Gardening", "chess": "Chess" },
     "course": { "book": "Read a book", "online": "Online course", "language": "Language lessons", "mentor": "Mentoring", "cert": "Certificate programme" }
   },
+  "rooms": {
+    "title": "Open rooms",
+    "desc": "Listed rooms. You need the room password to join.",
+    "listed": "Show this room in the open rooms list",
+    "multi": "Multiplayer",
+    "pres": "Presentation",
+    "join": "Join",
+    "enterPin": "Room code filled in, now enter the password.",
+    "none": "No listed rooms right now.",
+    "refresh": "Refresh"
+  },
   "badge": {
     "title": "🏅 Badges",
     "unlocked": "New badge",
@@ -882,6 +895,9 @@
     "note": "Costs (salary, SGK, rent, fuel, car) are derived from real 2026 data. Product prices are scaled as \"basket per order\" for game balance. * estimate."
   },
   "team": {
+    "call": "Call",
+    "goTo": "Go to them",
+    "calling": "{{name}} is calling you!",
     "title": "👥 Teams",
     "adminOnly": "In presentation rooms the admin creates teams.",
     "color": "Colour {{n}}",

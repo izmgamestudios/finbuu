@@ -711,7 +711,7 @@ export function draw(ctx, env) {
     bubble: env.nearNpc === n ? '💬' : null, label: env.met?.has(n.id) ? n.profile.name.split(' ')[0] : null } });
   for (const v of env.npcs.visitors) people.push({ x: v.x, y: v.lane, look: v.look, o: { dir: v.dir, moving: Math.abs(v.tx - v.x) > 3, phase: v.phase, bubble: v.emoji, scale: 0.92 } });
   for (const [id, o] of env.others) {
-    const p = env.state?.players[id]; if (!p) continue;
+    const p = env.state?.players[id]; if (!p || p.loc) continue;
     people.push({ x: o.x, y: FEET + 2, look: teamLook(lookFor(p.avatar ?? 0), env.state.teams?.[p.team]?.color), o: { dir: o.dir, moving: o.moving, phase: o.phase, label: p.name, ...sayOf(env, id) } });
   }
   const meP = env.state?.players[env.myId];

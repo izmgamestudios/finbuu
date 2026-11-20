@@ -179,7 +179,7 @@ const publicPresentation = st => st.presentation && {
     options: st.presentation.poll.options.map(o => ({ text: o.text, votes: o.votes })), total: Object.keys(st.presentation.poll.voters).length }
 };
 const publicPlayer = p => ({ id: p.id, name: p.name, coins: p.coins, role: p.role, stats: p.stats, x: p.x, dir: p.dir, avatar: p.avatar,
-  team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {}, life: publicLife(p) });
+  team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {}, life: publicLife(p), loc: p.loc?.cid || null });
 const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: st.day ? R.calendar(st.day) : null,
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
@@ -525,6 +525,12 @@ setInterval(() => {
   }
   posDirty.clear();
 }, 100);
+// Positions inside buildings (company interiors) are batched the same way: [id, companyId, floor, x, dir]
+const innerDirty = new Map(); // roomId -> Map(playerId -> loc)
+setInterval(() => {
+  for (const [rid, m] of innerDirty) if (rooms[rid] && m.size) io.to(rid).volatile.emit('innerBatch', [...m].map(([id, l]) => [id, l.cid, l.floor, l.x, l.dir]));
+  innerDirty.clear();
+}, 100);
 
 // ---------- GAME SOCKETS ----------
 io.on('connection', socket => {
@@ -575,14 +581,22 @@ io.on('connection', socket => {
   });
 
   // Multiplayer: create a private room → share link + 4-digit PIN
-  socket.on('createRoom', ({ name, pin, city } = {}) => {
+  socket.on('createRoom', ({ name, pin, city, listed } = {}) => {
     if (street) return;
     if (cityLocked(city)) return socket.emit('toast', 'toast.cityLocked');
     const id = newRoomId();
-    rooms[id] = createStreet(id, 'multiplayer', pinOrRandom(pin), city);
+    rooms[id] = createStreet(id, 'multiplayer', pinOrRandom(pin), city); rooms[id].listed = listed !== false;
     enter(rooms[id], name);
   });
 
+  // Open rooms: multiplayer / presentation rooms that are listed; the PIN is never revealed, only needed to join
+  let lastList = 0, lastListRes = { rooms: [] };
+  socket.on('listRooms', (_, cb) => {
+    if (typeof cb !== 'function') return;
+    const now = Date.now(); if (now - lastList < 1000) return cb(lastListRes); lastList = now;   // too fast: answer with the previous list
+    cb(lastListRes = { rooms: Object.values(rooms).filter(r => SHARED_MODES.includes(r.mode) && r.worldId === r.id && r.listed !== false).slice(0, 30)
+      .map(r => ({ id: r.id, mode: r.mode, players: Object.keys(r.players).length, max: SEED.maxPlayersPerRoom, city: r.city, day: r.day || 0 })) });
+  });
   socket.on('joinRoom', ({ roomId, pin, name } = {}) => {
     if (street) return;
     if (pinFails >= 5) return socket.emit('toast', 'toast.tooManyTries');
@@ -849,7 +863,7 @@ io.on('connection', socket => {
     if (by === 'bus') me.coins -= fare; else { car.cash -= fare; R.track(car, 'expenses', fare); R.track(car, 'fuel', fare); }
     // leave the street like a disconnect would (jobs end), but keep solo streets alive: the player's companies keep running
     for (const c of Object.values(from.companies)) c.employees = c.employees.filter(id => id !== socket.id);
-    from.pastPlayers[socket.id] = me; delete from.players[socket.id];
+    me.loc = null; from.pastPlayers[socket.id] = me; delete from.players[socket.id];
     if (from.ownerId === socket.id) from.ownerId = Object.keys(from.players)[0] || null;
     addLog(from, 'log.leftCity', { player: me.name });
     socket.leave(from.id); syncRoom(from); street = null;
@@ -857,6 +871,30 @@ io.on('connection', socket => {
     traveling = { timer: setTimeout(() => arrive(target), seconds * 1000) };
   });
   socket.on('disconnect', () => { if (traveling) { clearTimeout(traveling.timer); traveling = null; for (const [id, r] of Object.entries(rooms)) if (r.mode === 'solo' && r.worldId === myWorld) delete rooms[id]; } });
+  // ----- Presence inside buildings -----
+  socket.on('enterBuilding', ({ cid } = {}) => {
+    if (!street || !me || !street.companies[cid] || street.mode === 'presentation') return;
+    me.loc = { cid, floor: 0, x: 380, dir: 1 }; sync();
+  });
+  socket.on('leaveBuilding', () => { if (!street || !me?.loc) return; me.loc = null; sync(); });
+  let lastInner = 0;
+  socket.on('innerMove', ({ floor, x, dir } = {}) => {
+    if (!street || !me?.loc) return;
+    const now = Date.now(); if (now - lastInner < 50) return; lastInner = now;
+    const fl = Math.round(Number(floor)), nx = Number(x); if (!Number.isFinite(nx) || !Number.isFinite(fl)) return;
+    me.loc.floor = Math.max(0, Math.min(3, fl)); me.loc.x = Math.max(0, Math.min(960, Math.round(nx))); me.loc.dir = dir < 0 ? -1 : 1;
+    if (!innerDirty.has(street.id)) innerDirty.set(street.id, new Map());
+    innerDirty.get(street.id).set(me.id, { cid: me.loc.cid, floor: me.loc.floor, x: me.loc.x, dir: me.loc.dir });
+  });
+  // ----- Team: call a teammate to you (they get a prompt with your position) -----
+  let lastCall = 0;
+  socket.on('teamCall', ({ to } = {}) => {
+    if (!street || !me || !me.team) return;
+    const t = street.players[String(to)]; if (!t || t.id === me.id || t.team !== me.team) return socket.emit('toast', 'toast.notTeammate');
+    const now = Date.now(); if (now - lastCall < 15000) return socket.emit('toast', 'toast.slowDown'); lastCall = now;
+    io.to(t.id).emit('teamCall', { from: me.id, name: me.name, x: me.x, cid: me.loc?.cid || null });
+    socket.emit('toast', 'toast.callSent');
+  });
   socket.on('setSpeed', ({ speed } = {}) => {
     if (!street || !me || street.mode === 'presentation') return;
     if (street.ownerId !== me.id) return socket.emit('toast', 'toast.ownerOnly');
@@ -1204,6 +1242,7 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     if (!street) return;
     for (const c of Object.values(street.companies)) c.employees = c.employees.filter(id => id !== socket.id);
+    if (me) me.loc = null;
     street.pastPlayers[socket.id] = me;
     delete street.players[socket.id];
     if (street.ownerId === socket.id) street.ownerId = Object.keys(street.players)[0] || null;

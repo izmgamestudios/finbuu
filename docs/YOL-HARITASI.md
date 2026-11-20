@@ -16,7 +16,8 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **11a — Minimap & şehir haritası** | Minimap (M tuşu / köşedeki 🗺 düğmesi): tüm cadde, bina renkleri, duraklar, siz ve diğer oyuncular, görünür alan; işletme listesi, tıklayınca yürür ve açar · lobide Türkiye haritasından şehir seçimi: 5 oynanabilir şehir, Premium (Adana, Konya, Gaziantep, Kayseri) ve Pek yakında (7 şehir) kilitleri | ✅ Tamam |
 | **11b — Şehirler arası seyahat** | Caddenin sonunda OTOGAR · şehirler arası otobüs (₺/km bilet, yolda gerçek süre) veya şirket aracıyla (yakıt şirket kasasından) seyahat · her şehir kendi caddesi (kardeş oda); şirketler kendi şehirlerinde çalışmaya devam eder, oyuncu aynı hesap/istatistikle taşınır, dönünce kendi şirketine kavuşur | ✅ Tamam (İstanbul, Ankara, İzmir, Bursa, Antalya) |
 | **12 — Ev** | Sokağın başında (kılavuzun solunda) ev · dışarıdan kişisel harcamalar (market, restoran, sinema, giyim, hediye, doktor, tatil, yürüyüş) · içeri girince 3 katlı ev: mutfak, salon (ev kirası ve kişisel faturalar), çalışma odası (kitap/kurs/mentor/sertifika), hobi odası (7 hobi, seviyeler), yatak odası, teras · mutluluk ve sağlık gelire etki eder | ✅ Tamam |
-| **13 — Çok oyunculu iç sahne** | Aynı binaya giren oyuncular iç sahnede birbirini görür · takım arkadaşını yanına çağır / yanına git · açık odalar listesi (şifre ile giriş) · AFK ve offline devam (tarayıcı tarafında saklanır) | ⬜ |
+| **13a — Çok oyunculu iç sahne** | Aynı binaya giren oyuncular iç sahnede birbirini görür (konum, hareket, konuşma baloncuğu), sokakta içeridekiler gizlenir · takım arkadaşını çağır (📣, 15 sn bekleme) / yanına git (🏃, içerideyse binaya da girer) · lobide açık odalar listesi (şifre gerekir, PIN sızmaz, oda kurarken gizlenebilir) | ✅ Tamam |
+| **13b — AFK & offline devam** | AFK algılama ve çevrimdışıyken şirketlerin devam etmesi (veri tarayıcıda saklandığı için tasarım gerektirir) | ⬜ |
 | **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ⬜ |
 | **15 — Başlangıç & yardım** | İlk girişte atlanabilir tutorial · chatbot · yardım penceresi · oyun içi ayrıntılı arama (işletme, üye, görev, özellik) | ⬜ |
 | **16 — Premium yönetimi** | Admin Premium'u aç/kapa, şehir ve özellik kilitlerini yönet | ⬜ |
@@ -73,6 +74,11 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - **Sınırlar:** Her aktivite günde bir kez (tatil 30 günde, sertifika 360 günde bir); ücretsiz yürüyüş ve evde dinlenme her zaman yapılabilir. Fiyatlar **tahmini**.
 - **Rozetler:** Hobi Ustası (bir hobide 5. seviye = 25 seans), Kitap Kurdu (5 kurs/kitap).
 - **Teknik not:** `node --check` dosyaları betik gibi denetler; modül düzeyindeki yinelenen bildirimleri (ör. aynı isimli iki fonksiyon) yakalamaz. İstemci dosyaları `.mjs` kopyasıyla denetlenmeli.
+
+## Sprint 13a notları
+- **Bina içi konum:** Sunucu `loc` (hangi binada) bilgisini durumda herkese, bina içi konumu (kat, x) 100 ms'lik toplu `innerBatch` paketleriyle yayınlar. İstemci yalnızca aynı binadakileri çizer. Konumlar sınırlandırılır (kat 0–3, x 0–960). Ev (Sprint 12) özeldir, görünürlük yok.
+- **Takım çağrısı:** Yalnızca aynı takımdaki oyuncular, aynı odada; 15 sn'de bir. Çağrılan kişiye "Yanına git" penceresi çıkar (çağıranın sokak konumu ve binası ile). "Yanına git" sunucu gerektirmez: istemci yürür ve gerekirse içeri girer.
+- **Açık odalar:** Çok oyunculu ve sunum odaları listelenir (solo ve kardeş şehir odaları değil); oda kurarken "listede göster" kapatılabilir. Liste isteği bağlantı başına saniyede bir ile sınırlı, hızlı isteğe son liste döner.
 
 ## Kararlar
 - **Veri saklama:** Şimdilik tarayıcıda (localStorage/çerez) yönetilir. SQLite/PostgreSQL daha sonra bağlanacak; bunun için durum okuma/yazma tek bir katmandan geçmeli (depolama arayüzü), böylece geçiş tek yerde yapılır.
