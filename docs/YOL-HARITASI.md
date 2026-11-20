@@ -11,7 +11,7 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **7 — Zaman & finans kontrolleri** | Oyun hızı 0.5x/1x/2x/3x (oda sahibi değiştirir, odaya özel) · yatırım ve kâr payı çekmede 1–100 çubuk + elle rakam · pazarlama bütçe çubuğu (10–100, 50 = standart) · gün bazlı timeline (Cadde Olayları) · öneri çubuğunda ◀ önceki, sayaç, küçült | ✅ Tamam |
 | **8a — Ürünler & sihirbaz** | Şirket başına en fazla 8 ürün/hizmet (ad, liste fiyatı, %0–90 indirim) · satışta ürün seçimi · sihirbaz: ⚡ Hızlı (2 adım), 🧭 Standart (4), 🔬 Ayrıntılı (7: ek ürün, indirim, özet) | ✅ Tamam |
 | **8b — Vergiler & giderler** | Yıl sonu (360. gün) kademeli gelir vergisi (2026 dilimleri) · damga vergisi (kira binde 9,48, bordro binde 7,59) · muhasebeci seviyesi (yok +%15 ceza / temel / pro −%7) · dükkânda elektrik, su, doğalgaz, internet faturaları (sabit %60 + değişken %40, doğalgaz mevsimsel) ve kapatmanın satışa etkisi | ✅ Tamam |
-| **9 — Reklam sistemi** | Billboard, otobüs durağı, otobüs giydirme, mobil meta reklam, bina duvarı/çatı · görsel URL veya metin (font boyutu, renk) · admin ve şirket sahibi yönetir · **her reklam yayına girmeden admin onayından geçer** | ⬜ |
+| **9 — Reklam sistemi** | Billboard (4), durak (her durak), otobüs giydirme, bina duvarı ve çatısı, mobil banner (3) · metin (başlık, yazı boyutu, renk, hizalama, kalın) veya https görsel adresi · şirket sahibi kiralar ve düzenler, **admin onaylar**; admin kendi reklamını onaysız yerleştirebilir · canlı reklam satışı en fazla +%15 artırır, günlük kira gider olarak yazılır | ✅ Tamam |
 | **10 — Araç** | Galeriden sıfır/ikinci el araç · bina kapısında sabit park, otopark · kiralık aracın kalan süresi (üst bar) | ⬜ |
 | **11 — Harita & şehirler** | Minimap (M tuşu, mobilde harita ikonu) · Türkiye haritasından şehir seçimi (bazıları Premium/"pek yakında") · otobüs terminali, şehirler arası seyahat (maliyet + süre), özel/kiralık araçla seyahat · aynı odada farklı şehirler | ⬜ |
 | **12 — Ev** | Kılavuzun solunda ev · kişisel harcamalar · ev içi: kişisel faturalar, hobi, kendini geliştirme | ⬜ |
@@ -40,6 +40,13 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - NPC şirketleri vergi, damga, muhasebe ve fatura kalemlerinden muaftır; böylece cadde dengesi değişmedi.
 - Fatura kalemleri yalnızca oyuncu dükkânlarında. Kapatmanın etkisi: elektrik −%60 satış, internet −%15, su −%5, doğalgaz (kışın) −%10.
 - Gider dökümü raporlara eklendi (vergi, fatura, damga, muhasebe; CSV sütunları dahil). Bunlar toplam `expenses` içinde bir alt kırılımdır.
+
+## Sprint 9 notları
+- **Moderasyon:** Her reklam admin onayından geçer; onaylanana kadar eski reklam (varsa) yayında kalır, yeni içerik "onay bekliyor" görünür ve diğer oyunculara gönderilmez. Admin panelinde 📢 Reklamlar sekmesi: bekleyenler önizlemeyle, onayla / reddet (nedenle) / alanı boşalt, ayrıca admin reklamı.
+- **Güvenlik:** Görsel yalnızca herkese açık `https` adresi olabilir; kullanıcı adı/parola içeren adresler, IP adresleri, `localhost` ve iç ağ adları reddedilir (reklam, oyuncuların tarayıcısını iç ağa yönlendiremez). Metinlerde `<` `>` ve kontrol karakterleri temizlenir. Görsel istekleri `no-referrer` ile yapılır. Görseller sunucuya yüklenmez; adresten doğrudan gösterilir.
+- **Ekonomi:** Günlük kira: billboard 6, durak 3, otobüs 8, duvar 2, çatı 3, mobil 4 jeton. Şirket başına en fazla 6 alan. Bina duvarı/çatısı yalnızca o binadaki şirketler içindir. Şirket kapanırsa alanları boşalır.
+- **Mobil banner** yalnızca dokunmatik (telefon) cihazlarda, canlı mobil reklamlar arasında 8 sn'de bir dönerek gösterilir.
+- Ortak çizim modülü: `public/js/ads.js` (cadde, düzenleyici önizleme ve admin listesi aynı kodu kullanır).
 
 ## Kararlar
 - **Veri saklama:** Şimdilik tarayıcıda (localStorage/çerez) yönetilir. SQLite/PostgreSQL daha sonra bağlanacak; bunun için durum okuma/yazma tek bir katmandan geçmeli (depolama arayüzü), böylece geçiş tek yerde yapılır.

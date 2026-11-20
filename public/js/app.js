@@ -3,6 +3,7 @@
 // HUD, status overlay (FPS / ping / sync), leaderboard layer, NPC dialogs with ID cards, department panels,
 // founding wizard, chat + polls, presentation (watch-only) mode. The server stays authoritative for every action.
 import { layout, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook } from './world.js';
+import { paintAd, AD_SIZE } from './ads.js';
 import { suggestions, companyActions, employeeCap, maxTenants, staffOf, floorsFor, floorsOfCompany, deptOpen } from './advisor.js';
 import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON } from './interior.js';
 
@@ -613,7 +614,7 @@ function renderStreet(now) {
     }
   }
   draw(ctx, {
-    state, view: v, time: now, bubbles, myId: myId(), player, others: isPres() ? new Map() : others, npcs, buildings,
+    state, ads: state?.ads || {}, view: v, time: now, bubbles, myId: myId(), player, others: isPres() ? new Map() : others, npcs, buildings,
     near: isPres() ? null : near, nearNpc: isPres() ? null : nearNpc, targetId: player.targetId, met, low: perf.low, npcLimit: npcLimit(), hideMe: isPres(),
     ranks: boardOpen ? lotRanks() : null, traffic, busStops: seed?.busStops, night: nightFactor(gameMinutes()), riding: ride,
     nearStop: isPres() ? null : nearStop, stopHint: touch ? null : `E 🚏 ${t('bus.board')}`, money,
@@ -1094,7 +1095,7 @@ function render() {
   renderFinance();
   renderPoll();
   if (boardOpen) renderBoard();
-  updateSpeedBtn();
+  updateSpeedBtn(); updateAdBanner();
   if (state) {
     const sig = `${state.log[0]?.at}|${state.log.length}|${state.ideas.length}|${i18next.language}`;
     if (sig !== logSig) {
@@ -1421,6 +1422,7 @@ function companyBlock(body, c, isDefault) {
   const row = el('div', null, 'others');
   rest.forEach(a => row.append(btn((a.ev === 'invest' ? '🎚 ' + t('ui.investPick') : a.ev === 'withdraw' ? '🎚 ' + t('ui.withdrawPick') : t(a.key, a.payload)), pick(a))));
   if (!isPres()) row.append(btn('🚪 ' + t(isMember(c) ? 'ui.enterOffice' : 'ui.visit'), () => enterCompany(c)));
+  if (!isPres() && c.founders.includes(myId())) row.append(btn('📢 ' + t('ad.title'), () => openAdManager(c)));
   if (row.children.length) { box.append(el('small', t('ui.otherOptions'), 'muted')); box.append(row); }
   body.append(box);
 }
@@ -1579,6 +1581,77 @@ function productList(box, c, member, founder) {
   box.append(wrap);
   if (founder && productsOf(c).length < 8) box.append(btn('➕ ' + t('prod.add'), () => productEditor(c, null)));
 }
+// ---------- Advertising (street billboards, bus stops, bus livery, walls, roofs, mobile banners) ----------
+const AD_ICON = { billboard: '🪧', stop: '🚏', bus: '🚌', wall: '🏢', roof: '🏙', mobile: '📱' };
+const adSlotsFor = c => { // slots this company can see in its manager: shared ones + its own building
+  const out = [];
+  for (let i = 0; i < seed.ads.kinds.billboard.count; i++) out.push(`billboard:${i}`);
+  for (let i = 0; i < seed.busStops.length; i++) out.push(`stop:${i}`);
+  out.push('bus:0'); for (let i = 0; i < seed.ads.kinds.mobile.count; i++) out.push(`mobile:${i}`);
+  if (c.lotId != null) out.push(`wall:${c.lotId}`, `roof:${c.lotId}`);
+  return out;
+};
+const adKind = id => id.split(':')[0];
+const adLabel = id => { const [k, n] = id.split(':'); return `${AD_ICON[k]} ${t('ad.kind.' + k)}${k === 'wall' || k === 'roof' ? '' : ' ' + (Number(n) + 1)}`; };
+const adBoostOf = c => Math.min(seed.ads.maxBoost, Object.entries(state.ads || {}).reduce((s, [id, a]) => s + (a.owner === c.id && a.live ? seed.ads.kinds[adKind(id)].boost : 0), 0));
+const adDrafts = new Map(); // last creative typed per slot (pending ads are not sent back to clients)
+function openAdManager(c) {
+  const mineIds = Object.entries(state.ads || {}).filter(([, a]) => a.owner === c.id).map(([id]) => id);
+  openModal(body => {
+    body.append(el('h3', '📢 ' + t('ad.title') + ' · ' + companyName(c)), el('p', t('ad.note'), 'muted'));
+    body.append(el('p', t('ad.boostNow', { pct: Math.round(adBoostOf(c) * 100), max: Math.round(seed.ads.maxBoost * 100), n: mineIds.length, maxSlots: seed.ads.maxSlots })));
+    const list = el('div', null, 'prodList');
+    adSlotsFor(c).forEach(id => {
+      const k = seed.ads.kinds[adKind(id)], a = state.ads?.[id], mine = a?.owner === c.id, taken = a && !mine;
+      const row = el('div', null, 'prodRow'), label = el('div', null, 'prodName');
+      const status = !a ? t('ad.statusFree') : taken ? t('ad.statusTaken', { who: a.owner === 'admin' ? 'Admin' : t('ad.otherCompany') })
+        : a.pending ? t('ad.statusPending') : a.live ? t('ad.statusLive') : a.rejected ? t('ad.statusRejected', { reason: a.rejected }) : t('ad.statusNoAd');
+      label.append(el('b', adLabel(id)), el('span', `${status} · ${money(k.price)}/${t('ad.day')} · +%${Math.round(k.boost * 100)}`, 'prodPrice'));
+      const acts = el('div', null, 'prodActs');
+      if (!a) acts.append(btn(t('ad.rent'), () => { socket.emit('adRent', { cid: c.id, slot: id }); setTimeout(() => state.ads?.[id]?.owner === c.id && openAdManager(c), 450); }));
+      else if (mine) { acts.append(btn('✏ ' + t('ad.edit'), () => openAdEditor(c, id)), btn('🗑', () => { socket.emit('adRelease', { cid: c.id, slot: id }); setTimeout(() => openAdManager(c), 450); })); }
+      row.append(label, acts); list.append(row);
+    });
+    body.append(list);
+  });
+}
+function openAdEditor(c, id) {
+  const kind = adKind(id), live = state.ads?.[id]?.live;
+  const d = { type: 'text', title: '', text: '', fontSize: 20, color: '#ffffff', bg: '#2f6fe4', align: 'center', bold: true, imageUrl: '', ...(adDrafts.get(id) || live || {}) };
+  openModal(body => {
+    body.append(el('h3', '✏ ' + adLabel(id) + ' · ' + companyName(c)), el('p', t('ad.approvalNote'), 'muted'));
+    const preview = el('canvas', null, 'adPreview'); body.append(preview);
+    const repaint = () => { adDrafts.set(id, { ...d }); paintAd(preview, kind, { ...d, fontSize: Math.max(10, Math.min(40, d.fontSize)) }); };
+    const field = (label, input) => { const l = el('label', null, 'adField'); l.append(el('small', label, 'muted'), input); return l; };
+    const typeRow = el('div', null, 'others'); ['text', 'image'].forEach(ty => { const b = btn(t('ad.type.' + ty), () => { d.type = ty; refresh(); repaint(); }); b.className = d.type === ty ? 'sel' : ''; b.dataset.t = ty; typeRow.append(b); });
+    const mk = (prop, max, ph) => { const i = el('input'); i.value = d[prop] || ''; i.maxLength = max; i.placeholder = ph || ''; i.oninput = () => { d[prop] = i.value; repaint(); }; return i; };
+    const imgIn = mk('imageUrl', seed.ads.limits.url, 'https://…/banner.jpg');
+    const fs = el('input'); fs.type = 'range'; fs.min = 10; fs.max = 40; fs.value = d.fontSize; fs.oninput = () => { d.fontSize = Number(fs.value); repaint(); };
+    const col = (prop) => { const i = el('input'); i.type = 'color'; i.value = d[prop]; i.oninput = () => { d[prop] = i.value; repaint(); }; return i; };
+    const alignRow = el('div', null, 'others'); ['left', 'center', 'right'].forEach(a => { const b = btn(({ left: '⬅', center: '↔', right: '➡' })[a], () => { d.align = a; [...alignRow.children].forEach(x => (x.className = x.dataset.a === a ? 'sel' : '')); repaint(); }); b.dataset.a = a; b.className = d.align === a ? 'sel' : ''; alignRow.append(b); });
+    const boldB = btn('B', () => { d.bold = !d.bold; boldB.className = d.bold ? 'sel' : ''; repaint(); }); boldB.className = d.bold ? 'sel' : ''; boldB.style.fontWeight = '800';
+    const textFields = el('div'), imageFields = el('div');
+    textFields.append(field(t('ad.fTitle'), mk('title', seed.ads.limits.title)), field(t('ad.fText'), mk('text', seed.ads.limits.text)), field(t('ad.fFont') + ' (' + 10 + '–' + 40 + ')', fs));
+    const colors = el('div', null, 'row'); colors.append(field(t('ad.fColor'), col('color')), field(t('ad.fBg'), col('bg')), field(t('ad.fAlign'), alignRow), field('', boldB));
+    imageFields.append(field(t('ad.fImage'), imgIn), el('small', t('ad.imageNote'), 'muted'), field(t('ad.fCaption'), mk('title', seed.ads.limits.title)));
+    const refresh = () => { textFields.hidden = d.type !== 'text'; imageFields.hidden = d.type !== 'image'; [...typeRow.children].forEach(b => (b.className = b.dataset.t === d.type ? 'sel' : '')); };
+    body.append(typeRow, textFields, imageFields, colors);
+    const send = () => { socket.emit('adSubmit', { cid: c.id, slot: id, creative: { ...d } }); closeModal(); setTimeout(() => state && openAdManager(c), 600); };
+    body.append(btn('✓ ' + t('ad.submit'), send, { primary: true, isDefault: true }), btn('◀ ' + t('wiz.back'), () => openAdManager(c)));
+    refresh(); repaint();
+    // images load asynchronously: repaint a few times so the preview shows them
+    let n = 0; const iv = setInterval(() => { if (++n > 12 || !preview.isConnected) clearInterval(iv); else repaint(); }, 500);
+  });
+}
+// Mobile "meta" banner: rotates through the live mobile slots, shown only on phones
+let adBannerIdx = 0;
+function updateAdBanner() {
+  const live = [0, 1, 2].map(i => state?.ads?.[`mobile:${i}`]?.live).filter(Boolean);
+  const show = touch && !isPres() && live.length > 0;
+  document.body.classList.toggle('hasAd', show);
+  if (show) paintAd($('adCv'), 'mobile', live[adBannerIdx % live.length]);
+}
+setInterval(() => { adBannerIdx++; updateAdBanner(); }, 8000);
 // ---------- Amount pickers: a 1-100 slider and a manual number stay in sync ----------
 // moneyPicker: choose an amount of coins up to maxCoins. TR players type ₺, others coins.
 function moneyPicker({ title, note, maxCoins, defCoins, confirmLabel, onConfirm }) {

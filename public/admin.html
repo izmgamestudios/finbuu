@@ -77,6 +77,7 @@
     <button data-tab="economy">Ekonomi Ayarları</button>
     <button data-tab="reports">Finans Raporları</button>
     <button data-tab="ideas">Fikirler</button>
+    <button data-tab="ads">📢 Reklamlar <b id="adsBadge" class="pill s-atRisk" hidden></b></button>
     <button data-tab="audit">Denetim Kaydı</button>
   </div>
 
@@ -170,6 +171,28 @@
   </main>
 
   <main id="ideas"><div class="card"><table><thead><tr><th>Oda</th><th>Kim</th><th>Fikir</th><th>Tarih</th><th></th></tr></thead><tbody id="ideaBody"></tbody></table></div></main>
+  <main id="ads">
+    <div class="card">
+      <h3>Reklam Onayı ve Yönetimi</h3>
+      <div class="row"><select id="adRoom"></select><button id="adRefresh">↻ Yenile</button>
+        <label class="muted"><input type="checkbox" id="adOnlyPending"> yalnızca onay bekleyenler</label></div>
+      <p class="muted">Oyuncuların gönderdiği reklamlar siz onaylayana kadar yayına girmez. Görsel adreslerini açıp içeriği kontrol edin; uygunsuz, telifli veya yanıltıcı içeriği reddedin.</p>
+      <table><thead><tr><th>Alan</th><th>Sahip</th><th>Durum</th><th>Reklam</th><th>Onay bekleyen</th><th></th></tr></thead><tbody id="adBody"></tbody></table>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Admin Reklamı Yerleştir (onaysız yayına girer)</h3>
+      <div class="row">
+        <select id="adSetSlot"></select>
+        <select id="adSetType"><option value="text">Metin</option><option value="image">Görsel (https)</option></select>
+        <input id="adSetTitle" placeholder="Başlık" maxlength="40"><input id="adSetText" placeholder="Metin" maxlength="120" style="flex:1;min-width:160px">
+        <input id="adSetUrl" placeholder="https://… görsel adresi" style="flex:1;min-width:200px">
+        <label class="f">Yazı boyutu<input id="adSetFs" type="number" min="10" max="40" value="22"></label>
+        <label class="f">Yazı rengi<input id="adSetColor" type="color" value="#ffffff"></label>
+        <label class="f">Arka plan<input id="adSetBg" type="color" value="#1d70f5"></label>
+        <button id="adSetGo" class="primary">Yayına al</button>
+      </div>
+    </div>
+  </main>
   <main id="audit"><div class="card"><table><thead><tr><th>Zaman</th><th>İşlem</th><th>Detay</th></tr></thead><tbody id="auditBody"></tbody></table></div></main>
 </div>
 
@@ -258,7 +281,59 @@ $('tabs').onclick = e => {
   document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('active', x === b));
   document.querySelectorAll('main').forEach(m => m.classList.toggle('active', m.id === b.dataset.tab));
   if (b.dataset.tab === 'reports' && !report) loadReport();
+  if (b.dataset.tab === 'ads') loadAds();
 };
+
+// ---------- Advertising moderation ----------
+let adsMod = null; import('/js/ads.js').then(m => { adsMod = m; });
+const AD_KIND_TR = { billboard: 'Billboard', stop: 'Durak', bus: 'Otobüs', wall: 'Bina duvarı', roof: 'Bina çatısı', mobile: 'Mobil banner' };
+const adLabelTr = id => { const [k, n] = id.split(':'); return `${AD_KIND_TR[k]} ${k === 'wall' || k === 'roof' ? '(bina ' + n + ')' : Number(n) + 1}`; };
+let adSlots = [], adPaint = [];
+function adCell(kind, creative) {
+  const td = el('td');
+  if (!creative) return td.append(el('span', '—')), td;
+  const cv = document.createElement('canvas'); cv.style.cssText = 'width:200px;max-height:none;border-radius:6px;border:1px solid #3a4060'; td.append(cv);
+  adPaint.push(() => adsMod && adsMod.paintAd(cv, kind, creative));
+  if (creative.type === 'image') { const u = el('div', creative.imageUrl); u.style.cssText = 'font-size:.7rem;opacity:.7;max-width:220px;overflow:hidden;text-overflow:ellipsis'; td.append(u); }
+  return td;
+}
+function renderAdTable() {
+  adPaint = [];
+  const only = $('adOnlyPending').checked, rows = adSlots.filter(s => s.owner && (!only || s.pending));
+  const room = $('adRoom').value;
+  $('adBody').replaceChildren(...rows.sort((a, b) => (b.pending ? 1 : 0) - (a.pending ? 1 : 0)).map(s => {
+    const tr = el('tr'); tr.append(el('td', adLabelTr(s.id)), el('td', s.ownerName || s.ownerNameKey || '—'));
+    tr.append(el('td', s.pending ? '⏳ Onay bekliyor' : s.live ? '✅ Yayında' : s.rejected ? '⛔ Reddedildi: ' + s.rejected : 'Reklam yok'));
+    tr.append(adCell(s.kind, s.live), adCell(s.kind, s.pending));
+    const act = el('td');
+    if (s.pending) {
+      const ok = el('button', 'Onayla'); ok.className = 'primary'; ok.onclick = () => socket.emit('adminAdDecision', { roomId: room, slot: s.id, approve: true });
+      const no = el('button', 'Reddet'); no.className = 'danger'; no.onclick = () => { const r = prompt('Ret nedeni (oyuncuya gösterilir):', 'Uygunsuz içerik'); if (r !== null) socket.emit('adminAdDecision', { roomId: room, slot: s.id, approve: false, reason: r }); };
+      act.append(ok, ' ', no, ' ');
+    }
+    const clr = el('button', 'Alanı boşalt'); clr.onclick = () => { if (confirm(adLabelTr(s.id) + ' boşaltılsın mı?')) socket.emit('adminAdClear', { roomId: room, slot: s.id }); };
+    act.append(clr); tr.append(act); return tr;
+  }));
+  if (!$('adBody').children.length) $('adBody').append((() => { const tr = el('tr'), td = el('td', only ? 'Onay bekleyen reklam yok.' : 'Bu odada kiralanmış reklam alanı yok.'); td.colSpan = 6; tr.append(td); return tr; })());
+  const paint = () => adPaint.forEach(f => f()); paint(); setTimeout(paint, 800); setTimeout(paint, 2500);
+}
+function loadAds() {
+  const room = $('adRoom').value; if (!room || !socket) return;
+  socket.emit('adminListAds', { roomId: room }, res => {
+    adSlots = res.slots;
+    const sig = adSlots.map(s => s.id).join(); if ($('adSetSlot').dataset.sig !== sig) { $('adSetSlot').replaceChildren(...adSlots.map(s => new Option(adLabelTr(s.id), s.id))); $('adSetSlot').dataset.sig = sig; }
+    renderAdTable();
+  });
+}
+$('adRoom').onchange = loadAds; $('adRefresh').onclick = loadAds; $('adOnlyPending').onchange = renderAdTable;
+$('adSetGo').onclick = () => socket.emit('adminAdSet', { roomId: $('adRoom').value, slot: $('adSetSlot').value, creative: { type: $('adSetType').value, title: $('adSetTitle').value, text: $('adSetText').value, imageUrl: $('adSetUrl').value,
+  fontSize: Number($('adSetFs').value), color: $('adSetColor').value, bg: $('adSetBg').value, align: 'center', bold: true } });
+function fillAdRoom() {
+  const sel = $('adRoom'), cur = sel.value, rooms = ov.rooms.filter(r => !r.presentation || true);
+  const sig = rooms.map(r => r.id).join(); if (sel.dataset.sig !== sig) { sel.replaceChildren(...rooms.map(r => new Option(`${r.id} (${r.mode})${r.adsPending ? ' · ⏳' + r.adsPending : ''}`, r.id))); sel.dataset.sig = sig; sel.value = rooms.some(r => r.id === cur) ? cur : rooms[0]?.id || ''; }
+  const pend = ov.rooms.reduce((s, r) => s + (r.adsPending || 0), 0); $('adsBadge').hidden = !pend; $('adsBadge').textContent = pend;
+  if (document.querySelector('main#ads.active')) loadAds();
+}
 
 // ---------- Live render ----------
 let cfgRendered = false;
@@ -278,7 +353,7 @@ function renderAll() {
     const ws = {}; R.forEach(r => r.companies.forEach(c => (ws[c.workspace] = (ws[c.workspace] || 0) + 1)));
     chart('chWs', { type: 'doughnut', data: { labels: Object.keys(ws), datasets: [{ data: Object.values(ws), backgroundColor: ['#4caf50', '#1abc9c', '#2d9cdb', '#9b59b6', '#f1c40f'] }] }, options: { animation: false } });
   }
-  renderPresentation(); renderRooms(); renderCompanies(); renderIdeas(); renderAudit(); fillRoomSelects();
+  renderPresentation(); renderRooms(); renderCompanies(); renderIdeas(); renderAudit(); fillRoomSelects(); fillAdRoom();
   if (!cfgRendered) { renderConfig(); cfgRendered = true; }
 }
 

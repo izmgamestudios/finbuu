@@ -11,6 +11,7 @@ const path = require('path');
 // Load .env if present (Node >= 20.12 built-in, no dotenv dependency)
 try { if (typeof process.loadEnvFile === 'function') process.loadEnvFile(path.join(__dirname, '.env')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
 const R = require('./reports');
+const ADS = require('./ads');
 const { createAuth } = require('./auth');
 const ECON = require('./economy').build(25); // 25 coins = blue-collar daily employer cost (2026 minimum wage)
 
@@ -183,13 +184,14 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c) }])),
   presentation: publicPresentation(st) || null,
-  city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, serverNow: Date.now(),
+  city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(),
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
   busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, tax: ECON.tax });
+const publicAdConfig = () => ({ kinds: ADS.KINDS, maxBoost: ADS.MAX_BOOST, maxSlots: ADS.MAX_SLOTS_PER_COMPANY, limits: ADS.LIMITS });
 const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops,
   teamColors: SEED.teams.colors, quests: SEED.quests, badges: SEED.badges, salary: SEED.salary, custom: SEED.custom, departments: SEED.departments, marketing: SEED.marketing, itUpgrade: SEED.itUpgrade, npcTalk: { serviceCost: SEED.npcTalk.serviceCost, ids: SEED.npcTalk.ids }, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
-  lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES });
+  lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES, ads: publicAdConfig() });
 const maxTenants = lot => (lot.type === 'coworking' ? WS.coworking.maxTenants : SEED.lotSizes[lot.size].maxTenants);
 const newStats = () => ({ xp: 0, knowledge: 0, success: 0, level: 1, performance: 1 });
 const levelOf = xp => Math.floor(Math.sqrt(xp / 10)) + 1;
@@ -209,6 +211,31 @@ function activeBenefits(c) {
 }
 const performanceOf = c => +(1 + activeBenefits(c).reduce((s, k) => s + SEED.benefits[k].perf, 0)).toFixed(2);
 const benefitCostPerEmployee = c => activeBenefits(c).reduce((s, k) => s + SEED.benefits[k].cost, 0);
+
+// ---------- Advertising (Sprint 9) ----------
+// A slot is claimed by a company (or by the admin). Every creative is moderated: it goes live only after admin approval.
+const adCtx = st => ({ busStops: SEED.busStops.length, lots: st.lots.length });
+const adSlot = (st, id) => ADS.parseSlot(id, adCtx(st));
+const adState = (st, id) => (st.ads[id] ||= { owner: null, live: null, pending: null, rejected: null });
+const ownedSlots = (st, cid) => Object.entries(st.ads).filter(([, a]) => a.owner === cid).map(([id]) => id);
+// Live ads of a company raise its sales a little (capped); reach grows with how many places show it
+function adBoost(st, c) {
+  if (c.isNpc || !st.ads) return 0;
+  let b = 0;
+  for (const [id, a] of Object.entries(st.ads)) { if (a.owner !== c.id || !a.live) continue; const s = adSlot(st, id); if (s) b += s.boost; }
+  return Math.min(ADS.MAX_BOOST, b);
+}
+const publicAds = st => Object.fromEntries(Object.entries(st.ads).filter(([, a]) => a.owner).map(([id, a]) => [id,
+  { owner: a.owner, live: a.live, pending: !!a.pending, rejected: a.rejected || null }]));
+// Daily rent for every claimed slot; slots of closed companies are freed
+function billAds(st) {
+  for (const [id, a] of Object.entries(st.ads)) {
+    if (!a.owner || a.owner === 'admin') continue;
+    const c = st.companies[a.owner], s = adSlot(st, id);
+    if (!c || c.status !== 'active' || !s) { delete st.ads[id]; continue; }
+    c.cash -= s.price; R.track(c, 'expenses', s.price); R.track(c, 'advertising', s.price);
+  }
+}
 
 // ---------- Taxes, accounting and shop utility bills (Sprint 8b) ----------
 const ACC_LEVELS = ['none', 'basic', 'pro'];
@@ -314,7 +341,7 @@ function makeCompany({ id, name, nameKey, workspace, lotId, founders, cash, pric
 function createStreet(id, mode, pin, city) {
   const lots = Array.from({ length: LOTS_PER_STREET }, (_, i) => ({ id: i, ...SEED.lotPattern[i % SEED.lotPattern.length], companyIds: [] }));
   const st = { id, mode, pin: pin || null, city: ECON.cities[city] ? city : 'istanbul', teams: {}, tickAt: Date.now(), speed: 1, ownerId: null,
-    players: {}, pastPlayers: {}, companies: {}, lots, ideas: [], log: [], archive: [], day: 0, createdAt: Date.now() };
+    players: {}, pastPlayers: {}, companies: {}, lots, ideas: [], log: [], archive: [], ads: {}, day: 0, createdAt: Date.now() };
   SEED.npcCompanies.forEach((n, i) => {
     const lot = lots.find(l => l.type === n.lotType && l.size === n.size && l.companyIds.length === 0);
     const cid = 'npc' + i;
@@ -327,7 +354,7 @@ function createStreet(id, mode, pin, city) {
 }
 const crisisActive = (st, c) => c.crisis && c.crisis.until > (st.day || 0);
 const marketingActive = (st, c) => c.marketing && c.marketing.until > (st.day || 0);
-const incomeMult = (st, c) => utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
+const incomeMult = (st, c) => (1 + adBoost(st, c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
 // Mirrors the client: building height (floors) follows the lot's total cash. Virtual companies use their own cash.
 const floorsFor = cash => Math.max(1, Math.min(6, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
 function floorsOf(st, c) {
@@ -539,6 +566,36 @@ io.on('connection', socket => {
     c.price = ps[0].price; c.product = ps[0].name || null; if (i === 0) c.nameKey = ps[0].nameKey || c.nameKey;
     addLog(street, 'log.productRemoved', { player: me.name, product: gone.name || '—', ...cParams(c) });
     sync();
+  });
+
+  // Advertising: rent a slot, submit a creative (needs admin approval), release the slot
+  socket.on('adRent', ({ cid, slot } = {}) => {
+    const c = founderOf(cid); if (!c || limited() || c.isNpc) return;
+    const s = adSlot(street, slot); if (!s) return;
+    if (adState(street, s.id).owner) return socket.emit('toast', 'toast.adTaken');
+    if ((s.kind === 'wall' || s.kind === 'roof') && c.lotId !== s.index) return socket.emit('toast', 'toast.adNotYourBuilding');
+    if (ownedSlots(street, c.id).length >= ADS.MAX_SLOTS_PER_COMPANY) return socket.emit('toast', 'toast.adMaxSlots');
+    if (c.cash < s.price) return socket.emit('toast', 'toast.noCash');
+    adState(street, s.id).owner = c.id;
+    addLog(street, 'log.adRented', { player: me.name, kindKey: 'ad.kind.' + s.kind, ...cParams(c) });
+    sync();
+  });
+  socket.on('adRelease', ({ cid, slot } = {}) => {
+    const c = founderOf(cid); if (!c || limited()) return;
+    const s = adSlot(street, slot), a = s && street.ads[s.id]; if (!a || a.owner !== c.id) return;
+    delete street.ads[s.id]; sync();
+  });
+  let lastAdSubmit = 0;
+  socket.on('adSubmit', ({ cid, slot, creative } = {}) => {
+    const c = founderOf(cid); if (!c || limited()) return;
+    const s = adSlot(street, slot), a = s && street.ads[s.id]; if (!a || a.owner !== c.id) return;
+    if (Date.now() - lastAdSubmit < 3000) return socket.emit('toast', 'toast.slowDown');
+    const r = ADS.cleanCreative(creative);
+    if (!r.ok) return socket.emit('toast', r.error === 'badUrl' ? 'toast.adBadUrl' : 'toast.adEmpty');
+    lastAdSubmit = Date.now();
+    a.pending = { ...r.creative, at: Date.now() }; a.rejected = null;
+    addLog(street, 'log.adSubmitted', { player: me.name, kindKey: 'ad.kind.' + s.kind, ...cParams(c) });
+    socket.emit('toast', 'toast.adSent'); sync();
   });
 
   // Accountant level (none / basic / pro): monthly fee vs. tax penalty or saving
@@ -1046,6 +1103,7 @@ function economyTick(only) {
       }
       if (c.marketing && !marketingActive(st, c)) c.marketing = null;
     }
+    billAds(st);
     if (((st.day || 0) + 1) % 360 === 0) payIncomeTax(st);
     R.closeDay(st);
     st.tickAt = Date.now();
@@ -1208,7 +1266,7 @@ function overview() {
         companies: companies.map(c => ({ id: c.id, name: c.name, nameKey: c.nameKey, workspace: c.workspace, lotId: c.lotId,
           cash: c.cash, sales: c.sales, price: c.price, founders: c.founders.length, employees: c.employees.length,
           benefits: c.benefits, performance: c.performance, isNpc: c.isNpc, crisis: crisisActive(st, c) ? c.crisis : null })),
-        archived: st.archive.length,
+        archived: st.archive.length, adsPending: Object.values(st.ads || {}).filter(a => a.pending).length,
         ideas: st.ideas,
         log: st.log.slice(0, 15),
         totals: {
@@ -1321,6 +1379,30 @@ admin.on('connection', socket => {
     delete st.teams[teamId];
     Object.values(st.players).forEach(p => { if (p.team === teamId) p.team = null; });
     audit('deleteTeam', `${st.id}: ${teamId}`); syncRoom(st); push();
+  });
+  // ----- Advertising moderation -----
+  const adList = st => ADS.allSlots(adCtx(st)).map(s => { const a = st.ads[s.id] || {}, c = st.companies[a.owner];
+    return { id: s.id, kind: s.kind, price: s.price, owner: a.owner || null, ownerName: a.owner === 'admin' ? 'Admin' : c ? (c.name || c.nameKey) : null, ownerNameKey: !c?.name && c ? c.nameKey : null,
+      live: a.live || null, pending: a.pending || null, rejected: a.rejected || null }; });
+  socket.on('adminListAds', ({ roomId } = {}, cb) => { const st = room(roomId); if (st && typeof cb === 'function') cb({ slots: adList(st) }); });
+  socket.on('adminAdDecision', ({ roomId, slot, approve, reason } = {}) => {
+    const st = room(roomId), s = st && adSlot(st, slot), a = s && st.ads[s.id]; if (!a?.pending) return;
+    const c = st.companies[a.owner];
+    if (approve) { a.live = { ...a.pending }; a.pending = null; a.rejected = null; if (c) addLog(st, 'log.adApproved', { kindKey: 'ad.kind.' + s.kind, ...cParams(c) }); }
+    else { a.pending = null; a.rejected = clean(reason, 80) || 'rejected'; if (c) addLog(st, 'log.adRejected', { kindKey: 'ad.kind.' + s.kind, ...cParams(c) }); }
+    audit(approve ? 'adApprove' : 'adReject', `${st.id}: ${s.id}`); syncRoom(st); push();
+  });
+  // Admin places an ad directly (house ads, real-world promotions): no approval needed
+  socket.on('adminAdSet', ({ roomId, slot, creative } = {}) => {
+    const st = room(roomId), s = st && adSlot(st, slot); if (!s) return;
+    const r = ADS.cleanCreative(creative); if (!r.ok) return socket.emit('toast', 'toast.adBadUrl');
+    const a = adState(st, s.id); if (a.owner && a.owner !== 'admin') return socket.emit('toast', 'toast.adTaken');
+    a.owner = 'admin'; a.live = { ...r.creative, at: Date.now() }; a.pending = null; a.rejected = null;
+    audit('adSet', `${st.id}: ${s.id}`); syncRoom(st); push();
+  });
+  socket.on('adminAdClear', ({ roomId, slot } = {}) => {
+    const st = room(roomId), s = st && adSlot(st, slot); if (!s || !st.ads[s.id]) return;
+    delete st.ads[s.id]; audit('adClear', `${st.id}: ${s.id}`); syncRoom(st); push();
   });
   socket.on('adminSetSpeed', ({ roomId, speed } = {}) => {
     const st = room(roomId); if (!st || !setRoomSpeed(st, speed)) return;

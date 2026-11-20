@@ -2,6 +2,8 @@
 // Side-scrolling street renderer: layout, buildings with cutaway interiors, people and ambient NPCs.
 // Everything here is client-side only (zero server cost).
 
+import { drawAd } from './ads.js';
+
 export const WORLD_H = 540;
 export const GROUND = 460; // building base line
 export const FEET = 478;   // player walking line on the sidewalk
@@ -287,6 +289,13 @@ function drawLot(ctx, b, env) {
   const visibleFloors = Math.max(0, Math.floor((b.h - GROUND_H - ROOF_H) / FLOOR_H + 0.05));
   drawUpperFloors(ctx, b, visibleFloors, env.time);
   if (hash(b.seed, 3) < 0.5) drawTerrace(ctx, b, env.time, color);
+  const wallAd = env.ads?.['wall:' + lot.id]?.live, roofAd = env.ads?.['roof:' + lot.id]?.live;
+  if (wallAd) drawAd(ctx, 'wall', wallAd, b.x + 25, GROUND - b.h + ROOF_H + 4, 150, 40);
+  if (roofAd) { // sign standing on the roof
+    const rx = b.x + b.w - 118, ry = GROUND - b.h - 44;
+    ctx.fillStyle = '#4b5563'; ctx.fillRect(rx + 14, ry + 38, 3, 6); ctx.fillRect(rx + 92, ry + 38, 3, 6);
+    drawAd(ctx, 'roof', roofAd, rx, ry, 110, 38.5);
+  }
   if (tenants.length) {
     const trend = env.trend(tenants);
     const k = Math.abs(b.cash) >= 1000 ? (b.cash / 1000).toFixed(1) + 'k' : String(Math.round(b.cash));
@@ -436,10 +445,35 @@ function drawLamp(ctx, x) {
   ctx.fillStyle = '#ffe9a8'; rr(ctx, x + 8, FEET - 84, 10, 6, 3); ctx.fill();
 }
 // Bus stop shelter (🚏) on the sidewalk
-function drawStop(ctx, x, label) {
+// Billboards stand in four street gaps (never where a bus stop is), spread evenly along the street
+let bbCache = { n: -1, stops: '', gaps: [] };
+function billboardGaps(env) {
+  const key = (env.busStops || []).join(','), n = env.buildings.length;
+  if (bbCache.n === n && bbCache.stops === key) return bbCache.gaps;
+  const free = [];
+  for (let i = 0; i < n - 1; i++) {
+    const b = env.buildings[i], gx = b.x + b.w + (env.buildings[i + 1].x - b.x - b.w) / 2;
+    if (!(env.busStops || []).some(x => Math.abs(x - gx) < 30)) free.push(i);
+  }
+  const gaps = free.length <= 4 ? free : [0, 1, 2, 3].map(k => free[Math.floor((k + 0.5) * free.length / 4)]);
+  bbCache = { n, stops: key, gaps }; return gaps;
+}
+function drawBillboard(ctx, x, slot, t) {
+  const bw = 150, bh = 75, top = GROUND - 250;
+  ctx.fillStyle = '#4b5563'; ctx.fillRect(x - 14, top + bh, 4, GROUND - top - bh + 18); ctx.fillRect(x + 10, top + bh, 4, GROUND - top - bh + 18);
+  ctx.fillStyle = '#374151'; ctx.fillRect(x - bw / 2 - 4, top - 4, bw + 8, bh + 8);
+  if (slot?.live) drawAd(ctx, 'billboard', slot.live, x - bw / 2, top, bw, bh);
+  else {
+    ctx.fillStyle = slot?.owner ? '#1f2937' : '#f3f4f6'; ctx.fillRect(x - bw / 2, top, bw, bh);
+    ctx.fillStyle = slot?.owner ? '#9ca3af' : '#6b7280'; ctx.font = '600 11px system-ui, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(slot?.owner ? '…' : '📢 ' + (t ? t('ad.free') : ''), x, top + bh / 2 + 4); ctx.textAlign = 'left';
+  }
+}
+function drawStop(ctx, x, label, ad) {
   ctx.fillStyle = 'rgba(169,216,242,.55)'; ctx.fillRect(x - 20, FEET - 62, 40, 50);
   ctx.fillStyle = '#4b5563'; ctx.fillRect(x - 22, FEET - 66, 44, 5); ctx.fillRect(x - 21, FEET - 62, 2, 62); ctx.fillRect(x + 19, FEET - 62, 2, 62);
   ctx.fillStyle = '#9c6644'; ctx.fillRect(x - 14, FEET - 18, 28, 4);
+  if (ad) drawAd(ctx, 'stop', ad, x - 16, FEET - 59, 32, 44.8);
   ctx.fillStyle = '#1d70f5'; rr(ctx, x + 22, FEET - 92, 22, 22, 4); ctx.fill();
   ctx.fillStyle = '#4b5563'; ctx.fillRect(x + 32, FEET - 70, 2, 70);
   ctx.font = '13px system-ui'; ctx.textAlign = 'center'; ctx.fillText('🚏', x + 33, FEET - 76); ctx.textAlign = 'left';
@@ -457,8 +491,9 @@ function drawVehicle(ctx, v) {
   if (kind === 'bus' || kind === 'shuttle') {
     ctx.fillStyle = '#cfe8f7'; for (let wx = -w / 2 + 8; wx < w / 2 - 20; wx += 20) ctx.fillRect(wx, -h + 6, 15, 13);
     ctx.fillStyle = '#9fd3f0'; ctx.fillRect(w / 2 - 16, -h + 6, 12, 22);
-    ctx.fillStyle = '#fff'; ctx.font = '700 8px system-ui'; ctx.textAlign = 'center';
-    ctx.save(); ctx.scale(dir, 1); ctx.fillText(v.text || '', 0, -6); ctx.restore(); ctx.textAlign = 'left';
+    if (v.ad && kind === 'bus') { ctx.save(); ctx.scale(dir, 1); drawAd(ctx, 'bus', v.ad, -w / 2 + 6, -h + 22, w - 22, 26); ctx.restore(); }
+    else { ctx.fillStyle = '#fff'; ctx.font = '700 8px system-ui'; ctx.textAlign = 'center';
+      ctx.save(); ctx.scale(dir, 1); ctx.fillText(v.text || '', 0, -6); ctx.restore(); ctx.textAlign = 'left'; }
   } else {
     ctx.fillStyle = v.color; rr(ctx, -w / 4, -h - 9, w / 2, 11, 5); ctx.fill();
     ctx.fillStyle = '#cfe8f7'; ctx.fillRect(-w / 4 + 3, -h - 7, w / 4 - 4, 7); ctx.fillRect(2, -h - 7, w / 4 - 5, 7);
@@ -471,7 +506,7 @@ function drawVehicle(ctx, v) {
 }
 export function createTraffic() {
   const cars = [], drops = [];
-  const bus = { kind: 'bus', x: 0, y: LANE_A, dir: 1, w: 150, h: 44, color: '#1d70f5', text: '🚌 FİNBUU 42', speed: 95, wait: 0, nextStop: 0 };
+  const bus = { kind: 'bus', x: 0, y: LANE_A, dir: 1, w: 150, h: 52, color: '#1d70f5', text: '🚌 FİNBUU 42', speed: 95, wait: 0, nextStop: 0 };
   const make = (kind, x, lane, dir, color) => ({ kind, x, y: lane, dir, color, w: kind === 'shuttle' ? 84 : 58, h: kind === 'shuttle' ? 36 : 22,
     speed: kind === 'shuttle' ? 80 : 110 + Math.random() * 60, text: kind === 'shuttle' ? 'SERVİS' : '' });
   return {
@@ -613,7 +648,9 @@ export function draw(ctx, env) {
     const b = env.buildings[i], gx = b.x + b.w + (env.buildings[i + 1].x - b.x - b.w) / 2;
     if (gx < camX - 40 || gx > camX + viewWorldW + 40) continue;
     const stopIdx = (env.busStops || []).findIndex(x => Math.abs(x - gx) < 30);
-    if (stopIdx >= 0) drawStop(ctx, gx, env.nearStop === stopIdx ? env.stopHint : null);
+    const bbIdx = billboardGaps(env).indexOf(i);
+    if (stopIdx >= 0) drawStop(ctx, gx, env.nearStop === stopIdx ? env.stopHint : null, env.ads?.['stop:' + stopIdx]?.live);
+    else if (bbIdx >= 0) drawBillboard(ctx, gx, env.ads?.['billboard:' + bbIdx], env.t);
     else if (i % 2) drawLamp(ctx, gx); else drawTree(ctx, gx);
   }
   // people, sorted by depth
@@ -633,7 +670,7 @@ export function draw(ctx, env) {
     if (p.x < camX - 40 || p.x > camX + viewWorldW + 40) continue;
     drawPerson(ctx, p.x, p.y, p.look, p.o);
   }
-  if (env.traffic) env.traffic.draw(ctx, camX, viewWorldW, env.riding);
+  if (env.traffic) { env.traffic.bus.ad = env.ads?.['bus:0']?.live || null; env.traffic.draw(ctx, camX, viewWorldW, env.riding); }
   if (meP && env.keyHint && (env.near || env.nearNpc || env.nearStop != null) && !env.riding) pill(ctx, env.player.x, FEET - 70, env.keyHint, '#2f6fe4', '#fff', 11);
   if (NIGHT > 0) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = `rgba(10,20,50,${0.22 * NIGHT})`; ctx.fillRect(0, 0, w, h); }
 }
