@@ -396,7 +396,7 @@ function updateControls() {
   $('budgetBtn').hidden = $('doorBtn').hidden = !inOwnFlat();
   $('advisor').hidden = !joined || scene.name !== 'street';
   $('advChip').hidden = $('advisor').hidden;
-  const mapOk = !!joined && scene.name === 'street' && !isPres(); $('dwClass').hidden = !(joined && joined.mode === 'multiplayer'); $('mapBtn').hidden = !mapOk; $('zoomBox').hidden = !mapOk; $('guideBtn').hidden = !joined || isPres(); if (!mapOk && minimapOpen) toggleMinimap(false);
+  const mapOk = !!joined && scene.name === 'street' && !isPres(); $('dwClass').hidden = !(joined && joined.mode === 'multiplayer'); $('mapBtn').hidden = !mapOk; $('zoomBox').hidden = !joined || isPres(); $('guideBtn').hidden = !joined || isPres(); ['zoomIn', 'zoomOut', 'worldBtn'].forEach(id => { $(id).hidden = !mapOk; }); if (!mapOk && minimapOpen) toggleMinimap(false);
 }
 
 // ---------- Input: keyboard ----------
@@ -932,6 +932,7 @@ function renderClassReport(box) {
 $('dwClass').onclick = () => { openDrawer(false); openClassroom(); };
 socket.on('classDone', e => { toast(t('class.toastDone', { title: e.title, reward: e.reward ? t('class.toastReward', { n: e.reward }) : '' })); profSig = ''; });
 
+new ResizeObserver(() => document.documentElement.style.setProperty('--advH', ($('advisor').hidden || getComputedStyle($('advisor')).display === 'none' ? 0 : Math.round($('advisor').offsetHeight)) + 'px')).observe($('advisor'));
 // ---------- Accessibility (Sprint 33): color-blind palette, high contrast, text size, reduced motion, low-data mode; focus handling for dialogs ----------
 const A11Y_DEFAULT = { cb: false, hc: false, text: 'n', motion: false, low: false };
 ui.a11y = { ...A11Y_DEFAULT, ...(ui.a11y || {}) };

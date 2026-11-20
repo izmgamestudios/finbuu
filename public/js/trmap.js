@@ -29,6 +29,7 @@ export function renderTrMap(cities, { selected, onPick }) {
 
 // Sprint 29b: world overview map. data[cityKey] = { current, companies[], home, team, players }; cities as for renderTrMap.
 // Cities where the player has something get a larger pin with badges (🏢 companies, 🏠 home, 👥 team); others are small grey dots. onPick(city, info) on click.
+const CLUSTER = { istanbul: { badge: 'right' }, bursa: { label: 'left', badge: 'below-left' }, eskisehir: { label: 'right' } };
 export function renderWorldMap(cities, data, { onPick, labels }) {
   const svg = mk('svg', { viewBox: `0 0 ${MAP_W} ${MAP_H}`, class: 'trMap worldMap', role: 'img', 'aria-label': 'Türkiye' });
   svg.append(mk('path', { d: path(OUTLINE), class: 'trLand' }), mk('path', { d: path(MARMARA), class: 'trSea' }));
@@ -37,10 +38,13 @@ export function renderWorldMap(cities, data, { onPick, labels }) {
     const g = mk('g', { class: `trCity wm ${c.status}${info?.current ? ' here' : ''}${has ? ' has' : ''}`, tabindex: 0, role: 'button', 'aria-label': c.name });
     g.append(mk('circle', { cx: x, cy: y, r: has ? 11 : info ? 8 : 6 }));
     if (info?.current) g.append(mk('circle', { cx: x, cy: y, r: 17, class: 'pulse' }));
-    g.append(mk('text', { x, y: y - 16, 'text-anchor': 'middle', class: 'nm' }, c.name));
+    const P = CLUSTER[c.key] || {};   // crowded corners (İstanbul / Bursa / Eskişehir) get explicit label and badge sides so texts never overprint each other
+    const nm = P.label === 'left' ? { x: x - 13, y: y + 4, a: 'end' } : P.label === 'right' ? { x: x + 13, y: y + 4, a: 'start' } : { x, y: y - 16, a: 'middle' };
+    g.append(mk('text', { x: nm.x, y: nm.y, 'text-anchor': nm.a, class: 'nm' }, c.name));
     const badge = [info?.companies.length ? `🏢${info.companies.length}` : '', info?.home ? '🏠' : '', info?.team ? `👥${info.team.members}` : ''].filter(Boolean).join(' ');
-    if (badge) g.append(mk('text', { x, y: y + 24, 'text-anchor': 'middle', class: 'bd' }, badge));
-    else if (c.status !== 'open') g.append(mk('text', { x, y: y + 20, 'text-anchor': 'middle', class: 'bd' }, '🔒'));
+    const bd = P.badge === 'right' ? { x: x + 14, y: y + 5, a: 'start' } : P.badge === 'below-left' ? { x: x - 4, y: y + 26, a: 'end' } : { x, y: y + 24, a: 'middle' };
+    if (badge) g.append(mk('text', { x: bd.x, y: bd.y, 'text-anchor': bd.a, class: 'bd' }, badge));
+    else if (c.status !== 'open') g.append(mk('text', { x: bd.x, y: bd.y - 4, 'text-anchor': bd.a, class: 'bd' }, '🔒'));
     g.onclick = () => onPick(c, info || null); g.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(c, info || null); } };
     svg.append(g);
   }
