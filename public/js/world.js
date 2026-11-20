@@ -97,7 +97,7 @@ function fitText(ctx, text, maxW) {
   return s + '…';
 }
 function pill(ctx, x, y, text, bg, fg = '#fff', size = 10) {
-  ctx.font = `600 ${size}px system-ui, sans-serif`;
+  ctx.font = `700 ${size}px Nunito, system-ui, sans-serif`;
   const w = ctx.measureText(text).width + 12, h = size + 6;
   ctx.fillStyle = bg; rr(ctx, x - w / 2, y - h, w, h, h / 2); ctx.fill();
   ctx.fillStyle = fg; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -155,8 +155,8 @@ export function drawPerson(ctx, x, feet, look, o = {}) {
     if (look.glasses) { ctx.strokeStyle = '#222'; ctx.lineWidth = 1.1; ctx.strokeRect(1.2, -35.4, 4.2, 3); ctx.beginPath(); ctx.moveTo(-3, -34); ctx.lineTo(1.2, -34); ctx.stroke(); }
   }
   ctx.restore();
-  if (o.label) pill(ctx, x, feet - (look.npc ? 50 : 42) * s, o.label, look.team || (o.mine ? '#2f6fe4' : look.npc ? 'rgba(110,100,90,.75)' : 'rgba(35,40,55,.72)'));
-  if (o.mine) { ctx.fillStyle = '#2f6fe4'; ctx.beginPath(); ctx.moveTo(x - 4, feet - 64 * s); ctx.lineTo(x + 4, feet - 64 * s); ctx.lineTo(x, feet - 59 * s); ctx.fill(); }
+  if (o.label) pill(ctx, x, feet - (look.npc ? 50 : 42) * s, o.label, look.team || (o.mine ? '#ffb703' : look.npc ? 'rgba(110,100,90,.75)' : 'rgba(35,40,55,.72)'), o.mine && !look.team ? '#1d2b53' : '#fff');
+  if (o.mine) { ctx.fillStyle = '#ffb703'; ctx.beginPath(); ctx.moveTo(x - 4, feet - 64 * s); ctx.lineTo(x + 4, feet - 64 * s); ctx.lineTo(x, feet - 59 * s); ctx.fill(); }
   if (o.bubble && !o.say) bubble(ctx, x, feet - (o.label ? 60 : 44) * s, o.bubble);
   if (o.say) speech(ctx, x, feet - (o.label ? 62 : 46) * s, o.say);
 }
@@ -692,7 +692,7 @@ export function draw(ctx, env) {
     if (env.near?.id === b.id) { ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3; rr(ctx, b.x - 3, GROUND - b.h - 3, b.w + 6, b.h + 3, 6); ctx.stroke(); }
     if (env.targetId === b.id) {
       const by = GROUND - b.h - 22 + Math.sin(env.time / 180) * 4;
-      ctx.fillStyle = '#2f6fe4'; ctx.beginPath(); ctx.moveTo(b.x + b.w / 2 - 9, by); ctx.lineTo(b.x + b.w / 2 + 9, by); ctx.lineTo(b.x + b.w / 2, by + 11); ctx.fill();
+      ctx.fillStyle = '#ffb703'; ctx.beginPath(); ctx.moveTo(b.x + b.w / 2 - 9, by); ctx.lineTo(b.x + b.w / 2 + 9, by); ctx.lineTo(b.x + b.w / 2, by + 11); ctx.fill();
     }
   }
   // trees & lamps in the gaps between buildings
@@ -733,6 +733,6 @@ export function draw(ctx, env) {
       if (c.vehicle.type === 'rent' && c.vehicle.until != null) { const left = Math.max(0, c.vehicle.until - (env.state.day || 0)); pill(ctx, x, y - 38, `🚗 ${left}${env.t('veh.dayShort')}`, 'rgba(35,40,55,.75)', '#fff', 9); }
     }
   }
-  if (meP && env.keyHint && (env.near || env.nearNpc || env.nearStop != null) && !env.riding) pill(ctx, env.player.x, FEET - 70, env.keyHint, '#2f6fe4', '#fff', 11);
+  if (meP && env.keyHint && (env.near || env.nearNpc || env.nearStop != null) && !env.riding) pill(ctx, env.player.x, FEET - 70, env.keyHint, '#ffb703', '#1d2b53', 11);
   if (NIGHT > 0) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = `rgba(10,20,50,${0.22 * NIGHT})`; ctx.fillRect(0, 0, w, h); }
 }

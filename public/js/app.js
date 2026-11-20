@@ -159,6 +159,20 @@ function showTab(tab) {
   document.querySelectorAll('#side .card').forEach(c => c.classList.toggle('active', c.dataset.panel === tab));
   if (tab === 'finance') renderFinance(true);
 }
+// ---- UI-4: mobile bottom sheet — drag the handle (or the header area) down to close ----
+(() => {
+  const side = $('side'), handle = $('sheetHandle'); let y0 = null, dy = 0, t0 = 0;
+  const isMobile = () => matchMedia('(max-width: 820px)').matches;
+  handle.addEventListener('pointerdown', e => { if (!isMobile()) return; y0 = e.clientY; dy = 0; t0 = performance.now(); handle.setPointerCapture(e.pointerId); side.style.transition = 'none'; });
+  handle.addEventListener('pointermove', e => { if (y0 == null) return; dy = Math.max(0, e.clientY - y0); side.style.transform = `translateY(${dy}px)`; });
+  const end = () => {
+    if (y0 == null) return; const fast = dy / Math.max(1, performance.now() - t0) > 0.5; y0 = null;
+    side.style.transition = ''; side.style.transform = '';
+    if (dy > 90 || (fast && dy > 30)) showTab('street');
+  };
+  handle.addEventListener('pointerup', end); handle.addEventListener('pointercancel', end);
+  handle.addEventListener('click', () => { if (isMobile() && dy < 5) showTab('street'); });
+})();
 // UI-3: number keys 1-6 mirror the rail / bottom menu order
 const NAV_TABS = [...document.querySelectorAll('nav button')].map(b => b.dataset.tab);
 function labelNav() { document.querySelectorAll('nav button').forEach((b, i) => { b.dataset.key = i + 1; b.title = `${b.querySelector('b')?.textContent || ''} (${i + 1})`; }); }
@@ -862,12 +876,16 @@ function chip(icon, label, value, pct, color, onClick) {
 const signed = (n, cls) => { const v = Math.abs(n) < 0.5 ? 0 : n; return el('span', (v >= 0 ? '+' : '') + fmt(v), cls || (v >= 0 ? 'pos' : 'neg')); };
 let hudSig = '';
 // ---- UI-2: compact header stats (mobile) + drawer profile card ----
+let lastCoins = null, lastXp = null;
+function glow(node, up) { node.classList.remove('glowUp', 'glowDown'); void node.offsetWidth; node.classList.add(up ? 'glowUp' : 'glowDown'); }
 function updateHdrStats(p, s, prevXp, nextXp) {
   const box = $('hdrStats'); box.hidden = !p;
-  if (!p) return $('dwProfile').replaceChildren();
+  if (!p) { lastCoins = lastXp = null; return $('dwProfile').replaceChildren(); }
   const pct = Math.max(0, Math.min(100, ((s.xp - prevXp) / Math.max(1, nextXp - prevXp)) * 100));
   $('hdrCoins').replaceChildren(el('span', '🪙'), el('b', fmt(p.coins)));
+  if (lastCoins != null && p.coins !== lastCoins) glow($('hdrCoins'), p.coins > lastCoins); lastCoins = p.coins;
   const lv = $('hdrLvl'); lv.replaceChildren(el('span', '⭐'), el('b', String(s.level)));
+  if (lastXp != null && s.xp > lastXp) glow(lv, true); lastXp = s.xp;
   const xp = el('i', null, 'hxp'), fill = el('u'); fill.style.width = pct + '%'; xp.append(fill); lv.append(xp);
   const card = $('dwProfile'), head = el('div', null, 'dwHead');
   head.append(el('b', p.name || '—'), el('small', [state?.city && seed?.economy?.cityMap ? cityName(state.city) : '', state?.calendar ? t('ui.dwDay', { d: state.day || state.calendar.day }) : '', $('clockTxt').textContent].filter(Boolean).join(' · '), 'muted'));

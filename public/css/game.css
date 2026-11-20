@@ -500,3 +500,19 @@ nav button.active { color: var(--accent) !important; background: rgba(255, 183, 
   #side[data-view="events"] .card[data-panel="events"], #side[data-view="guide"] .card[data-panel="guide"], #side[data-view="ideas"] .card[data-panel="ideas"] { display: block }
   #side[data-view]:not([data-view="street"]) .card.collapsed > *:not(h3) { display: revert !important }
 }
+
+/* ===== UI-4: bottom sheet, tab animations, glow ===== */
+#sheetHandle { display: none }
+@keyframes cardIn { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+@keyframes glowUp { 0% { box-shadow: 0 0 0 0 rgba(255, 183, 3, .85); transform: scale(1) } 35% { box-shadow: 0 0 0 7px rgba(255, 183, 3, 0); transform: scale(1.1) } 100% { box-shadow: none; transform: scale(1) } }
+@keyframes glowDown { 0% { box-shadow: 0 0 0 0 rgba(255, 107, 74, .7) } 40% { box-shadow: 0 0 0 6px rgba(255, 107, 74, 0) } 100% { box-shadow: none } }
+.hpill.glowUp { animation: glowUp .7s ease-out } .hpill.glowDown { animation: glowDown .6s ease-out }
+@media (min-width: 821px) { #side .card { animation: cardIn .18s ease-out } }
+@media (max-width: 820px) {
+  #side { padding-top: 0; border-top: 3px solid var(--accent); touch-action: pan-y; overscroll-behavior: contain }
+  #sheetHandle { display: flex; justify-content: center; padding: 10px 0 8px; cursor: grab; touch-action: none; position: sticky; top: 0; z-index: 2; background: var(--bg) }
+  #sheetHandle i { width: 44px; height: 5px; border-radius: 3px; background: var(--line); display: block }
+  #side { transition: transform .28s cubic-bezier(.2, .9, .3, 1.05) }
+  #side .card.active { animation: cardIn .22s ease-out }
+}
+@media (prefers-reduced-motion: reduce) { #side .card, #side .card.active, .hpill.glowUp, .hpill.glowDown { animation: none !important } #side { transition: none !important } }
