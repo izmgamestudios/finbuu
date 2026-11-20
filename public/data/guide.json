@@ -1,0 +1,2497 @@
+{
+ "version": 1,
+ "categories": [
+  {
+   "id": "start",
+   "icon": "🎮",
+   "title": {
+    "tr": "Başlangıç",
+    "en": "Getting started"
+   },
+   "children": [
+    {
+     "id": "start-intro",
+     "icon": "🚀",
+     "title": {
+      "tr": "Oyuna giriş",
+      "en": "Introduction"
+     }
+    },
+    {
+     "id": "start-controls",
+     "icon": "🕹",
+     "title": {
+      "tr": "Hareket ve kontroller",
+      "en": "Movement & controls"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ui",
+   "icon": "🧭",
+   "title": {
+    "tr": "Menüler ve arayüz",
+    "en": "Menus & interface"
+   },
+   "children": [
+    {
+     "id": "ui-header",
+     "icon": "📟",
+     "title": {
+      "tr": "Üst çubuk",
+      "en": "Top bar"
+     }
+    },
+    {
+     "id": "ui-nav",
+     "icon": "☰",
+     "title": {
+      "tr": "Ana menü (sekmeler)",
+      "en": "Main menu (tabs)"
+     }
+    },
+    {
+     "id": "ui-panels",
+     "icon": "🗂",
+     "title": {
+      "tr": "Paneller ve HUD",
+      "en": "Panels & HUD"
+     }
+    },
+    {
+     "id": "ui-map",
+     "icon": "🗺",
+     "title": {
+      "tr": "Harita ve zoom",
+      "en": "Maps & zoom"
+     }
+    }
+   ]
+  },
+  {
+   "id": "buildings",
+   "icon": "🏢",
+   "title": {
+    "tr": "Binalar",
+    "en": "Buildings"
+   },
+   "children": [
+    {
+     "id": "b-support",
+     "icon": "🎓",
+     "title": {
+      "tr": "Destek binaları",
+      "en": "Support buildings"
+     }
+    },
+    {
+     "id": "b-work",
+     "icon": "💼",
+     "title": {
+      "tr": "Çalışma binaları",
+      "en": "Work buildings"
+     }
+    },
+    {
+     "id": "b-life",
+     "icon": "🏠",
+     "title": {
+      "tr": "Yaşam ve ulaşım",
+      "en": "Living & transport"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company",
+   "icon": "💼",
+   "title": {
+    "tr": "Şirket yönetimi",
+    "en": "Running a company"
+   },
+   "children": [
+    {
+     "id": "c-found",
+     "icon": "🏁",
+     "title": {
+      "tr": "Kurmak ve ürün",
+      "en": "Founding & products"
+     }
+    },
+    {
+     "id": "c-sell",
+     "icon": "🛒",
+     "title": {
+      "tr": "Satış",
+      "en": "Selling"
+     }
+    },
+    {
+     "id": "c-team",
+     "icon": "👷",
+     "title": {
+      "tr": "Ekip ve departmanlar",
+      "en": "Team & departments"
+     }
+    },
+    {
+     "id": "c-tools",
+     "icon": "🧰",
+     "title": {
+      "tr": "Araçlar ve mini SaaS",
+      "en": "Tools & mini SaaS"
+     }
+    },
+    {
+     "id": "c-growth",
+     "icon": "📣",
+     "title": {
+      "tr": "Büyüme: reklam ve araç",
+      "en": "Growth: ads & vehicles"
+     }
+    }
+   ]
+  },
+  {
+   "id": "economy",
+   "icon": "💰",
+   "title": {
+    "tr": "Ekonomi ve finans",
+    "en": "Economy & finance"
+   },
+   "children": [
+    {
+     "id": "e-money",
+     "icon": "🪙",
+     "title": {
+      "tr": "Para ve kasa",
+      "en": "Money & cash"
+     }
+    },
+    {
+     "id": "e-costs",
+     "icon": "🧾",
+     "title": {
+      "tr": "Vergi ve giderler",
+      "en": "Taxes & costs"
+     }
+    },
+    {
+     "id": "e-market",
+     "icon": "📈",
+     "title": {
+      "tr": "Piyasa ve pazar",
+      "en": "Market & trade"
+     }
+    }
+   ]
+  },
+  {
+   "id": "social",
+   "icon": "🤝",
+   "title": {
+    "tr": "Sosyal ve ortaklık",
+    "en": "Social & partnerships"
+   },
+   "children": [
+    {
+     "id": "s-room",
+     "icon": "💬",
+     "title": {
+      "tr": "Oda ve sohbet",
+      "en": "Rooms & chat"
+     }
+    },
+    {
+     "id": "s-partner",
+     "icon": "🤝",
+     "title": {
+      "tr": "Ortaklık ve satış",
+      "en": "Partners & exit"
+     }
+    }
+   ]
+  },
+  {
+   "id": "progress",
+   "icon": "🏆",
+   "title": {
+    "tr": "İlerleme ve ödüller",
+    "en": "Progress & rewards"
+   },
+   "children": [
+    {
+     "id": "p-quests",
+     "icon": "🎯",
+     "title": {
+      "tr": "Görevler ve seri",
+      "en": "Quests & streak"
+     }
+    },
+    {
+     "id": "p-compete",
+     "icon": "🏁",
+     "title": {
+      "tr": "Yarış ve hedefler",
+      "en": "Competition & goals"
+     }
+    },
+    {
+     "id": "p-badges",
+     "icon": "🏅",
+     "title": {
+      "tr": "Rozetler ve seviye",
+      "en": "Badges & level"
+     }
+    }
+   ]
+  },
+  {
+   "id": "account",
+   "icon": "👤",
+   "title": {
+    "tr": "Hesap",
+    "en": "Account"
+   }
+  },
+  {
+   "id": "glossary",
+   "icon": "📖",
+   "title": {
+    "tr": "Sözlük",
+    "en": "Glossary"
+   }
+  }
+ ],
+ "items": [
+  {
+   "id": "what-is",
+   "cat": "start-intro",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Finbuu nedir?",
+    "en": "What is Finbuu?"
+   },
+   "body": {
+    "tr": "Finbuu, sokakta yürüyerek şirket kurduğun, ürün sattığın, ekip kurduğun ve gerçek girişimcilik kavramlarını (değer önerisi, canvas, pitch, ortaklık) öğrendiğin çok oyunculu bir girişimcilik oyunudur.",
+    "en": "Finbuu is a multiplayer entrepreneurship game where you walk a street, found companies, sell products, build teams and learn real startup ideas (value proposition, canvas, pitch, partnerships)."
+   },
+   "tags": [
+    "oyun",
+    "giris",
+    "baslangic"
+   ],
+   "steps": {
+    "tr": [
+     "Cadde → Kılavuz binası → Rehber sekmesi",
+     "Üstteki ❓ düğmesiyle de yardıma ulaşabilirsin"
+    ],
+    "en": [
+     "Street → Guide building → Guide tab",
+     "The ❓ button at the top also opens help"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "guide"
+   },
+   "related": []
+  },
+  {
+   "id": "first-steps",
+   "cat": "start-intro",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "İlk 10 dakikada ne yapmalıyım?",
+    "en": "What should I do in my first 10 minutes?"
+   },
+   "body": {
+    "tr": "Sol altta beliren öneriyi (Danışman) kabul et, Digital Plaza'da Ev Ofisi aç, ürünün fiyatını belirle ve satış yap. Sonra Finans sekmesine bakıp ilk çalışanını işe al.",
+    "en": "Accept the suggestion in the bottom advisor bar, open a Home Office in the Digital Plaza, set your product price and make a sale. Then check the Finance tab and hire your first employee."
+   },
+   "tags": [
+    "baslangic",
+    "tutorial",
+    "sirket kurmak"
+   ],
+   "steps": {
+    "tr": [
+     "Alttaki \"Tamam\" düğmesine bas (öneriyi kabul et)",
+     "Digital Plaza binasına gir (W/↑)",
+     "Ev Ofisi aç ve ürün fiyatını gir",
+     "Şirket paneline dokunarak satış yap"
+    ],
+    "en": [
+     "Press \"OK\" in the bottom bar to accept the suggestion",
+     "Enter the Digital Plaza (W/↑)",
+     "Open a Home Office and set a price",
+     "Tap the company to make a sale"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "plaza"
+   },
+   "related": []
+  },
+  {
+   "id": "solo-multi",
+   "cat": "start-intro",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Tek oyunculu ve çok oyunculu mod farkı nedir?",
+    "en": "Solo vs multiplayer?"
+   },
+   "body": {
+    "tr": "Tek oyunculuda yalnızsın; sohbet, ortaklık ve pazar gibi sosyal özellikler kapalıdır. Çok oyunculuda oda kurar veya koda katılırsın; oyuncular aynı sokağı paylaşır.",
+    "en": "Solo is just you; social features such as chat, partnerships and the market are off. In multiplayer you create or join a room and share one street."
+   },
+   "tags": [
+    "oda",
+    "coklu",
+    "solo"
+   ],
+   "steps": {
+    "tr": [
+     "Menü (☰) → Mod seç",
+     "\"Oda kur\" veya \"Odaya katıl\" seç"
+    ],
+    "en": [
+     "Menu (☰) → Choose mode",
+     "Pick \"Create room\" or \"Join room\""
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "menu"
+   },
+   "related": []
+  },
+  {
+   "id": "walk",
+   "cat": "start-controls",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Nasıl hareket ederim?",
+    "en": "How do I move?"
+   },
+   "body": {
+    "tr": "A/D veya ok tuşlarıyla yürü, Shift ile koş, ekrana tıklayarak oraya git. Mobilde sol alttaki joystick'i kullan. W/↑ binaya girer, S/↓ çıkar veya araca bindirir.",
+    "en": "Walk with A/D or arrow keys, hold Shift to run, or click to go there. On mobile use the joystick. W/↑ enters a building, S/↓ leaves it or gets into a car."
+   },
+   "tags": [
+    "yuruyus",
+    "kontrol",
+    "klavye",
+    "joystick"
+   ],
+   "steps": {
+    "tr": [
+     "Masaüstü: A/D veya ← →",
+     "Mobil: joystick",
+     "Bir binaya tıkla: oraya yürür ve girer"
+    ],
+    "en": [
+     "Desktop: A/D or ← →",
+     "Mobile: joystick",
+     "Click a building: you walk there and enter"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "street"
+   },
+   "related": []
+  },
+  {
+   "id": "keys",
+   "cat": "start-controls",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Klavye kısayolları",
+    "en": "Keyboard shortcuts"
+   },
+   "body": {
+    "tr": "1–6: sekmeler · M: mini harita · F1: yardım · E/Enter: etkileşim · +/−: yakınlaştır/uzaklaştır · Esc: bina içinden çık.",
+    "en": "1–6 tabs · M minimap · F1 help · E/Enter interact · +/− zoom in/out · Esc leave a building."
+   },
+   "tags": [
+    "kisayol",
+    "tus"
+   ],
+   "steps": {
+    "tr": [
+     "Sokak ekranında klavyeyi kullan",
+     "Mobilde kısayol yoktur; düğmeleri kullan"
+    ],
+    "en": [
+     "Use the keyboard on the street screen",
+     "Mobile has no shortcuts; use the buttons"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "zoom",
+   "cat": "ui-map",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Yakınlaştırma ve uzaklaştırma (zoom)",
+    "en": "Zoom in and out"
+   },
+   "body": {
+    "tr": "Fare tekerleği, mobilde iki parmak (pinch), ＋/－ düğmeleri veya + / − tuşlarıyla sokağı yakınlaştır. Belli bir seviyeden sonra uzaklaşırsan Türkiye haritası açılır.",
+    "en": "Use the mouse wheel, a two-finger pinch on mobile, the ＋/－ buttons or the + / − keys. Zoom out far enough and the Türkiye map opens."
+   },
+   "tags": [
+    "zoom",
+    "pinch",
+    "yakinlastir"
+   ],
+   "steps": {
+    "tr": [
+     "Sokak ekranında tekerleği çevir / iki parmakla aç-kapa",
+     "En uzak seviyeden de uzaklaş → Türkiye haritası",
+     "Haritadan \"Sokağa dön\" ile geri gel"
+    ],
+    "en": [
+     "On the street scroll the wheel / pinch",
+     "Keep zooming out → Türkiye map",
+     "Use \"Back to the street\" to return"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "street"
+   },
+   "related": [
+    "world-map"
+   ]
+  },
+  {
+   "id": "world-map",
+   "cat": "ui-map",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Türkiye haritası (dünya görünümü)",
+    "en": "Türkiye map (world view)"
+   },
+   "body": {
+    "tr": "Her şehirde kaç şirketin, evin ve ekibin olduğunu gösterir. Şehre dokununca şirketlerin, çalışan sayıları, kasa ve satışlarla birlikte açılır. Başka şehre gitmek için terminale yürü düğmesi vardır.",
+    "en": "Shows how many companies, homes and team members you have in each city. Tap a city for details: companies, staff, cash and sales. A button walks you to the terminal to travel."
+   },
+   "tags": [
+    "harita",
+    "sehir",
+    "turkiye"
+   ],
+   "steps": {
+    "tr": [
+     "Sokakta uzaklaş veya sağ kenardaki 🇹🇷 düğmesine bas",
+     "Bir şehir pinine dokun",
+     "\"Seyahat için terminale git\" düğmesini kullan"
+    ],
+    "en": [
+     "Zoom out on the street or press the 🇹🇷 button on the right",
+     "Tap a city pin",
+     "Use \"Walk to the terminal to travel\""
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "street"
+   },
+   "related": [
+    "zoom",
+    "travel"
+   ]
+  },
+  {
+   "id": "minimap",
+   "cat": "ui-map",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Mini harita (M)",
+    "en": "Minimap (M)"
+   },
+   "body": {
+    "tr": "Sokağın kuş bakışı haritası: binaları, şirketleri ve sıralamayı gösterir; tıklayınca oraya yürürsün.",
+    "en": "A bird's-eye map of the street with buildings and companies; click to walk there."
+   },
+   "tags": [
+    "mini harita",
+    "harita"
+   ],
+   "steps": {
+    "tr": [
+     "Sağ üstteki 🗺 düğmesi veya M tuşu"
+    ],
+    "en": [
+     "The 🗺 button at the top right or the M key"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "street"
+   },
+   "related": []
+  },
+  {
+   "id": "hdr-chips",
+   "cat": "ui-header",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Üst çubuk: para, seviye, hız",
+    "en": "Top bar: coins, level, speed"
+   },
+   "body": {
+    "tr": "Üstte jeton sayın, seviyen (XP çizgisiyle), oyun hızı ve saat görünür. Hız düğmesi 0,5×–3× arasında oyun hızını değiştirir.",
+    "en": "The top bar shows your coins, level (with XP line), game speed and clock. The speed button changes the game speed between 0.5× and 3×."
+   },
+   "tags": [
+    "hiz",
+    "xp",
+    "seviye"
+   ],
+   "steps": {
+    "tr": [
+     "Üst çubuktaki ⏱ düğmesine dokun",
+     "Menüden (☰) tarih ve saat de görülür"
+    ],
+    "en": [
+     "Tap the ⏱ button in the top bar",
+     "Date and time are also in the menu (☰)"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "hdr-date",
+   "cat": "ui-header",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Oyun tarihi ve saati",
+    "en": "Game date and time"
+   },
+   "body": {
+    "tr": "Oyunda 1 tik = 1 oyun günü (60 sn). Tarih, ayın günü, haftanın günü ve saat HUD'da ve üst çubukta gösterilir; oda kurulunca 1. yıl 1. ay 1. gün 00:00 başlar.",
+    "en": "One tick = one game day (60 s). Date, day of month, weekday and time are shown in the HUD and top bar; a new room starts at Year 1, Month 1, Day 1, 00:00."
+   },
+   "tags": [
+    "tarih",
+    "saat",
+    "gun"
+   ],
+   "steps": {
+    "tr": [
+     "Üst çubukta ortadaki tarih/saat alanına bak",
+     "Sokaktaki HUD'da Tarih kartı"
+    ],
+    "en": [
+     "Look at the date/time in the top bar",
+     "The Date card in the street HUD"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "nav-street",
+   "cat": "ui-nav",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Sokak sekmesi (1)",
+    "en": "Street tab (1)"
+   },
+   "body": {
+    "tr": "Oyunun ana ekranı: sokakta yürür, binalara girersin.",
+    "en": "The main game screen where you walk the street and enter buildings."
+   },
+   "tags": [
+    "sokak",
+    "ana ekran"
+   ],
+   "steps": {
+    "tr": [
+     "Sol menü / alt menü → Sokak"
+    ],
+    "en": [
+     "Side/bottom menu → Street"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "street"
+   },
+   "related": []
+  },
+  {
+   "id": "nav-finance",
+   "cat": "ui-nav",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Finans sekmesi (2)",
+    "en": "Finance tab (2)"
+   },
+   "body": {
+    "tr": "Şirketlerinin kasası, gelir/gider, aylık özet, vergi ve fatura grafikleri; finans çubukları ile yatırım/çekim burada yapılır.",
+    "en": "Your companies' cash, income/expenses, monthly summary, tax and bill charts; invest/withdraw with the finance bars."
+   },
+   "tags": [
+    "finans",
+    "kasa",
+    "grafik",
+    "yatirim",
+    "cekim"
+   ],
+   "steps": {
+    "tr": [
+     "Sol menü / alt menü → Finans (2)"
+    ],
+    "en": [
+     "Side/bottom menu → Finance (2)"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "finance"
+   },
+   "related": []
+  },
+  {
+   "id": "nav-chat",
+   "cat": "ui-nav",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Sohbet sekmesi (3)",
+    "en": "Chat tab (3)"
+   },
+   "body": {
+    "tr": "Odadaki oyuncularla yazışır, emoji ve anket kullanırsın. Tek oyunculuda kapalıdır; \"Oda kur / katıl\" düğmesi çıkar.",
+    "en": "Chat with players in the room using emoji and polls. It is off in solo mode, where a \"Create / join a room\" button appears."
+   },
+   "tags": [
+    "sohbet",
+    "chat",
+    "emoji",
+    "anket"
+   ],
+   "steps": {
+    "tr": [
+     "Sol menü / alt menü → Sohbet (3)",
+     "Tek oyunculuysan: Oda kur / katıl"
+    ],
+    "en": [
+     "Side/bottom menu → Chat (3)",
+     "In solo mode: Create / join a room"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "chat"
+   },
+   "related": []
+  },
+  {
+   "id": "nav-profile",
+   "cat": "ui-nav",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Profil sekmesi (4)",
+    "en": "Profile tab (4)"
+   },
+   "body": {
+    "tr": "Seviyen, XP, bilgi, başarı, mutluluk, sağlık, rozetlerin, görevlerin ve takım bilgisi.",
+    "en": "Your level, XP, knowledge, success, happiness, health, badges, quests and team."
+   },
+   "tags": [
+    "profil",
+    "rozet",
+    "gorev"
+   ],
+   "steps": {
+    "tr": [
+     "Sol menü / alt menü → Profil (4)"
+    ],
+    "en": [
+     "Side/bottom menu → Profile (4)"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "profile"
+   },
+   "related": []
+  },
+  {
+   "id": "nav-events",
+   "cat": "ui-nav",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Olaylar sekmesi (5)",
+    "en": "Events tab (5)"
+   },
+   "body": {
+    "tr": "Odada olan gelişmelerin günlüğü: işe alımlar, yatırımlar, piyasa olayları, ortaklıklar.",
+    "en": "The room's activity log: hires, investments, market events, partnerships."
+   },
+   "tags": [
+    "olaylar",
+    "gunluk",
+    "log"
+   ],
+   "steps": {
+    "tr": [
+     "Sol menü / alt menü → Olaylar (5)"
+    ],
+    "en": [
+     "Side/bottom menu → Events (5)"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "events"
+   },
+   "related": []
+  },
+  {
+   "id": "nav-menu",
+   "cat": "ui-nav",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Menü (6) ve çekmece",
+    "en": "Menu (6) and drawer"
+   },
+   "body": {
+    "tr": "Mod seçimi, harita, sıralama, yardım, tema, Kılavuz ve Hesap düğmeleri çekmecede toplanır.",
+    "en": "Mode selection, map, leaderboard, help, theme, Guide and Account buttons live in the drawer."
+   },
+   "tags": [
+    "menu",
+    "cekmece",
+    "hamburger"
+   ],
+   "steps": {
+    "tr": [
+     "Sağ üstteki ☰ veya alt menüdeki Menü"
+    ],
+    "en": [
+     "The ☰ at the top right or Menu in the bottom bar"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "menu"
+   },
+   "related": []
+  },
+  {
+   "id": "help-btn",
+   "cat": "ui-panels",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Yardım penceresi (❓, F1)",
+    "en": "Help window (❓, F1)"
+   },
+   "body": {
+    "tr": "Kural tabanlı sohbet robotu: sorunu yaz, sık sorulan sorulardan cevap ve oyun içi arama (şirket, ürün, oyuncu) sunar.",
+    "en": "A rule-based help bot: type a question to get FAQ answers and in-game search (companies, products, players)."
+   },
+   "tags": [
+    "yardim",
+    "sss",
+    "arama"
+   ],
+   "steps": {
+    "tr": [
+     "Üstteki ❓ veya F1"
+    ],
+    "en": [
+     "The ❓ at the top or F1"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "leaderboard",
+   "cat": "ui-panels",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Sıralama paneli (🏆)",
+    "en": "Leaderboard (🏆)"
+   },
+   "body": {
+    "tr": "Şirketleri kasaya, aylık kâra, satışa, çalışana veya takıma göre sıralar. Üstünde haftalık yarış ve aylık ortak hedef kartları görünür.",
+    "en": "Ranks companies by cash, monthly profit, sales, staff or team. The weekly race and monthly shared goal cards sit above it."
+   },
+   "tags": [
+    "siralama",
+    "liderlik"
+   ],
+   "steps": {
+    "tr": [
+     "Üstteki 🏆 düğmesi veya Menü → Sıralama"
+    ],
+    "en": [
+     "The 🏆 button at the top or Menu → Leaderboard"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": [
+    "weekly-race",
+    "shared-goal"
+   ]
+  },
+  {
+   "id": "hud-cards",
+   "cat": "ui-panels",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "HUD kartları",
+    "en": "HUD cards"
+   },
+   "body": {
+    "tr": "Sokağın üstündeki kartlar: tarih, jeton, şirket kasası, müşteriler, çalışanlar, bugünkü gelir/gider, aylık kâr, seviye ve sıra. Ok düğmesiyle gizlenir.",
+    "en": "The cards above the street: date, coins, company cash, customers, staff, today's income/expenses, monthly profit, level and rank. Hide them with the arrow button."
+   },
+   "tags": [
+    "hud",
+    "kart"
+   ],
+   "steps": {
+    "tr": [
+     "Sokak ekranının üstündeki kartlar",
+     "Sağ üstteki ▾ düğmesiyle gizle/göster"
+    ],
+    "en": [
+     "The cards above the street",
+     "Hide/show with the ▾ button at the top right"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "mobile-sheet",
+   "cat": "ui-panels",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Mobil alt panel (sheet)",
+    "en": "Mobile bottom sheet"
+   },
+   "body": {
+    "tr": "Mobilde sekmeler alttan açılan panellerdir; sağ üstteki ✕ ile veya tutamacı aşağı sürükleyerek kapatılır.",
+    "en": "On mobile the tabs are bottom sheets; close them with the ✕ at the top right or by dragging the handle down."
+   },
+   "tags": [
+    "mobil",
+    "panel",
+    "kapat"
+   ],
+   "steps": {
+    "tr": [
+     "Alttaki menüden bir sekmeye dokun",
+     "Sağ üst ✕ ile kapat"
+    ],
+    "en": [
+     "Tap a tab in the bottom menu",
+     "Close with the ✕ at the top right"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "b-guide",
+   "cat": "b-support",
+   "type": "building",
+   "icon": "",
+   "title": {
+    "tr": "Kılavuz binası",
+    "en": "Guide building"
+   },
+   "body": {
+    "tr": "Alt katında öğretici, üst katında günlük görevler ve Rehber sekmesinde bu ansiklopedi bulunur.",
+    "en": "The ground floor has the tutorial, the upper floor daily quests, and the Guide tab holds this encyclopedia."
+   },
+   "tags": [
+    "kilavuz",
+    "rehber",
+    "gorev"
+   ],
+   "steps": {
+    "tr": [
+     "Sokakta başlangıç noktasının yanındaki sarı Kılavuz binasına git",
+     "W/↑ ile gir"
+    ],
+    "en": [
+     "Find the yellow Guide building near the start",
+     "Press W/↑ to enter"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "guide"
+   },
+   "related": []
+  },
+  {
+   "id": "b-plaza",
+   "cat": "b-work",
+   "type": "building",
+   "icon": "",
+   "title": {
+    "tr": "Digital Plaza",
+    "en": "Digital Plaza"
+   },
+   "body": {
+    "tr": "Ev ofisi ve e-ofis gibi dijital çalışma alanlarının kurulduğu bina; çok kiracılı katlarda şirketler tabela ile görünür.",
+    "en": "The building for digital workspaces such as home offices and e-offices; tenant companies appear on floor signs."
+   },
+   "tags": [
+    "plaza",
+    "ev ofisi",
+    "e-ofis",
+    "kiralama"
+   ],
+   "steps": {
+    "tr": [
+     "Kılavuz binasının yanındaki mavi Digital Plaza'ya gir",
+     "Boş bir kat seç ve şirket kur"
+    ],
+    "en": [
+     "Enter the blue Digital Plaza next to the Guide",
+     "Pick a free floor and found a company"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "plaza"
+   },
+   "related": [
+    "found-company"
+   ]
+  },
+  {
+   "id": "b-demoday",
+   "cat": "b-support",
+   "type": "building",
+   "icon": "",
+   "title": {
+    "tr": "Demo Day binası",
+    "en": "Demo Day building"
+   },
+   "body": {
+    "tr": "Business canvas, pitch, yatırımcı teklifleri, hibe, ortaklar ve şirket satışı (exit) burada yönetilir.",
+    "en": "Business canvas, pitch, investor offers, grants, partners and company sale (exit) are handled here."
+   },
+   "tags": [
+    "demo day",
+    "yatirimci",
+    "canvas",
+    "pitch",
+    "hibe"
+   ],
+   "steps": {
+    "tr": [
+     "Sokakta mor Demo Day binasına git",
+     "W/↑ ile gir",
+     "Sekmeler: Olaylar · Canvas · Pitch · Deck · Ortaklar · Satış"
+    ],
+    "en": [
+     "Find the purple Demo Day building",
+     "Press W/↑",
+     "Tabs: Events · Canvas · Pitch · Deck · Partners · Exit"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "demoday"
+   },
+   "related": [
+    "partners",
+    "exit"
+   ]
+  },
+  {
+   "id": "b-oss",
+   "cat": "b-support",
+   "type": "building",
+   "icon": "",
+   "title": {
+    "tr": "Açık Kaynak Destek Merkezi",
+    "en": "Open Source Support Center"
+   },
+   "body": {
+    "tr": "65 açık kaynak aracın listesi; her araç için kurulum adımları, bağlantılar ve oyundaki etkisi. Araçları şirketine kurabilirsin.",
+    "en": "A catalog of 65 open-source tools with setup steps, links and their in-game effect. You can install tools into your company."
+   },
+   "tags": [
+    "acik kaynak",
+    "arac",
+    "yazilim"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day'in yanındaki turkuaz binaya gir",
+     "Kategori seç, bir araca dokun, \"Kur\" düğmesine bas"
+    ],
+    "en": [
+     "Enter the teal building beside Demo Day",
+     "Pick a category, tap a tool and press \"Install\""
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "oss"
+   },
+   "related": [
+    "install-tools"
+   ]
+  },
+  {
+   "id": "b-grants",
+   "cat": "b-support",
+   "type": "building",
+   "icon": "",
+   "title": {
+    "tr": "Hibe ve Destek Programları",
+    "en": "Grants & Support Programs"
+   },
+   "body": {
+    "tr": "Kamu ve özel hibe, teşvik ve yatırım programlarını, kime uygun olduklarını ve başvuru adımlarını gösterir.",
+    "en": "Lists public and private grants, incentives and investment programs, who they suit and how to apply."
+   },
+   "tags": [
+    "hibe",
+    "tesvik",
+    "kosgeb",
+    "destek"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day'in diğer yanındaki altın renkli binaya gir",
+     "Grup seçip programa dokun"
+    ],
+    "en": [
+     "Enter the gold building on the other side of Demo Day",
+     "Pick a group and tap a program"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "grants"
+   },
+   "related": []
+  },
+  {
+   "id": "b-gamfed",
+   "cat": "b-support",
+   "type": "building",
+   "icon": "",
+   "title": {
+    "tr": "GamFed Türkiye binası (10 kat)",
+    "en": "GamFed Türkiye building (10 floors)"
+   },
+   "body": {
+    "tr": "TOY Gamification Decards'ın 10 adımını 10 katta anlatır. Katlarda kendi projen için alan doldurur; TOY Tuvali, Business Canvas ve Pitch Deck'i yazıp PDF/PNG/JPEG/link olarak dışa aktarırsın.",
+    "en": "Explains the 10 steps of TOY Gamification Decards over 10 floors. Fill in your own project per floor, then write the TOY Canvas, Business Canvas and Pitch Deck and export as PDF/PNG/JPEG/link."
+   },
+   "tags": [
+    "gamfed",
+    "oyunlastirma",
+    "toy",
+    "canvas",
+    "pitch deck"
+   ],
+   "steps": {
+    "tr": [
+     "Sokağın sonundaki mor-lacivert GamFed kulesine gir",
+     "Sekmeler: Katlar · TOY Tuvali · Business Canvas · Pitch Deck",
+     "Alttan PDF/PNG/JPEG/Link ile dışa aktar"
+    ],
+    "en": [
+     "Enter the purple-navy GamFed tower at the end of the street",
+     "Tabs: Floors · TOY Canvas · Business Canvas · Pitch Deck",
+     "Export with PDF/PNG/JPEG/Link at the bottom"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "gamfed"
+   },
+   "related": []
+  },
+  {
+   "id": "b-home",
+   "cat": "b-life",
+   "type": "building",
+   "icon": "",
+   "title": {
+    "tr": "Apartman (ev)",
+    "en": "Apartment block (home)"
+   },
+   "body": {
+    "tr": "Odadaki her oyuncuya bir kat/daire verilir. Kendi dairenin faturaları ve Ev Bütçesi paneli vardır; başkalarını misafir edebilir veya onların evini ziyaret edebilirsin.",
+    "en": "Each player in the room gets a floor/flat. Your flat has its own bills and a Home Budget panel; you can host guests or visit others."
+   },
+   "tags": [
+    "ev",
+    "apartman",
+    "fatura",
+    "butce",
+    "misafir"
+   ],
+   "steps": {
+    "tr": [
+     "Sokaktaki apartman binasına gir (W/↑)",
+     "Kendi katını seç",
+     "Ev Bütçesi için eve girince panele bak"
+    ],
+    "en": [
+     "Enter the apartment block (W/↑)",
+     "Pick your own floor",
+     "See the Home Budget panel inside"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "home"
+   },
+   "related": []
+  },
+  {
+   "id": "b-terminal",
+   "cat": "b-life",
+   "type": "building",
+   "icon": "",
+   "title": {
+    "tr": "Terminal (şehirler arası)",
+    "en": "Terminal (intercity)"
+   },
+   "body": {
+    "tr": "Otobüs veya kendi aracınla başka şehre seyahat edersin; her şehirde ayrı bir sokak vardır ve şirketlerin çalışmaya devam eder.",
+    "en": "Travel to another city by bus or by your own vehicle; each city has its own street and your companies keep running."
+   },
+   "tags": [
+    "seyahat",
+    "otobus",
+    "sehir",
+    "terminal"
+   ],
+   "steps": {
+    "tr": [
+     "Sokaktaki Terminal binasına git",
+     "Şehri seç → otobüs veya araç ile git"
+    ],
+    "en": [
+     "Go to the Terminal building",
+     "Pick a city → go by bus or vehicle"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "terminal"
+   },
+   "related": [
+    "world-map"
+   ]
+  },
+  {
+   "id": "b-parking",
+   "cat": "b-life",
+   "type": "building",
+   "icon": "",
+   "title": {
+    "tr": "Otopark",
+    "en": "Car park"
+   },
+   "body": {
+    "tr": "Şirket aracını güvenli park eder; sokakta park çizilme/çarpma riski taşır.",
+    "en": "Park your company vehicle safely; street parking risks scratches and hits."
+   },
+   "tags": [
+    "otopark",
+    "park",
+    "arac"
+   ],
+   "steps": {
+    "tr": [
+     "Sokaktaki otopark binasına git",
+     "Aracını park et"
+    ],
+    "en": [
+     "Go to the car park",
+     "Park your vehicle"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "parking"
+   },
+   "related": []
+  },
+  {
+   "id": "found-company",
+   "cat": "c-found",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Nasıl şirket kurarım?",
+    "en": "How do I found a company?"
+   },
+   "body": {
+    "tr": "Digital Plaza veya boş bir dükkâna gir, çalışma alanını (ev ofisi, e-ofis, ortak ofis, dükkân) seç, sektör/ürün ve fiyatı belirle. Kasan için başlangıç yatırımı yapabilirsin.",
+    "en": "Enter the Digital Plaza or an empty shop, pick a workspace (home office, e-office, coworking, shop), set sector/product and price. You can invest coins as starting cash."
+   },
+   "tags": [
+    "sirket kur",
+    "kurmak",
+    "ev ofisi"
+   ],
+   "steps": {
+    "tr": [
+     "Sokakta Digital Plaza'ya gir",
+     "Çalışma alanı seç",
+     "Şirket adı, sektör ve fiyatı yaz",
+     "Kur'a bas"
+    ],
+    "en": [
+     "Enter the Digital Plaza",
+     "Pick a workspace",
+     "Enter name, sector and price",
+     "Press Found"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "plaza"
+   },
+   "related": []
+  },
+  {
+   "id": "pricing",
+   "cat": "c-found",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Fiyatı nasıl belirlerim?",
+    "en": "How do I set prices?"
+   },
+   "body": {
+    "tr": "Her ürünün listede fiyatı ve indirimi vardır (en fazla 8 ürün). Fiyat sektör ortalamasının çok üstündeyse müşteri kaybedersin; tatlı nokta sektör fiyatının yaklaşık 1,5 katıdır.",
+    "en": "Each product has a list price and discount (up to 8 products). If the price is far above the sector norm you lose customers; the sweet spot is around 1.5× the sector price."
+   },
+   "tags": [
+    "fiyat",
+    "indirim",
+    "esneklik"
+   ],
+   "steps": {
+    "tr": [
+     "Şirket paneli → Ürünler",
+     "Fiyat ve indirimi düzenle"
+    ],
+    "en": [
+     "Company panel → Products",
+     "Edit price and discount"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "finance"
+   },
+   "related": [
+    "elasticity"
+   ]
+  },
+  {
+   "id": "sell",
+   "cat": "c-sell",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Nasıl satış yaparım?",
+    "en": "How do I sell?"
+   },
+   "body": {
+    "tr": "Şirket içinde satış düğmesine bas veya bir müşteriyle roleplay konuşması yap. Personel, reklam ve araçlar pasif geliri artırır.",
+    "en": "Press the sell button inside your company or run a roleplay conversation with a customer. Staff, ads and vehicles raise passive income."
+   },
+   "tags": [
+    "satis",
+    "musteri",
+    "roleplay"
+   ],
+   "steps": {
+    "tr": [
+     "Şirketine gir",
+     "Satış düğmesine bas ya da müşteriyle konuş"
+    ],
+    "en": [
+     "Enter your company",
+     "Press sell or talk to a customer"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "street"
+   },
+   "related": []
+  },
+  {
+   "id": "roleplay",
+   "cat": "c-sell",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Satış roleplay (müşteri konuşması)",
+    "en": "Sales roleplay (customer conversation)"
+   },
+   "body": {
+    "tr": "Müşterinin kişiliğine göre 3 turluk konuşmada doğru cevabı seçersin; ilgi yükselirse büyük satış, düşerse kayıp olur.",
+    "en": "Pick the right reply over 3 rounds according to the customer's persona; high interest means a big sale, low means a lost one."
+   },
+   "tags": [
+    "roleplay",
+    "pitch",
+    "musteri"
+   ],
+   "steps": {
+    "tr": [
+     "Şirket içinde \"Müşteriyle konuş\""
+    ],
+    "en": [
+     "Inside your company: \"Talk to customer\""
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "hire",
+   "cat": "c-team",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Nasıl çalışan alırım?",
+    "en": "How do I hire?"
+   },
+   "body": {
+    "tr": "Şirket panelinden NPC personel (mavi/gri/beyaz yaka) veya oyuncu çalışan al. Her çalışan maaş ve yan hak gideri getirir ama satışı artırır.",
+    "en": "Hire NPC staff (blue/grey/white collar) or player employees from the company panel. Each costs salary and benefits but raises sales."
+   },
+   "tags": [
+    "calisan",
+    "personel",
+    "maas",
+    "yan hak"
+   ],
+   "steps": {
+    "tr": [
+     "Şirket paneli → Çalışanlar",
+     "Tür seç → İşe al"
+    ],
+    "en": [
+     "Company panel → Staff",
+     "Pick a type → Hire"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "finance"
+   },
+   "related": []
+  },
+  {
+   "id": "departments",
+   "cat": "c-team",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Departmanlar",
+    "en": "Departments"
+   },
+   "body": {
+    "tr": "Şirketin katlarında Satış, Bilgi İşlem (IT), İK vb. departmanlar açılır; her biri yeni özellikler getirir.",
+    "en": "Floors unlock departments such as Sales, IT and HR, each adding features."
+   },
+   "tags": [
+    "departman",
+    "kat",
+    "it"
+   ],
+   "steps": {
+    "tr": [
+     "Şirketine gir",
+     "Asansör/kat okları ile departmana çık"
+    ],
+    "en": [
+     "Enter your company",
+     "Take the elevator/arrows to a department"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "mini-saas",
+   "cat": "c-tools",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Mini SaaS: CRM, KPI, Takvim, Gantt, ERP",
+    "en": "Mini SaaS: CRM, KPI, Calendar, Gantt, ERP"
+   },
+   "body": {
+    "tr": "Bilgi İşlem departmanında müşteri kaydı ve KPI, görev takvimi ve Gantt şeması, stok ve sipariş yönetimi (ERP) bulunur. Stoktaki satış +%5, stok biterse gelir %60.",
+    "en": "The IT department offers customer records and KPIs, a task calendar and Gantt chart, and stock/orders (ERP). In-stock sales get +5%, out of stock revenue drops to 60%."
+   },
+   "tags": [
+    "crm",
+    "erp",
+    "kpi",
+    "gantt",
+    "takvim",
+    "stok"
+   ],
+   "steps": {
+    "tr": [
+     "Şirketine gir → IT katı",
+     "CRM & KPI, Takvim & Gantt veya ERP seç"
+    ],
+    "en": [
+     "Enter your company → IT floor",
+     "Pick CRM & KPI, Calendar & Gantt or ERP"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "install-tools",
+   "cat": "c-tools",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Açık kaynak araç kurma",
+    "en": "Installing open-source tools"
+   },
+   "body": {
+    "tr": "Katalogdan seçtiğin aracı şirketine kurarsın: kurulum bedeli ve aylık sunucu gideri vardır; satış, gider, XP gibi etkiler verir. Aylık gider ödenemezse araç askıya alınır.",
+    "en": "Install a catalog tool into your company: it has a setup cost and monthly hosting, and gives effects such as sales, lower costs or XP. If the monthly fee cannot be paid the tool is suspended."
+   },
+   "tags": [
+    "arac kur",
+    "sunucu",
+    "acik kaynak"
+   ],
+   "steps": {
+    "tr": [
+     "Açık Kaynak Destek Merkezi → bir araç",
+     "Kur → şirketini seç"
+    ],
+    "en": [
+     "Open Source Support Center → a tool",
+     "Install → pick your company"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "oss"
+   },
+   "related": []
+  },
+  {
+   "id": "ads",
+   "cat": "c-growth",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Reklam sistemi",
+    "en": "Advertising"
+   },
+   "body": {
+    "tr": "Billboard, otobüs durağı, otobüs ve bina reklamlarıyla geçici satış artışı alırsın; slot sayısı ve etki üst sınırı vardır.",
+    "en": "Billboard, bus stop, bus and building ads give a temporary sales boost; slots and the boost have caps."
+   },
+   "tags": [
+    "reklam",
+    "billboard",
+    "kampanya",
+    "pazarlama"
+   ],
+   "steps": {
+    "tr": [
+     "Şirket paneli → Reklam",
+     "Tür ve süre seç"
+    ],
+    "en": [
+     "Company panel → Ads",
+     "Pick a type and duration"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "finance"
+   },
+   "related": []
+  },
+  {
+   "id": "vehicles",
+   "cat": "c-growth",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Araç, sürüş ve taksi",
+    "en": "Vehicles, driving and taxis"
+   },
+   "body": {
+    "tr": "Şirket aracı satın al/kirala; S/↓ ile bin, W/↑ ile in; benzin ve eskime vardır. Sarı taksiye tıklayıp fiyat pazarlığı yapabilirsin.",
+    "en": "Buy/rent a company vehicle; S/↓ to get in, W/↑ to get out; fuel and wear apply. Tap a yellow taxi to haggle over the fare."
+   },
+   "tags": [
+    "arac",
+    "araba",
+    "taksi",
+    "benzin"
+   ],
+   "steps": {
+    "tr": [
+     "Şirket paneli → Araç",
+     "Aracının yanında S/↓"
+    ],
+    "en": [
+     "Company panel → Vehicle",
+     "Press S/↓ next to your car"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "parking"
+   },
+   "related": []
+  },
+  {
+   "id": "coins",
+   "cat": "e-money",
+   "type": "term",
+   "icon": "",
+   "title": {
+    "tr": "Coin (jeton)",
+    "en": "Coin"
+   },
+   "body": {
+    "tr": "Kişisel paran. Şirket kasası ayrıdır; yatırım ile coin'i kasaya koyar, çekim ile geri alırsın.",
+    "en": "Your personal money. Company cash is separate; invest to move coins to the company and withdraw to take them back."
+   },
+   "tags": [
+    "coin",
+    "jeton",
+    "para"
+   ],
+   "steps": {
+    "tr": [
+     "Üst çubukta 🪙 sayısı",
+     "Finans sekmesi → yatırım/çekim çubukları"
+    ],
+    "en": [
+     "The 🪙 count in the top bar",
+     "Finance tab → invest/withdraw bars"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": [
+    "cash"
+   ]
+  },
+  {
+   "id": "cash",
+   "cat": "e-money",
+   "type": "term",
+   "icon": "",
+   "title": {
+    "tr": "Kasa (şirket nakdi)",
+    "en": "Cash (company funds)"
+   },
+   "body": {
+    "tr": "Şirketin nakit parası. Kira, maaş, fatura ve vergi buradan ödenir; -200'ün altına inerse şirket iflas eder.",
+    "en": "The company's cash. Rent, salaries, bills and tax are paid from it; below -200 the company goes bankrupt."
+   },
+   "tags": [
+    "kasa",
+    "nakit",
+    "iflas"
+   ],
+   "steps": {
+    "tr": [
+     "Finans sekmesi → şirket kasası"
+    ],
+    "en": [
+     "Finance tab → company cash"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "finance"
+   },
+   "related": []
+  },
+  {
+   "id": "taxes",
+   "cat": "e-costs",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Hangi vergiler ve giderler var?",
+    "en": "Which taxes and costs exist?"
+   },
+   "body": {
+    "tr": "Gelir vergisi (yıllık), damga vergisi, muhasebe ücreti, kira, maaşlar, yan haklar, elektrik/su/doğalgaz/internet faturaları ve araç giderleri.",
+    "en": "Income tax (yearly), stamp tax, accounting fees, rent, salaries, benefits, electricity/water/gas/internet bills and vehicle costs."
+   },
+   "tags": [
+    "vergi",
+    "fatura",
+    "kira",
+    "gider"
+   ],
+   "steps": {
+    "tr": [
+     "Finans sekmesi → Gider grafikleri"
+    ],
+    "en": [
+     "Finance tab → expense charts"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "finance"
+   },
+   "related": []
+  },
+  {
+   "id": "elasticity",
+   "cat": "e-market",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Fiyat esnekliği",
+    "en": "Price elasticity"
+   },
+   "body": {
+    "tr": "Fiyat sektörün tipik fiyatının çok üstüne çıkarsa talep düşer; en kârlı fiyat yaklaşık 1,5× civarıdır. Admin bu davranışı ayarlayabilir.",
+    "en": "Demand drops when your price is far above the sector norm; the most profitable price is around 1.5×. The admin can tune this."
+   },
+   "tags": [
+    "esneklik",
+    "fiyat",
+    "talep"
+   ],
+   "steps": {
+    "tr": [
+     "Şirket paneli → Ürünler → fiyatı değiştir",
+     "Finans sekmesinde gelir değişimini izle"
+    ],
+    "en": [
+     "Company panel → Products → change the price",
+     "Watch income in the Finance tab"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": [
+    "pricing"
+   ]
+  },
+  {
+   "id": "market-events",
+   "cat": "e-market",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Piyasa olayları",
+    "en": "Market events"
+   },
+   "body": {
+    "tr": "Her hafta sonu şansa bağlı olarak enflasyon, fuar, teknoloji patlaması gibi oda çapında bir olay başlar; sektörüne göre gelirin ve faturaların değişir. Üst çubuktaki 📈/📉 çipine dokun.",
+    "en": "Each week end a random room-wide event such as inflation, a trade fair or a tech boom may start; your income and bills change by sector. Tap the 📈/📉 chip in the HUD."
+   },
+   "tags": [
+    "olay",
+    "enflasyon",
+    "fuar",
+    "kriz"
+   ],
+   "steps": {
+    "tr": [
+     "HUD'daki Piyasa çipi",
+     "Olaylar sekmesinde günlük"
+    ],
+    "en": [
+     "The Market chip in the HUD",
+     "The log in the Events tab"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "events"
+   },
+   "related": []
+  },
+  {
+   "id": "wholesale",
+   "cat": "e-market",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Toptan pazar",
+    "en": "Wholesale market"
+   },
+   "body": {
+    "tr": "Oyuncu şirketleri fazla ERP stoğunu birbirine satar; stok anında teslim edilir. %10 komisyon yakılır, fiyat perakendenin %20–80'i arasında olmalıdır.",
+    "en": "Player companies sell surplus ERP stock to each other with instant delivery. A 10% fee is burned and prices must be 20–80% of retail."
+   },
+   "tags": [
+    "pazar",
+    "toptan",
+    "stok",
+    "ticaret"
+   ],
+   "steps": {
+    "tr": [
+     "ERP panelini aç (IT katı)",
+     "🤝 Toptan pazar düğmesi"
+    ],
+    "en": [
+     "Open the ERP panel (IT floor)",
+     "The 🤝 Wholesale market button"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "rooms",
+   "cat": "s-room",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Oda nasıl kurulur, arkadaşlar nasıl katılır?",
+    "en": "How do I create a room and invite friends?"
+   },
+   "body": {
+    "tr": "Menü → Oda kur ile 6 haneli kod ve PIN alırsın; arkadaşların Odaya katıl ile kodu girer veya paylaşılan bağlantıyı açar.",
+    "en": "Menu → Create room gives a 6-digit code and PIN; friends use Join room with the code or open the shared link."
+   },
+   "tags": [
+    "oda",
+    "davet",
+    "pin",
+    "katil"
+   ],
+   "steps": {
+    "tr": [
+     "Menü → Oda kur",
+     "Kod/PIN ya da bağlantıyı paylaş"
+    ],
+    "en": [
+     "Menu → Create room",
+     "Share the code/PIN or the link"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "menu"
+   },
+   "related": []
+  },
+  {
+   "id": "teams",
+   "cat": "s-room",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Takım",
+    "en": "Teams"
+   },
+   "body": {
+    "tr": "Çok oyunculu odada takım kurar veya katılırsın; takım sıralaması ve renk vardır.",
+    "en": "Create or join a team in a multiplayer room; teams have a ranking and a colour."
+   },
+   "tags": [
+    "takim",
+    "ekip"
+   ],
+   "steps": {
+    "tr": [
+     "Profil sekmesi → Takım"
+    ],
+    "en": [
+     "Profile tab → Team"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "profile"
+   },
+   "related": []
+  },
+  {
+   "id": "partners",
+   "cat": "s-partner",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Oyuncu ortaklığı",
+    "en": "Player partnerships"
+   },
+   "body": {
+    "tr": "Başka bir oyuncuya şirketinden %1–49 pay satarsın; o parayı şirkete koyar, her 30 günde son 30 günün kârından payını alır. Kurucu payı adil değerle geri alabilir.",
+    "en": "Sell a 1–49% stake of your company to another player; they put the money into the company and receive their share of the last 30 days' profit every 30 days. The founder can buy the stake back at fair value."
+   },
+   "tags": [
+    "ortak",
+    "hisse",
+    "pay",
+    "temettu"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day binasına gir",
+     "Ortaklar sekmesi → Ortaklık teklif et"
+    ],
+    "en": [
+     "Enter Demo Day",
+     "Partners tab → Offer a partnership"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "demoday"
+   },
+   "related": [
+    "exit",
+    "g-equity"
+   ]
+  },
+  {
+   "id": "exit",
+   "cat": "s-partner",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Şirket satışı (exit)",
+    "en": "Selling a company (exit)"
+   },
+   "body": {
+    "tr": "Şirket en az 30 günlükse alıcı teklifi istersin: fiyat = son 30 gün kârı × çarpan + şirket kasası. Gelir kurucu, ortaklar ve NPC yatırımcılar arasında paylaşılır.",
+    "en": "If the company is at least 30 days old you can request a buyer offer: price = last 30 days' profit × multiple + company cash. Proceeds are shared between founders, partners and NPC investors."
+   },
+   "tags": [
+    "exit",
+    "satis",
+    "alici",
+    "sirket sat"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day → Satış sekmesi",
+     "Alıcı teklifi iste → onayla"
+    ],
+    "en": [
+     "Demo Day → Exit tab",
+     "Request an offer → confirm"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "demoday"
+   },
+   "related": [
+    "partners"
+   ]
+  },
+  {
+   "id": "pitch-invest",
+   "cat": "s-partner",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Yatırımcıdan nasıl yatırım alırım?",
+    "en": "How do I get investment?"
+   },
+   "body": {
+    "tr": "Demo Day'de canvas'ı doldur, pitch'ini yaz; olgunluk puanın yeterliyse NPC yatırımcı veya melek teklif eder (pay karşılığı). Hibe için en az 10 günlük ve 7 canvas bloğu dolu şirket gerekir.",
+    "en": "At Demo Day fill the canvas and write your pitch; with enough readiness an NPC investor or angel makes an offer for equity. Grants need a company at least 10 days old with 7 canvas blocks filled."
+   },
+   "tags": [
+    "yatirim",
+    "melek",
+    "pitch",
+    "hibe"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day → Canvas → doldur",
+     "Pitch → yaz",
+     "Olaylar sekmesinde teklifi kabul et"
+    ],
+    "en": [
+     "Demo Day → Canvas → fill",
+     "Pitch → write",
+     "Accept the offer"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "demoday"
+   },
+   "related": []
+  },
+  {
+   "id": "quests",
+   "cat": "p-quests",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Günlük görevler",
+    "en": "Daily quests"
+   },
+   "body": {
+    "tr": "Her gün 3 görev gelir (Kılavuz binasının üst katı ve Profil'de). Hepsini bitirirsen günlük sandık açılır.",
+    "en": "Three quests arrive every day (upper floor of the Guide building and Profile). Finish all three to open the daily chest."
+   },
+   "tags": [
+    "gorev",
+    "gunluk",
+    "sandik"
+   ],
+   "steps": {
+    "tr": [
+     "Profil sekmesi → Görevler",
+     "Veya Kılavuz binası → Görevler sekmesi"
+    ],
+    "en": [
+     "Profile tab → Quests",
+     "Or Guide building → Quests tab"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "guide"
+   },
+   "related": []
+  },
+  {
+   "id": "streak-season",
+   "cat": "p-quests",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Giriş serisi ve sezon puanı",
+    "en": "Login streak and season points"
+   },
+   "body": {
+    "tr": "Her gün oyuna girince seri artar (bonus = min(seri,7)×10 coin). Görevler +10, sandık +25 sezon puanı verir; 100/250/500 puanda ödül, 500'de Sezon Yıldızı rozeti.",
+    "en": "Logging in each day raises your streak (bonus = min(streak,7)×10 coins). Quests give +10 and the chest +25 season points; rewards at 100/250/500, plus the Season Star badge at 500."
+   },
+   "tags": [
+    "seri",
+    "sezon",
+    "puan"
+   ],
+   "steps": {
+    "tr": [
+     "Profil sekmesi → Görevler bölümü"
+    ],
+    "en": [
+     "Profile tab → Quests section"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "profile"
+   },
+   "related": []
+  },
+  {
+   "id": "weekly-race",
+   "cat": "p-compete",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Haftalık yarış",
+    "en": "Weekly race"
+   },
+   "body": {
+    "tr": "Her 7 günde haftalık satış cirosuna göre sıralanırsın. Çok oyunculuda ilk 3 coin kazanır; tek başınaysan kendi rekorunu kırarsan ödül alırsın.",
+    "en": "Every 7 days players are ranked by weekly sales revenue. In multiplayer the top 3 win coins; solo you earn a reward by beating your own record."
+   },
+   "tags": [
+    "yarisma",
+    "hafta",
+    "siralama"
+   ],
+   "steps": {
+    "tr": [
+     "Sıralama paneli (🏆) üstündeki yarış kartı"
+    ],
+    "en": [
+     "The race card above the leaderboard (🏆)"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "shared-goal",
+   "cat": "p-compete",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Aylık ortak hedef",
+    "en": "Monthly shared goal"
+   },
+   "body": {
+    "tr": "Odadaki herkesin birlikte tamamladığı 30 günlük hedef (ortak ciro → satış → görev döngüsü). Hedef tutarsa katkı yapan herkes ödül alır.",
+    "en": "A 30-day goal the whole room completes together (revenue → sales → quests cycle). If it is met every contributing player is rewarded."
+   },
+   "tags": [
+    "ortak hedef",
+    "hedef",
+    "isbirligi"
+   ],
+   "steps": {
+    "tr": [
+     "Sıralama paneli (🏆) → Ortak hedef kartı"
+    ],
+    "en": [
+     "Leaderboard (🏆) → Shared goal card"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "badges",
+   "cat": "p-badges",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Rozetler nasıl kazanılır?",
+    "en": "How do I earn badges?"
+   },
+   "body": {
+    "tr": "Rozetler görevlerle, dönüm noktalarıyla (ilk şirket, 100 satış, ortaklık, exit, seri…) kazanılır. Profil sekmesinde üzerine gelince açıklama çıkar.",
+    "en": "Badges come from quests and milestones (first company, 100 sales, partnership, exit, streak…). Hover them in the Profile tab for a description."
+   },
+   "tags": [
+    "rozet",
+    "basari"
+   ],
+   "steps": {
+    "tr": [
+     "Profil sekmesi → Rozetler"
+    ],
+    "en": [
+     "Profile tab → Badges"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "profile"
+   },
+   "related": []
+  },
+  {
+   "id": "levels",
+   "cat": "p-badges",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Seviye ve XP",
+    "en": "Level and XP"
+   },
+   "body": {
+    "tr": "Satış, görev ve eğitimlerle XP kazanırsın; seviye atlayınca yeni seviye × 20 coin ödül gelir ve satış bonusun artar.",
+    "en": "You gain XP from sales, quests and learning; each level-up pays new level × 20 coins and raises your sales bonus."
+   },
+   "tags": [
+    "seviye",
+    "xp"
+   ],
+   "steps": {
+    "tr": [
+     "Üst çubukta ⭐ ve XP çizgisi"
+    ],
+    "en": [
+     "The ⭐ and XP line in the top bar"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "account",
+   "cat": "account",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Hesap açmak ne işe yarar?",
+    "en": "Why create an account?"
+   },
+   "body": {
+    "tr": "E-posta + parola ile açtığın hesap rozet, seri, sezon puanı ve GamFed panonu her oda ve cihazda saklar. Parolanı unutursan kayıtta gösterilen kurtarma kodu gerekir.",
+    "en": "An email + password account keeps your badges, streak, season points and GamFed board across rooms and devices. If you forget the password you need the recovery code shown at sign-up."
+   },
+   "tags": [
+    "hesap",
+    "giris",
+    "kayit",
+    "parola"
+   ],
+   "steps": {
+    "tr": [
+     "Menü (☰) → Hesap",
+     "Kayıt → kurtarma kodunu kaydet"
+    ],
+    "en": [
+     "Menu (☰) → Account",
+     "Sign up → save the recovery code"
+    ]
+   },
+   "go": {
+    "kind": "tab",
+    "target": "menu"
+   },
+   "related": []
+  },
+  {
+   "id": "g-kpi",
+   "cat": "glossary",
+   "type": "term",
+   "icon": "",
+   "title": {
+    "tr": "KPI",
+    "en": "KPI"
+   },
+   "body": {
+    "tr": "Anahtar performans göstergesi: satış, müşteri, kâr gibi ölçülebilir hedefler.",
+    "en": "Key performance indicator: measurable goals such as sales, customers or profit."
+   },
+   "tags": [
+    "kpi",
+    "olcum"
+   ],
+   "steps": {
+    "tr": [
+     "IT katı → CRM & KPI",
+     "Finans sekmesi → grafikler"
+    ],
+    "en": [
+     "IT floor → CRM & KPI",
+     "Finance tab → charts"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "g-canvas",
+   "cat": "glossary",
+   "type": "term",
+   "icon": "",
+   "title": {
+    "tr": "Business Model Canvas",
+    "en": "Business Model Canvas"
+   },
+   "body": {
+    "tr": "9 bloktan oluşan tek sayfalık iş modeli şeması: ortaklar, faaliyetler, kaynaklar, değer önerisi, ilişkiler, kanallar, segmentler, maliyet, gelir.",
+    "en": "A one-page business model with 9 blocks: partners, activities, resources, value proposition, relationships, channels, segments, costs, revenue."
+   },
+   "tags": [
+    "canvas",
+    "bmc",
+    "is modeli"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day → Canvas",
+     "GamFed → Business Canvas"
+    ],
+    "en": [
+     "Demo Day → Canvas",
+     "GamFed → Business Canvas"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "gamfed"
+   },
+   "related": []
+  },
+  {
+   "id": "g-valprop",
+   "cat": "glossary",
+   "type": "term",
+   "icon": "",
+   "title": {
+    "tr": "Değer önerisi",
+    "en": "Value proposition"
+   },
+   "body": {
+    "tr": "Müşteriye sunduğun faydanın net cümlesi: kim için, hangi sorunu, nasıl çözüyorsun.",
+    "en": "The clear statement of the benefit you offer: for whom, which problem, and how you solve it."
+   },
+   "tags": [
+    "deger onerisi",
+    "musteri"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day → Canvas → Değer Önerisi bloğu"
+    ],
+    "en": [
+     "Demo Day → Canvas → Value Proposition block"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "g-equity",
+   "cat": "glossary",
+   "type": "term",
+   "icon": "",
+   "title": {
+    "tr": "Pay (equity)",
+    "en": "Equity"
+   },
+   "body": {
+    "tr": "Şirketin sahipliğinin yüzde olarak bölümü. Dışarıdan toplam pay %49'u geçemez, kurucu kontrolü korunur.",
+    "en": "The percentage split of company ownership. Outside equity cannot exceed 49%, so founders keep control."
+   },
+   "tags": [
+    "pay",
+    "hisse",
+    "equity"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day → Ortaklar sekmesi"
+    ],
+    "en": [
+     "Demo Day → Partners tab"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "g-dividend",
+   "cat": "glossary",
+   "type": "term",
+   "icon": "",
+   "title": {
+    "tr": "Temettü",
+    "en": "Dividend"
+   },
+   "body": {
+    "tr": "Şirket kârından ortaklara ödenen pay; oyunda her 30 günde son 30 günün kârından ödenir.",
+    "en": "A payout of profit to partners; in the game it is paid every 30 days from the last 30 days' profit."
+   },
+   "tags": [
+    "temettu",
+    "kar payi"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day → Ortaklar; ödeme Olaylar sekmesinde görünür"
+    ],
+    "en": [
+     "Demo Day → Partners; payouts appear in the Events tab"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "g-valuation",
+   "cat": "glossary",
+   "type": "term",
+   "icon": "",
+   "title": {
+    "tr": "Değerleme",
+    "en": "Valuation"
+   },
+   "body": {
+    "tr": "Şirketin tahmini değeri; oyunda olgunluk, yıllık gelir ve kasaya dayanır, en az 5.000 coindir (yatırım teklifleri için).",
+    "en": "The estimated company value; in the game it uses readiness, yearly revenue and cash, with a floor of 5,000 coins (for investment offers)."
+   },
+   "tags": [
+    "degerleme",
+    "valuation"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day → Olaylar sekmesi → Olgunluk bölümü"
+    ],
+    "en": [
+     "Demo Day → Events tab → Readiness section"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
+   "id": "g-readiness",
+   "cat": "glossary",
+   "type": "term",
+   "icon": "",
+   "title": {
+    "tr": "Olgunluk puanı",
+    "en": "Readiness score"
+   },
+   "body": {
+    "tr": "Canvas, pitch, ivme (traction), büyüme ve ekip puanlarının toplamı (100 üzerinden); yatırım ve satış fiyatını etkiler.",
+    "en": "The sum of canvas, pitch, traction, growth and team scores (out of 100); it affects investment and exit price."
+   },
+   "tags": [
+    "olgunluk",
+    "hazirlik"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day → Olaylar sekmesi → Olgunluk çubuğu"
+    ],
+    "en": [
+     "Demo Day → Events tab → Readiness bar"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "demoday"
+   },
+   "related": []
+  },
+  {
+   "id": "g-gamification",
+   "cat": "glossary",
+   "type": "term",
+   "icon": "",
+   "title": {
+    "tr": "Oyunlaştırma",
+    "en": "Gamification"
+   },
+   "body": {
+    "tr": "Oyun mekaniklerini (puan, rozet, görev, ödül) oyun dışı süreçlere uygulama. GamFed binasındaki TOY Decards 10 adımda bunu tasarlatır.",
+    "en": "Applying game mechanics (points, badges, quests, rewards) to non-game processes. The TOY Decards in the GamFed building walk you through designing it in 10 steps."
+   },
+   "tags": [
+    "oyunlastirma",
+    "gamification",
+    "toy"
+   ],
+   "steps": {
+    "tr": [
+     "GamFed binası → Katlar → 1'den 10'a çık"
+    ],
+    "en": [
+     "GamFed building → Floors → climb from 1 to 10"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "gamfed"
+   },
+   "related": []
+  }
+ ]
+}

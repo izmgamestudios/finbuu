@@ -583,3 +583,21 @@ nav button.active { color: var(--accent) !important; background: rgba(255, 183, 
   .worldMap text.nm { font-size: 17px; stroke-width: 4px } .worldMap text.bd { font-size: 16px; stroke-width: 4px }
   .worldMap .trCity.wm circle:first-of-type { r: 12px } .worldMap .trCity.wm.has circle:first-of-type { r: 15px }
 }
+
+/* Sprint 32: Guide encyclopedia */
+.wikiTop { display: flex; gap: 6px; align-items: center; margin: 6px 0 } .wikiTop input { flex: 1; min-width: 0 } .wikiHam { display: none }
+.wikiChips { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 } .wikiChips .chip { min-height: 30px; padding: 3px 10px; font-size: .82rem; border-radius: 999px }
+.wiki { display: grid; grid-template-columns: 230px 1fr; gap: 12px; margin-top: 6px }
+.wikiTree { display: flex; flex-direction: column; gap: 2px; max-height: 56vh; overflow: auto; padding-right: 4px }
+.wikiTree .catRow { display: flex; align-items: center; gap: 2px } .wikiTree .arrow { width: 24px; min-height: 28px; padding: 0; background: transparent; border: 0; box-shadow: none; font-size: .9rem }
+.wikiTree .catBtn { flex: 1; text-align: left; min-height: 30px; padding: 3px 8px; font-size: .86rem; background: transparent; border: 1px solid transparent; box-shadow: none; white-space: normal }
+.wikiTree .catBtn.on { background: color-mix(in srgb, var(--accent) 22%, var(--panel)); border-color: var(--accent); font-weight: 700 }
+.wikiMain { min-width: 0; max-height: 56vh; overflow: auto } .wikiMain > * { flex-shrink: 0 }
+.wikiRow { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; margin: 4px 0; padding: 8px 10px; white-space: normal; background: var(--panel-2); border: 1px solid var(--line) }
+.wikiRow span { font-size: .84rem; opacity: .85 } .wikiMeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px }
+.wikiMeta .tag { background: var(--accent); color: #1c1c1c; border-radius: 999px; padding: 1px 10px; font-size: .78rem; font-weight: 700 } .wikiMeta .crumb { min-height: 26px; padding: 1px 8px; font-size: .78rem; background: transparent; border: 1px dashed var(--line); box-shadow: none }
+.wikiSteps { margin: 4px 0 10px 1.2em; padding: 0 } .wikiSteps li { margin: 4px 0 }
+@media (max-width: 640px) {
+  .wikiHam { display: inline-flex } .wiki { grid-template-columns: 1fr } .wikiTree { display: none; max-height: 40vh; border: 1px solid var(--line); border-radius: 10px; padding: 6px }
+  .wiki.treeOpen .wikiTree { display: flex } .wikiMain { max-height: none }
+}

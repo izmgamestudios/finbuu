@@ -1227,7 +1227,8 @@
     "ground": "📘 Zemin: Kılavuz",
     "none": "Şu an aktif görev yok.",
     "done": "{{n}}/{{total}} görev tamam",
-    "guideTitle": "Kılavuz Binası"
+    "guideTitle": "Kılavuz Binası",
+    "wiki": "📚 Rehber"
   },
   "real": {
     "title": "📚 Gerçek Veriler (Türkiye 2026)",
@@ -2045,5 +2046,27 @@
     "noValue": "Şirketin değeri henüz çok düşük.",
     "gone": "Teklif artık geçerli değil.",
     "wait": "Yeni satışa {{n}} gün var."
+  },
+  "wiki": {
+    "search": "Ara: menü, görev, terim, bina, soru…",
+    "categories": "Kategoriler",
+    "all": "Tümü",
+    "back": "Sonuçlara dön",
+    "how": "Nasıl giderim?",
+    "related": "İlgili maddeler",
+    "results": "{{n}} madde",
+    "none": "Eşleşen madde yok. Aramayı kısaltmayı veya filtreleri kaldırmayı dene.",
+    "goBuilding": "Binaya git",
+    "goTab": "Menüyü aç",
+    "noBuilding": "Bu bina şu an bu şehirde yok.",
+    "type": {
+      "faq": "SSS",
+      "menu": "Menü",
+      "building": "Bina",
+      "feature": "Özellik",
+      "term": "Terim",
+      "quest": "Görev",
+      "tip": "İpucu"
+    }
   }
 }

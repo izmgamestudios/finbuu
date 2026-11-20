@@ -10,6 +10,7 @@ import { suggestions, companyActions, employeeCap, maxTenants, staffOf, floorsFo
 import { createBoardUi } from './gfboard.js';
 import { cleanBoard } from './board.js';
 import { createAccountUi } from './account.js';
+import { createWiki } from './wiki.js';
 import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON, HOME_ROOMS, HOME_FLOORS } from './interior.js';
 
 const { i18next, io, Chart } = window;
@@ -1542,8 +1543,9 @@ function openGuideBuilding(tab = 'ground') {
   openModal(body => {
     body.append(el('h3', '📘 ' + t('quest.guideTitle')));
     const row = el('div', null, 'row');
-    [['ground', 'quest.ground'], ['upper', 'quest.upper']].forEach(([k, key]) => { const b = btn(t(key), () => openGuideBuilding(k)); if (k === tab) b.classList.add('primary'); row.append(b); });
+    [['ground', 'quest.ground'], ['upper', 'quest.upper'], ['wiki', 'quest.wiki']].forEach(([k, key]) => { const b = btn(t(key), () => openGuideBuilding(k)); if (k === tab) b.classList.add('primary'); row.append(b); });
     body.append(row);
+    if (tab === 'wiki') { body.classList.add('wideBody'); return wikiUi.mount(body); }
     if (tab === 'ground') { seed.tutorial.forEach(k => body.append(el('p', t(k)))); return; }
     const p = me(), list = p?.quests || [];
     if (!list.length) return body.append(el('p', t('quest.none'), 'muted'));
@@ -1565,6 +1567,7 @@ function loadData(name, cb) {
   if (dataCache[name]) return cb(dataCache[name]);
   fetch(`/data/${name}.json`).then(r => r.json()).then(d => { dataCache[name] = d; cb(d); }).catch(() => toast(t('ui.dataError')));
 }
+const wikiUi = createWiki({ el, btn: (...x) => btn(...x), t, L10, loadData, buildings: () => buildings, walkTo: (...x) => walkTo(...x), openBuilding: b => openBuilding(b), showTab: k => showTab(k), closeModal: () => closeModal(), toast });
 const safeUrl = u => (typeof u === 'string' && /^https:\/\//.test(u) ? u : null);
 const extLink = (label, url) => { const a = el('a', label, 'extLink'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a; };
 const badgeEl = (text, cls) => el('span', text, 'tag ' + (cls || ''));

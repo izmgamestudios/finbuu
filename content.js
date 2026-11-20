@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const NAMES = ['open-source-tools', 'grants', 'gamfed'];
+const NAMES = ['open-source-tools', 'grants', 'gamfed', 'guide'];
 const DEFAULT_DIR = path.join(__dirname, 'public', 'data');
 const OVERRIDE_DIR = path.join(__dirname, 'data', 'content');
 const fileOf = (dir, name) => path.join(dir, name + '.json');
@@ -68,7 +68,40 @@ function validateGamfed(doc) {
     sources: list(doc?.sources || [], 8, 'kaynaklar').map((s, i) => ({ label: str(s?.label, 60, `kaynak ${i + 1} adı`), url: url(s?.url, `kaynak ${i + 1} adresi`, true) })),
     floors: floors.map((f, i) => ({ n: i + 1, icon: str(f?.icon, 4, `kat ${i + 1} simgesi`), title: bi(f?.title, 60, `kat ${i + 1} başlığı`), desc: bi(f?.desc, 500, `kat ${i + 1} açıklaması`), game: bi(f?.game, 300, `kat ${i + 1} Finbuu karşılığı`, false) })) };
 }
-const VALIDATORS = { 'open-source-tools': validateTools, grants: validateGrants, gamfed: validateGamfed };
+
+// Sprint 32: Guide encyclopedia — nested categories + items (FAQ, menu, building, feature, term, quest, tip) with "how to get there" steps
+const GUIDE_TYPES = ['faq', 'menu', 'building', 'feature', 'term', 'quest', 'tip'];
+const GO_BUILDINGS = ['guide', 'plaza', 'demoday', 'oss', 'grants', 'gamfed', 'home', 'terminal', 'parking'];
+const GO_TABS = ['street', 'finance', 'chat', 'profile', 'events', 'menu', 'guide'];
+function validateGuide(doc) {
+  const seenCat = new Set(); let catCount = 0;
+  const cat = (c, depth) => {
+    if (depth > 3) bad('kategoriler en fazla 3 seviye iç içe olabilir');
+    if (++catCount > 150) bad('en fazla 150 kategori olabilir');
+    const cid = id(c?.id, 'kategori kimliği', 30); if (seenCat.has(cid)) bad(`kategori kimliği tekrar ediyor: ${cid}`); seenCat.add(cid);
+    const out = { id: cid, icon: str(c?.icon, 4, `${cid} simgesi`, false), title: bi(c?.title, 40, `${cid} başlığı`) };
+    const kids = list(c?.children || [], 30, `${cid} alt kategorileri`); if (kids.length) out.children = kids.map(k => cat(k, depth + 1));
+    return out;
+  };
+  const categories = list(doc?.categories, 30, 'kategoriler').map(c => cat(c, 1)); if (!categories.length) bad('en az 1 kategori olmalı');
+  const seen = new Set(), raw = list(doc?.items, 600, 'maddeler');
+  const items = raw.map(t => {
+    const iid = id(t?.id, 'madde kimliği', 50); if (seen.has(iid)) bad(`madde kimliği tekrar ediyor: ${iid}`); seen.add(iid);
+    const c = clean(t.cat); if (!seenCat.has(c)) bad(`${iid}: kategori bulunamadı (${c})`);
+    const type = clean(t.type); if (!GUIDE_TYPES.includes(type)) bad(`${iid}: tür ${GUIDE_TYPES.join(' / ')} olmalı`);
+    const steps = {}; for (const l of ['tr', 'en']) steps[l] = list(t.steps?.[l] || [], 10, `${iid} adımları (${l})`).map((x, i) => str(x, 220, `${iid} adım ${i + 1}`));
+    if (!steps.en.length) steps.en = steps.tr;
+    const kind = clean(t.go?.kind), target = clean(t.go?.target);
+    if (kind && !['building', 'tab'].includes(kind)) bad(`${iid}: git türü building veya tab olmalı`);
+    if (kind === 'building' && !GO_BUILDINGS.includes(target)) bad(`${iid}: bina hedefi ${GO_BUILDINGS.join(' / ')} olmalı`);
+    if (kind === 'tab' && !GO_TABS.includes(target)) bad(`${iid}: sekme hedefi ${GO_TABS.join(' / ')} olmalı`);
+    return { id: iid, cat: c, type, icon: str(t.icon, 4, `${iid} simgesi`, false), title: bi(t.title, 80, `${iid} başlığı`), body: bi(t.body, 1500, `${iid} metni`),
+      tags: list(t.tags || [], 12, `${iid} etiketleri`).map((x, i) => str(x, 24, `${iid} etiket ${i + 1}`)), steps, go: kind ? { kind, target } : { kind: '', target: '' }, related: list(t.related || [], 8, `${iid} ilgili`).map(x => clean(x).toLowerCase()) };
+  });
+  for (const it of items) it.related = it.related.filter(r => seen.has(r) && r !== it.id);   // silently drop links to deleted items
+  return { version: Math.max(1, Math.floor(Number(doc.version) || 1)), categories, items };
+}
+const VALIDATORS = { 'open-source-tools': validateTools, grants: validateGrants, gamfed: validateGamfed, guide: validateGuide };
 
 function readJson(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } }
 function readDefault(name) { return readJson(fileOf(DEFAULT_DIR, name)); }

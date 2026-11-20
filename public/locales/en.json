@@ -1227,7 +1227,8 @@
     "ground": "📘 Ground floor: Guide",
     "none": "No active quests right now.",
     "done": "{{n}}/{{total}} quests done",
-    "guideTitle": "Guide Building"
+    "guideTitle": "Guide Building",
+    "wiki": "📚 Guide"
   },
   "real": {
     "title": "📚 Real Data (Türkiye 2026)",
@@ -2045,5 +2046,27 @@
     "noValue": "The company is worth too little for now.",
     "gone": "That offer is no longer valid.",
     "wait": "{{n}} days until you can sell again."
+  },
+  "wiki": {
+    "search": "Search: menu, quest, term, building, question…",
+    "categories": "Categories",
+    "all": "All",
+    "back": "Back to results",
+    "how": "How do I get there?",
+    "related": "Related",
+    "results": "{{n}} articles",
+    "none": "No matching articles. Try a shorter search or clear the filters.",
+    "goBuilding": "Go to the building",
+    "goTab": "Open the menu",
+    "noBuilding": "That building is not in this city right now.",
+    "type": {
+      "faq": "FAQ",
+      "menu": "Menu",
+      "building": "Building",
+      "feature": "Feature",
+      "term": "Term",
+      "quest": "Quest",
+      "tip": "Tip"
+    }
   }
 }

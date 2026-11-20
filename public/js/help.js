@@ -15,8 +15,8 @@ export const TUTORIAL_STEPS = [
 ];
 export function tutorialState(ctx) { const steps = TUTORIAL_STEPS.map(s => ({ id: s.id, done: !!s.done(ctx) })); return { steps, doneCount: steps.filter(s => s.done).length, total: steps.length }; }
 
-const norm = s => String(s || '').toLocaleLowerCase('tr').replace(/[ıİ]/g, 'i').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, ' ');
-const words = s => norm(s).split(/\s+/).filter(w => w.length > 1);
+export const norm = s => String(s || '').toLocaleLowerCase('tr').replace(/[ıİ]/g, 'i').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, ' ');
+export const words = s => norm(s).split(/\s+/).filter(w => w.length > 1);
 
 // Returns FAQ ids ranked by relevance (empty array when nothing matches).
 export function rankFaq(query, t) {
