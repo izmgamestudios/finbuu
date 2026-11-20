@@ -17,6 +17,7 @@ const PITCH = require('./pitch');
 const CRM = require('./crm');
 const PLAN = require('./planner');
 const ERP = require('./erp');
+const TOOLS = require('./osTools');
 const { createAuth } = require('./auth');
 const ECON = require('./economy').build(25); // 25 coins = blue-collar daily employer cost (2026 minimum wage)
 
@@ -505,7 +506,9 @@ function createStreet(id, mode, pin, city) {
 }
 const crisisActive = (st, c) => c.crisis && c.crisis.until > (st.day || 0);
 const marketingActive = (st, c) => c.marketing && c.marketing.until > (st.day || 0);
-const incomeMult = (st, c) => (1 + adBoost(st, c)) * (1 + vehicleBoost(c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
+// employees get the productivity tools bonus (Sprint 21a); founders sell at base performance
+const perfFor = (c, who) => (c.employees.includes(who.id) ? c.performance * (1 + TOOLS.effectOf(c, 'employeeProductivity')) : 1);
+const incomeMult = (st, c) => (1 + TOOLS.effectOf(c, 'conversionRate')) * (1 + adBoost(st, c)) * (1 + vehicleBoost(c)) * utilMult(st, c) * (crisisActive(st, c) ? CRISES[c.crisis.type].incomeMult : 1) * (marketingActive(st, c) ? 1 + (SEED.marketing.mult - 1) * (c.marketing.k || 1) : 1);
 // Mirrors the client: building height (floors) follows the lot's total cash. Virtual companies use their own cash.
 const floorsFor = cash => Math.max(1, Math.min(6, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
 function floorsOf(st, c) {
@@ -849,12 +852,13 @@ io.on('connection', socket => {
   });
 
   // ---- Sprint 17a: Mini SaaS CRM + KPI (IT department) ----
+  const retentionOf = c => TOOLS.effectOf(c, 'customerRetention'), dormantDaysOf = c => CRM.DORMANT_DAYS + Math.round(retentionOf(c) * 60);
   const crmCo = cid => { const c = street?.companies[cid]; return c && !c.isNpc && (c.founders.includes(me?.id) || c.employees.includes(me?.id)) && deptUnlocked(street, c, 'it') ? c : null; };
   socket.on('crmGet', ({ cid } = {}, cb) => {
     const c = crmCo(cid); if (!c || typeof cb !== 'function') return;
     const day = street.day || 0;
-    cb({ day, cost: CRM.FOLLOW_COST, cooldown: CRM.FOLLOW_COOLDOWN_DAYS, kpi: CRM.kpis(c, day),
-      customers: CRM.book(c).customers.map(x => ({ id: x.id, name: x.name, persona: x.persona, orders: x.orders, spent: x.spent, last: x.last, stage: CRM.stageOf(x, day), chance: Math.round(CRM.winChance(x, day) * 100), ready: CRM.canFollow(x, day) }))
+    cb({ day, cost: CRM.FOLLOW_COST, cooldown: CRM.FOLLOW_COOLDOWN_DAYS, kpi: CRM.kpis(c, day, dormantDaysOf(c)),
+      customers: CRM.book(c).customers.map(x => ({ id: x.id, name: x.name, persona: x.persona, orders: x.orders, spent: x.spent, last: x.last, stage: CRM.stageOf(x, day, dormantDaysOf(c)), chance: Math.round(CRM.winChance(x, day, retentionOf(c), dormantDaysOf(c)) * 100), ready: CRM.canFollow(x, day) }))
         .sort((a, b) => b.spent - a.spent).slice(0, CRM.CAP) });
   });
   socket.on('crmFollow', ({ cid, id } = {}, cb) => {
@@ -863,11 +867,11 @@ io.on('connection', socket => {
     const cu = CRM.book(c).customers.find(x => x.id === id), day = street.day || 0; if (!cu) return reply({ ok: false });
     if (!CRM.canFollow(cu, day)) return reply({ ok: false, key: 'toast.crmCooldown' });
     if (c.cash < CRM.FOLLOW_COST) return reply({ ok: false, key: 'toast.noCash' });
-    const chance = CRM.winChance(cu, day);
+    const chance = CRM.winChance(cu, day, retentionOf(c), dormantDaysOf(c));
     c.cash -= CRM.FOLLOW_COST; R.track(c, 'expenses', CRM.FOLLOW_COST); cu.followAt = day;
     const won = crypto.randomInt(0, 1000) < chance * 1000; let revenue = 0;
     if (won) {
-      const perf = c.employees.includes(me.id) ? c.performance : 1;
+      const perf = perfFor(c, me);
       revenue = Math.max(1, Math.round(unitPrice(c) * WS[c.workspace].salesMult * perf * incomeMult(street, c) * 3));
       revenue = stockAdjust(c, null, 2, revenue);
       c.cash += revenue; c.sales += 2; R.track(c, 'revenue', revenue); R.track(c, 'units', 2); addDelivery(street, c, 2);
@@ -911,6 +915,30 @@ io.on('connection', socket => {
     const label = prod.name || (prod.nameKey ? prod.nameKey.split('.').pop() : 'x');
     PLAN.add(c, street.day || 0, { name: `📦 ${label} x${r.order.qty}`, start: street.day || 0, dur: r.order.due - (street.day || 0) });
     sync(); reply(erpReply(c));
+  });
+
+  // ---- Sprint 21a: open-source tools installed on a company (founders only) ----
+  const toolCo = cid => { const c = street?.companies[cid]; return c && !c.isNpc && c.status === 'active' && c.founders.includes(me?.id) ? c : null; };
+  const toolsReply = (c, extra = {}) => ({ ok: true, day: street.day || 0, scale: TOOLS.SETUP_SCALE, max: TOOLS.MAX_TOOLS, cash: Math.round(c.cash), monthly: TOOLS.hostingMonthly(c), effects: TOOLS.effects(c),
+    installed: TOOLS.book(c).map(x => ({ id: x.id, day: x.day, suspended: !!x.suspended })), level: founderLevel(c), ...extra });
+  const founderLevel = c => Math.max(1, ...c.founders.map(f => street.players[f]?.stats.level || 1));
+  socket.on('toolsGet', ({ cid } = {}, cb) => { const c = toolCo(cid); if (c && typeof cb === 'function') cb(toolsReply(c)); });
+  socket.on('toolInstall', ({ cid, id } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = toolCo(cid); if (!c || limited() || typeof id !== 'string') return reply({ ok: false });
+    const chk = TOOLS.checkInstall(c, id, founderLevel(c)); if (!chk.ok) return reply(chk);
+    c.cash -= chk.cost; R.track(c, 'expenses', chk.cost); TOOLS.place(c, id, street.day || 0);
+    const xp = Math.round(chk.tool.game.xpReward / TOOLS.XP_DIV); me.stats.xp += xp; me.stats.level = levelOf(me.stats.xp);
+    progress(street, me, 'tools'); addLog(street, 'log.toolInstalled', { player: me.name, tool: chk.tool.name, ...cParams(c) });
+    sync(); reply(toolsReply(c, { xp }));
+  });
+  socket.on('toolRemove', ({ cid, id } = {}, cb) => {
+    const c = toolCo(cid); if (!c || limited() || typeof id !== 'string') return typeof cb === 'function' && cb({ ok: false });
+    TOOLS.remove(c, id); sync(); if (typeof cb === 'function') cb(toolsReply(c));
+  });
+  socket.on('toolReactivate', ({ cid, id } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = toolCo(cid); if (!c || limited() || typeof id !== 'string') return reply({ ok: false });
+    const r = TOOLS.reactivate(c, id); if (!r.ok) return reply(r);
+    R.track(c, 'expenses', r.cost); sync(); reply(toolsReply(c));
   });
 
   socket.on('itUpgrade', ({ cid } = {}) => {
@@ -1024,7 +1052,7 @@ io.on('connection', socket => {
     if (Date.now() - lastPitch < 12000) return socket.emit('toast', 'toast.pitchCooldown');
     const personas = Object.keys(PITCH.PERSONAS), persona = personas[crypto.randomInt(0, personas.length)];
     const prod = ensureProducts(c).find(p => p.id === pid) || ensureProducts(c)[0];
-    me.pitch = { cid, pid: prod.id, persona, round: 0, interest: PITCH.startInterest(persona, { level: me.stats.level, knowledge: me.stats.knowledge, discount: prod.discount || 0 }),
+    me.pitch = { cid, pid: prod.id, persona, round: 0, interest: PITCH.startInterest(persona, { level: me.stats.level, knowledge: me.stats.knowledge, discount: prod.discount || 0, bonus: Math.round(TOOLS.effectOf(c, 'conversionRate') * 50) }),
       options: shuffle([1, 2, 3]), product: prod.name || null, productKey: prod.nameKey || null, price: unitPrice(c, prod.id) };
     pitchStep(me.pitch);
   });
@@ -1039,7 +1067,7 @@ io.on('connection', socket => {
     const outcome = pt.interest <= 0 ? 'lost' : PITCH.outcomeOf(pt.interest), R_ = PITCH.REWARD[outcome];
     let revenue = 0;
     if (c && c.status === 'active') {
-      const perf = c.employees.includes(me.id) ? c.performance : 1, levelBonus = 1 + (me.stats.level - 1) * 0.05;
+      const perf = perfFor(c, me), levelBonus = 1 + (me.stats.level - 1) * 0.05;
       const click = Math.max(1, Math.round(unitPrice(c, pt.pid) * WS[c.workspace].salesMult * perf * levelBonus * incomeMult(street, c) * lifeMult(me) * knowBonus(me)));
       revenue = Math.round(click * R_.mult);
       if (revenue > 0 && R_.units > 0) revenue = stockAdjust(c, pt.pid, R_.units, revenue);
@@ -1411,7 +1439,7 @@ io.on('connection', socket => {
   socket.on('click', ({ cid, pid } = {}) => {
     const c = street?.companies[cid];
     if (!c || limited() || !(c.founders.includes(me.id) || c.employees.includes(me.id))) return;
-    const perf = c.employees.includes(me.id) ? c.performance : 1;
+    const perf = perfFor(c, me);
     const levelBonus = 1 + (me.stats.level - 1) * 0.05;
     let value = Math.max(1, Math.round(unitPrice(c, pid) * WS[c.workspace].salesMult * perf * levelBonus * incomeMult(street, c) * lifeMult(me) * knowBonus(me)));
     value = stockAdjust(c, pid, 1, value);
@@ -1506,10 +1534,11 @@ function economyTick(only) {
         const lot = st.lots[c.lotId], owner = lot.owner && lot.owner !== c.id ? st.companies[lot.owner] : null;
         if (owner && lot.type === 'shop') { const r = Math.ceil(lotRent(st, lot) / Math.max(1, lot.companyIds.length)); owner.cash += r; R.track(owner, 'revenue', r); }
       }
-      const rentPart = costPerTick(st, c), payroll = c.employees.length * (SEED.salary + c.benefitCost) + npcSalaries;
+      const opx = 1 - TOOLS.effectOf(c, 'operatingCostReduction');
+      const rentPart = costPerTick(st, c) * opx, payroll = c.employees.length * (SEED.salary + c.benefitCost) + npcSalaries;
       let ub = { total: 0 }, stamp = 0, acctFee = 0;
       if (!c.isNpc) {
-        ub = utilityBills(st, c);
+        ub = utilityBills(st, c); if (opx < 1) ub = { ...ub, total: ub.total * opx };
         // fractional taxes / fees accumulate and are charged in whole coins (same trick as fuel)
         c.stampAcc = (c.stampAcc || 0) + rentPart * ECON.tax.stampContract + payroll * ECON.tax.stampPayroll;
         stamp = Math.floor(c.stampAcc); c.stampAcc -= stamp;
@@ -1551,6 +1580,10 @@ function economyTick(only) {
     for (const p of Object.values(st.players)) lifeTick(st, p);
     billAds(st);
     if (((st.day || 0) + 1) % 360 === 0) payIncomeTax(st);
+    if (((st.day || 0) + 1) % 30 === 0) for (const c of Object.values(st.companies)) if (!c.isNpc && c.tools?.length) {
+      const r = TOOLS.chargeMonth(c); if (r.paid) R.track(c, 'expenses', r.paid);
+      if (r.suspended.length) addLog(st, 'log.toolsSuspended', { n: r.suspended.length, ...cParams(c) });
+    }
     R.closeDay(st);
     st.tickAt = Date.now();
     for (const c of Object.values(st.companies)) {

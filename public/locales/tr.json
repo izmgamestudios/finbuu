@@ -341,7 +341,11 @@
     "planFull": "Görev listesi dolu (en fazla 20).",
     "planTooEarly": "Bu görev henüz bitirilemez; başladıktan en az 1 gün geçmeli.",
     "erpBad": "Sipariş bilgisi geçersiz (1–200 adet).",
-    "erpFull": "En fazla 5 bekleyen sipariş olabilir."
+    "erpFull": "En fazla 5 bekleyen sipariş olabilir.",
+    "toolBad": "Araç bulunamadı ya da bu işlem yapılamaz.",
+    "toolHave": "Bu araç zaten kurulu.",
+    "toolFull": "En fazla 12 araç kurulabilir.",
+    "toolLevel": "Bu aracın seviye şartını henüz karşılamıyorsun."
   },
   "log": {
     "joined": "{{player}} caddeye girdi.",
@@ -383,7 +387,9 @@
     "grant": "🏛 {{company}} {{amount}} hibe aldı.",
     "teamCreated": "👥 {{player}} \"{{team}}\" takımını kurdu.",
     "teamJoined": "👥 {{player}} \"{{team}}\" takımına katıldı.",
-    "vehicle": "🚗 {{player}}, {{company}} için araç: {{mode}}"
+    "vehicle": "🚗 {{player}}, {{company}} için araç: {{mode}}",
+    "toolInstalled": "{{player}}, {{company}} şirketine {{tool}} kurdu.",
+    "toolsSuspended": "{{company}}: aylık sunucu gideri ödenemedi, {{n}} araç askıya alındı."
   },
   "crisis": {
     "concordat": "Konkordato ilan etti",

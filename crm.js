@@ -5,7 +5,8 @@ const INITIALS = 'ABCÇDEFGHİKLMNOPRSŞTUVYZ';
 const CAP = 40, DORMANT_DAYS = 30, FOLLOW_COST = 10, FOLLOW_COOLDOWN_DAYS = 10, AUTO_CHANCE = 0.08;
 const WIN_CHANCE = { lead: 0.4, dormant: 0.5, active: 0.3 };
 
-const stageOf = (cu, day) => (cu.orders === 0 ? 'lead' : day - cu.last > DORMANT_DAYS ? 'dormant' : 'active');
+// retention tools (Sprint 21a) lengthen the dormant window and raise follow-up chances
+const stageOf = (cu, day, dormantDays = DORMANT_DAYS) => (cu.orders === 0 ? 'lead' : day - cu.last > dormantDays ? 'dormant' : 'active');
 const randomName = rnd => `${FIRST[rnd(FIRST.length)]} ${INITIALS[rnd(INITIALS.length)]}.`;
 const book = c => (c.crm ||= { customers: [], seq: 0 });
 
@@ -25,11 +26,11 @@ function record(c, day, { id = null, name, persona = null, amount = 0 }) {
   return cu;
 }
 const canFollow = (cu, day) => day - cu.followAt >= FOLLOW_COOLDOWN_DAYS;
-const winChance = (cu, day) => WIN_CHANCE[stageOf(cu, day)];
+const winChance = (cu, day, bonus = 0, dormantDays = DORMANT_DAYS) => Math.min(0.9, WIN_CHANCE[stageOf(cu, day, dormantDays)] + bonus);
 
-function kpis(c, day) {
+function kpis(c, day, dormantDays = DORMANT_DAYS) {
   const list = book(c).customers, buyers = list.filter(x => x.orders > 0);
-  const count = s => list.filter(x => stageOf(x, day) === s).length;
+  const count = s => list.filter(x => stageOf(x, day, dormantDays) === s).length;
   const orders = buyers.reduce((s, x) => s + x.orders, 0), spent = buyers.reduce((s, x) => s + x.spent, 0);
   const d = (c.fin?.daily || []).slice(-30), sum = k => d.reduce((s, x) => s + (x[k] || 0), 0);
   const revenue30 = sum('revenue'), expenses30 = sum('expenses') + sum('advertising') + sum('tax') + sum('utilities') + sum('accounting') + sum('stampTax');

@@ -341,7 +341,11 @@
     "planFull": "Task list is full (max 20).",
     "planTooEarly": "This task cannot be completed yet; at least 1 day must pass after it starts.",
     "erpBad": "Invalid order (1–200 units).",
-    "erpFull": "You can have at most 5 pending orders."
+    "erpFull": "You can have at most 5 pending orders.",
+    "toolBad": "Tool not found or action not possible.",
+    "toolHave": "This tool is already installed.",
+    "toolFull": "You can install at most 12 tools.",
+    "toolLevel": "You do not meet this tool's level requirement yet."
   },
   "log": {
     "joined": "{{player}} entered the street.",
@@ -383,7 +387,9 @@
     "grant": "🏛 {{company}} received a {{amount}} grant.",
     "teamCreated": "👥 {{player}} created team \"{{team}}\".",
     "teamJoined": "👥 {{player}} joined \"{{team}}\".",
-    "vehicle": "🚗 {{player}} vehicle for {{company}}: {{mode}}"
+    "vehicle": "🚗 {{player}} vehicle for {{company}}: {{mode}}",
+    "toolInstalled": "{{player}} installed {{tool}} on {{company}}.",
+    "toolsSuspended": "{{company}}: monthly hosting could not be paid, {{n}} tool(s) suspended."
   },
   "crisis": {
     "concordat": "Filed for concordat (debt restructuring)",
