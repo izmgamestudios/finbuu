@@ -302,3 +302,11 @@ body.noAdv #advisor { display: none }
 body.noAdv #advChip:not([hidden]) { display: block }
 #advCount { display: block }
 #advMin { padding: 6px 10px; min-width: 40px }
+
+/* ---- Sprint 8a: products + wizard modes ---- */
+.prodList { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 }
+.prodRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--panel-2); border-radius: 10px; padding: 8px 10px }
+.prodName { display: flex; flex-direction: column; min-width: 0; flex: 1 }
+.prodPrice { font-size: .85rem; color: var(--muted) } .prodPrice s { opacity: .7 }
+.prodPrice .disc { color: var(--good); font-style: normal; font-weight: 700 }
+.prodActs { display: flex; gap: 6px } .prodActs button { min-height: 38px; padding: 4px 10px }

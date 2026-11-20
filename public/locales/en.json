@@ -294,6 +294,8 @@
     "npcBusy": "Fully booked today.",
     "npcTaken": "This person was already hired.",
     "tooFar": "Too far away, get closer.",
+    "maxProducts": "You can have at most 8 products/services.",
+    "lastProduct": "You cannot remove the last product.",
     "ownerOnly": "Only the room owner can do this.",
     "slowDown": "Slow down a little.",
     "cannotBuy": "You must be the only tenant to buy.",
@@ -318,6 +320,9 @@
     "crisisOver": "✅ {{company}} survived the crisis.",
     "campaign": "📣 {{player}} started a {{days}}-day campaign for {{company}}.",
     "speed": "⏱ {{player}} set the game speed to {{speed}}x.",
+    "productAdded": "🆕 {{player}} added a product: {{product}}.",
+    "productEdited": "✏ {{player}} updated a product: {{product}}.",
+    "productRemoved": "🗑 {{player}} removed a product: {{product}}.",
     "itUpgrade": "🛡 {{company}} raised security to level {{level}}.",
     "hiredNpc": "🤝 {{company}} hired an NPC employee.",
     "badge": "🏅 {{player}} earned a badge: {{badge}}",
@@ -481,6 +486,11 @@
   "wiz": {
     "open": "Found with wizard",
     "title": "Company Wizard",
+    "chooseMode": "How detailed should the setup be?",
+    "steps": "{{n}} steps",
+    "mode": { "quick": "⚡ Quick", "standard": "🧭 Standard", "detailed": "🔬 Detailed" },
+    "modeDesc": { "quick": "Pick sector and product, choose a place and name, done.", "standard": "Sector, product, place and name: four short steps.", "detailed": "Extra products/services, discounts, place, name and summary: full control." },
+    "extraNote": "Your main product: {{name}}. Optionally add more products or services (up to 7).",
     "back": "Back",
     "next": "Next",
     "deposit": "deposit {{dep}} · {{cost}}/day",
@@ -488,9 +498,24 @@
       "sector": "Which sector do you want to start in?",
       "product": "What will you sell? Pick one or add your own with \"Other\".",
       "place": "Where do you want to start?",
-      "name": "Give your company a name (optional)."
+      "name": "Give your company a name (optional).",
+      "sectorProduct": "Pick your sector and what you will sell.",
+      "placeName": "Choose a place and name your company (optional).",
+      "extra": "Extra products or services",
+      "discount": "Discount per product (0–90%). Discounts boost volume but lower unit revenue.",
+      "summary": "Review the summary and found the company."
     },
     "summary": "Summary: {{sector}} · {{product}} · {{place}}"
+  },
+  "prod": {
+    "add": "Add product/service",
+    "edit": "Edit product",
+    "namePh": "Product or service name",
+    "name": "Name",
+    "price": "List price",
+    "discount": "Discount (%)",
+    "netInfo": "Customer pays: {{net}} (−{{pct}}%)",
+    "save": "Save"
   },
   "badge": {
     "title": "🏅 Badges",

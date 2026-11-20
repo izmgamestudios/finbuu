@@ -1229,51 +1229,86 @@ function foundForm(body, { lot = null, choices, isDefault, rec }) {
 }
 
 // ---------- Founding wizard: Q&A, Next / OK ----------
+// Company wizard. Quick = 2 steps, Standard = 4, Detailed = 7 (extra products, discounts, summary).
+const WIZ_MODES = { quick: ['sectorProduct', 'placeName'], standard: ['sector', 'product', 'place', 'name'], detailed: ['sector', 'product', 'extra', 'discount', 'place', 'name', 'summary'] };
 function openWizard() {
   if (!state) return;
-  const w = { step: 0, sector: seed.custom.sectors[2], product: null, workspace: 'home', name: '' };
-  const steps = ['sector', 'product', 'place', 'name'];
+  const w = { mode: null, step: 0, sector: seed.custom.sectors[2], product: null, workspace: 'home', name: '', discount: 0, extra: [] };
+  const unit = isTR() ? RATE() : 1, pmin = seed.custom.minPrice, pmax = seed.custom.maxPrice, toCoins = v => Math.max(pmin, Math.min(pmax, Math.round(Number(v) / unit) || pmin));
+  const primaryName = () => w.product?.custom ? w.product.custom.label : t(seed.templates[w.product?.templateIdx ?? 0].key);
+  const primaryPrice = () => w.product?.custom ? w.product.custom.price : seed.templates[w.product?.templateIdx ?? 0].price;
+  const placeGrid = body => {
+    const grid = el('div', null, 'choices'), coins = me()?.coins || 0;
+    const opts = ['home', 'virtual', 'eoffice', 'coworking', 'shop'].map(ws => {
+      const lot = seed.workspaces[ws].physical ? freeLot(ws) : null, ok = !seed.workspaces[ws].physical || !!lot, dep = ok ? depositLabel(ws, lot) : null;
+      return { ws, lot, ok: ok && coins >= (dep || 0), dep, cost: ok ? costLabel(ws, lot) : null };
+    });
+    if (!opts.find(o => o.ws === w.workspace)?.ok) w.workspace = 'home';
+    opts.forEach(o => {
+      const b = btn(`${t('ws.' + o.ws)} · ${o.dep == null ? t('ui.full') : t('wiz.deposit', { dep: o.dep, cost: o.cost })}`, () => { w.workspace = o.ws; render(); });
+      b.disabled = !o.ok; if (o.ws === w.workspace) b.className = 'sel'; grid.append(b);
+    });
+    body.append(grid);
+  };
+  const nameInput = body => { const nm = el('input'); nm.placeholder = t('ui.companyNamePh'); nm.maxLength = 40; nm.value = w.name; nm.oninput = () => (w.name = nm.value); body.append(nm); };
+  const found = () => {
+    socket.emit('found', { lotId: seed.workspaces[w.workspace].physical ? 'auto' : null, workspace: w.workspace, name: w.name, ...w.product,
+      discount: w.discount, products: w.extra.map(x => ({ name: x.name, price: x.price, discount: x.discount })) });
+    closeModal();
+  };
   const render = () => openModal(body => {
+    if (!w.mode) { // step 0: choose how detailed the setup should be
+      body.append(el('h3', `🧭 ${t('wiz.title')}`), el('p', t('wiz.chooseMode'), 'muted'));
+      const grid = el('div', null, 'choices');
+      Object.keys(WIZ_MODES).forEach(m => { const b = btn(`${t('wiz.mode.' + m)} · ${t('wiz.steps', { n: WIZ_MODES[m].length })}`, () => { w.mode = m; w.step = 0; render(); }); b.title = t('wiz.modeDesc.' + m); grid.append(b, el('small', t('wiz.modeDesc.' + m), 'muted')); });
+      body.append(grid); return;
+    }
+    const steps = WIZ_MODES[w.mode], kind = steps[w.step], last = w.step === steps.length - 1;
     const bar = el('div', null, 'steps'); steps.forEach((_, i) => bar.append(el('i', null, i <= w.step ? 'on' : ''))); body.append(bar);
-    body.append(el('h3', `🧭 ${t('wiz.title')} · ${w.step + 1}/${steps.length}`), el('p', t('wiz.q.' + steps[w.step]), 'muted'));
+    body.append(el('h3', `🧭 ${t('wiz.title')} · ${w.step + 1}/${steps.length}`), el('p', t('wiz.q.' + kind), 'muted'));
     const nav = el('div', null, 'wizNav');
-    const back = btn('◀ ' + t('wiz.back'), () => { w.step--; render(); }); back.disabled = w.step === 0;
-    let next;
-    if (steps[w.step] === 'sector') {
+    const back = btn('◀ ' + t('wiz.back'), () => { if (w.step === 0) w.mode = null; else w.step--; render(); });
+    let next = btn(t('wiz.next') + ' ▶', () => { w.step++; render(); }, { primary: true, isDefault: true });
+    if (kind === 'sector') {
       const grid = el('div', null, 'choices');
       seed.custom.sectors.forEach(s => { const b = btn(t(s), () => { w.sector = s; w.step++; render(); }); if (s === w.sector) b.className = 'sel'; grid.append(b); });
       body.append(grid);
-      next = btn(t('wiz.next') + ' ▶', () => { w.step++; render(); }, { primary: true, isDefault: true });
-    } else if (steps[w.step] === 'product') {
-      const box = el('div'); body.append(box);
-      const tplInSector = seed.templates.findIndex(tp => tp.sector === w.sector);
-      const pick = productPicker(box, tplInSector, w.sector);
-      next = btn(t('wiz.next') + ' ▶', () => { const p = pick(); if (p.custom && !p.custom.label) return toast(t('toast.badCustom')); w.product = p; w.step++; render(); }, { primary: true, isDefault: true });
-    } else if (steps[w.step] === 'place') {
-      const grid = el('div', null, 'choices');
-      const coins = me()?.coins || 0;
-      const opts = ['home', 'virtual', 'eoffice', 'coworking', 'shop'].map(ws => {
-        const lot = seed.workspaces[ws].physical ? freeLot(ws) : null;
-        const ok = !seed.workspaces[ws].physical || !!lot;
-        const dep = ok ? depositLabel(ws, lot) : null;
-        return { ws, lot, ok: ok && coins >= (dep || 0), dep, cost: ok ? costLabel(ws, lot) : null };
+    } else if (kind === 'product' || kind === 'sectorProduct') {
+      const box = el('div');
+      let pick;
+      const build = () => { box.replaceChildren(); pick = productPicker(box, seed.templates.findIndex(tp => tp.sector === w.sector), w.sector); };
+      if (kind === 'sectorProduct') { const sel = el('select'); seed.custom.sectors.forEach(s => sel.append(new Option(t(s), s))); sel.value = w.sector; sel.onchange = () => { w.sector = sel.value; build(); }; body.append(sel); }
+      build(); body.append(box);
+      const go = () => { const p = pick(); if (p.custom && !p.custom.label) return toast(t('toast.badCustom')); w.product = p; if (kind === 'sectorProduct') { w.step++; render(); } else { w.step++; render(); } };
+      next = btn(t('wiz.next') + ' ▶', go, { primary: true, isDefault: true });
+    } else if (kind === 'extra') {
+      body.append(el('small', t('wiz.extraNote', { name: primaryName() }), 'muted'));
+      const list = el('div', null, 'prodList');
+      w.extra.forEach((x, i) => { const row = el('div', null, 'prodRow'); row.append(el('div', `${x.name} · ${money(x.price)}`, 'prodName'), btn('🗑', () => { w.extra.splice(i, 1); render(); })); list.append(row); });
+      body.append(list);
+      if (w.extra.length < 7) {
+        const row = el('div', null, 'row'), nm = el('input'); nm.placeholder = t('prod.namePh'); nm.maxLength = 30;
+        const pr = el('input'); pr.type = 'number'; pr.inputMode = 'decimal'; pr.min = Math.round(pmin * unit); pr.max = Math.round(pmax * unit); pr.value = Math.round(10 * unit);
+        row.append(nm, pr, btn('➕', () => { if (!nm.value.trim()) return toast(t('toast.badCustom')); w.extra.push({ name: nm.value.trim(), price: toCoins(pr.value), discount: 0 }); render(); }));
+        body.append(row);
+      }
+    } else if (kind === 'discount') {
+      const items = [{ name: primaryName(), price: primaryPrice(), get d() { return w.discount; }, set d(v) { w.discount = v; } }, ...w.extra.map(x => ({ name: x.name, price: x.price, get d() { return x.discount; }, set d(v) { x.discount = v; } }))];
+      items.forEach(it => {
+        const row = el('div', null, 'prodRow'), info = el('small', null, 'muted');
+        const sl = el('input'); sl.type = 'range'; sl.min = 0; sl.max = 90; sl.value = it.d;
+        const show = () => (info.textContent = `${it.name}: ${money(it.price)} → ${money(netPrice({ price: it.price, discount: it.d }))} (−%${it.d})`);
+        sl.oninput = () => { it.d = Number(sl.value); show(); }; show();
+        const col = el('div', null, 'prodName'); col.append(info, sl); row.append(col); body.append(row);
       });
-      if (!opts.find(o => o.ws === w.workspace)?.ok) w.workspace = 'home';
-      opts.forEach(o => {
-        const b = btn(`${t('ws.' + o.ws)} · ${o.dep == null ? t('ui.full') : t('wiz.deposit', { dep: o.dep, cost: o.cost })}`, () => { w.workspace = o.ws; render(); });
-        b.disabled = !o.ok; if (o.ws === w.workspace) b.className = 'sel'; grid.append(b);
-      });
-      body.append(grid);
-      next = btn(t('wiz.next') + ' ▶', () => { w.step++; render(); }, { primary: true, isDefault: true });
-    } else {
-      const nm = el('input'); nm.placeholder = t('ui.companyNamePh'); nm.maxLength = 40; nm.value = w.name; nm.oninput = () => (w.name = nm.value);
-      body.append(nm);
-      const prodLabel = w.product?.custom ? `${w.product.custom.label} (${money(w.product.custom.price)})` : t(seed.templates[w.product?.templateIdx ?? 0].key);
-      body.append(el('p', t('wiz.summary', { sector: t(w.sector), product: prodLabel, place: t('ws.' + w.workspace) })));
-      next = btn('✓ ' + t('ui.found'), () => {
-        socket.emit('found', { lotId: seed.workspaces[w.workspace].physical ? 'auto' : null, workspace: w.workspace, name: w.name, ...w.product });
-        closeModal();
-      }, { primary: true, isDefault: true });
+    } else if (kind === 'place') placeGrid(body);
+    else if (kind === 'placeName') { placeGrid(body); nameInput(body); }
+    else if (kind === 'name') nameInput(body);
+    else if (kind === 'summary') body.append(el('p', '✓ ' + t('wiz.summary', { sector: t(w.sector), product: primaryName() + (w.extra.length ? ` +${w.extra.length}` : ''), place: t('ws.' + w.workspace) })));
+    if (kind === 'name' && !last) { /* detailed: name, then summary */ }
+    if (last) {
+      if (kind === 'name' || kind === 'placeName') body.append(el('p', t('wiz.summary', { sector: t(w.sector), product: primaryName() + (w.extra.length ? ` +${w.extra.length}` : ''), place: t('ws.' + w.workspace) })));
+      next = btn('✓ ' + t('ui.found'), found, { primary: true, isDefault: true });
     }
     nav.append(back, next); body.append(nav);
   });
@@ -1451,6 +1486,51 @@ function collarPanel(box, c, emit) {
   Object.keys(cols).filter(k => k !== best).forEach(k => row.append(btn(t('hr.hire', { collar: t('collar.' + k), salary: cols[k].salary }), emit('hireNpc', { collar: k }))));
   box.append(row);
 }
+// ---------- Products / services of a company ----------
+const productName = p => p.name || t(p.nameKey || 'tpl.custom');
+const productsOf = c => (c.products?.length ? c.products : [{ id: 'p0', name: c.product || null, nameKey: c.nameKey, price: c.price, discount: 0 }]);
+const netPrice = p => Math.max(1, Math.round(p.price * (1 - (p.discount || 0) / 100)));
+// Add (p == null) or edit a product: name, list price (₺ for TR), discount slider 0-90 + manual number
+function productEditor(c, p) {
+  const unit = isTR() ? RATE() : 1, min = seed.custom.minPrice, max = seed.custom.maxPrice;
+  openModal(body => {
+    body.append(el('h3', (p ? '✏ ' : '➕ ') + t(p ? 'prod.edit' : 'prod.add') + ' · ' + companyName(c)));
+    const name = el('input'); name.maxLength = 30; name.placeholder = t('prod.namePh'); name.value = p ? productName(p) : '';
+    const price = el('input'); price.type = 'number'; price.min = Math.round(min * unit); price.max = Math.round(max * unit); price.inputMode = 'decimal'; price.value = Math.round((p ? p.price : 10) * unit);
+    price.title = t('ui.customPrice', { min: money(min), max: money(max) });
+    const slider = el('input'); slider.type = 'range'; slider.min = 0; slider.max = 90; slider.value = p?.discount || 0;
+    const dnum = el('input'); dnum.type = 'number'; dnum.min = 0; dnum.max = 90; dnum.value = slider.value; dnum.inputMode = 'numeric';
+    const info = el('small', null, 'muted');
+    const coinsOf = () => Math.max(min, Math.min(max, Math.round(Number(price.value) / unit) || min));
+    const sync = from => { const d = Math.max(0, Math.min(90, Math.floor(Number(from === 'num' ? dnum.value : slider.value)) || 0));
+      if (from !== 'slider') slider.value = d; if (from !== 'num') dnum.value = d;
+      info.textContent = t('prod.netInfo', { net: money(netPrice({ price: coinsOf(), discount: d })), pct: d }); };
+    slider.oninput = () => sync('slider'); dnum.oninput = () => sync('num'); price.oninput = () => sync();
+    body.append(el('small', t('prod.name'), 'muted'), name, el('small', t('prod.price'), 'muted'), price, el('small', t('prod.discount'), 'muted'), slider, dnum, info);
+    const save = () => { if (!name.value.trim()) return toast(t('toast.badCustom')); closeModal();
+      socket.emit('productSave', { cid: c.id, pid: p?.id, name: name.value.trim(), price: coinsOf(), discount: Number(slider.value) }); };
+    body.append(btn('✓ ' + t('prod.save'), save, { primary: true, isDefault: true }));
+    sync();
+  });
+}
+// Sales department: one row per product (sell / buy, edit, remove)
+function productList(box, c, member, founder) {
+  const wrap = el('div', null, 'prodList');
+  productsOf(c).forEach((p, i, all) => {
+    const row = el('div', null, 'prodRow'), label = el('div', null, 'prodName');
+    label.append(el('b', productName(p)));
+    const price = el('span', null, 'prodPrice');
+    if (p.discount) { price.append(el('s', money(p.price)), document.createTextNode(' ' + money(netPrice(p))), el('em', ' −%' + p.discount, 'disc')); } else price.textContent = money(p.price);
+    label.append(price);
+    const acts = el('div', null, 'prodActs');
+    if (member) acts.append(btn('🖱 ' + t('ui.clickSell'), () => socket.emit('click', { cid: c.id, pid: p.id })));
+    else if (!c.founders.includes(myId())) acts.append(btn('🛒 ' + t('ui.buy'), () => socket.emit('buy', { cid: c.id, pid: p.id })));
+    if (founder) { acts.append(btn('✏', () => productEditor(c, p))); if (all.length > 1) acts.append(btn('🗑', () => socket.emit('productRemove', { cid: c.id, pid: p.id }))); }
+    row.append(label, acts); wrap.append(row);
+  });
+  box.append(wrap);
+  if (founder && productsOf(c).length < 8) box.append(btn('➕ ' + t('prod.add'), () => productEditor(c, null)));
+}
 // ---------- Amount pickers: a 1-100 slider and a manual number stay in sync ----------
 // moneyPicker: choose an amount of coins up to maxCoins. TR players type ₺, others coins.
 function moneyPicker({ title, note, maxCoins, defCoins, confirmLabel, onConfirm }) {
@@ -1517,7 +1597,8 @@ function openDept(c, d) {
       case 'sales': {
         box.append(el('p', t('dept.salesInfo', { product: c.product || t(c.nameKey), price: c.price, units: c.fin?.today?.units || 0 })));
         if (member) rec(t('ui.clickSell'), () => socket.emit('click', { cid: c.id }), t('adv.sellWhy'));
-        else rec(t('ui.buy'), emit('buy'), t('adv.buyWhy'));
+        else if (!founder) rec(t('ui.buy'), emit('buy'), t('adv.buyWhy'));
+        productList(box, c, member, founder);
         vehiclePanel(box, c, founder);
         break;
       }

@@ -9,7 +9,8 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **5** | Slogan, Shift ile koşma, mobil joystick'te 2 kademe (yürü / koş), tema (sistem · açık · koyu) | ✅ Tamam |
 | **6 — Sohbet & sosyal** | Yakınlık konuşması ("Ahmet'ten Ayşe'ye mesaj") herkese açık sohbete düşer · mobilde mavi "Gir" yanında yeşil "Konuş" (masaüstünde T) · kafa üstü konuşma baloncuğu · hızlı emoji · açılır/kapanır paneller (başlığa tıkla, ▤ yan panel, ▾ üst göstergeler) | ✅ Tamam |
 | **7 — Zaman & finans kontrolleri** | Oyun hızı 0.5x/1x/2x/3x (oda sahibi değiştirir, odaya özel) · yatırım ve kâr payı çekmede 1–100 çubuk + elle rakam · pazarlama bütçe çubuğu (10–100, 50 = standart) · gün bazlı timeline (Cadde Olayları) · öneri çubuğunda ◀ önceki, sayaç, küçült | ✅ Tamam |
-| **8 — Şirket kurma & giderler** | Birden çok ürün/hizmet · ürün bazlı indirim · hızlı (2/4 adım) ve ayrıntılı (6–8 adım) sihirbaz · gelir vergisi, damga vergisi, muhasebe · dükkânda elektrik/su/doğalgaz/internet, sabit ve değişken giderler | ⬜ |
+| **8a — Ürünler & sihirbaz** | Şirket başına en fazla 8 ürün/hizmet (ad, liste fiyatı, %0–90 indirim) · satışta ürün seçimi · sihirbaz: ⚡ Hızlı (2 adım), 🧭 Standart (4), 🔬 Ayrıntılı (7: ek ürün, indirim, özet) | ✅ Tamam |
+| **8b — Vergiler & giderler** | Gelir vergisi, damga vergisi, muhasebe · dükkânda elektrik/su/doğalgaz/internet faturaları, sabit ve değişken giderler | ⬜ |
 | **9 — Reklam sistemi** | Billboard, otobüs durağı, otobüs giydirme, mobil meta reklam, bina duvarı/çatı · görsel URL veya metin (font boyutu, renk) · admin ve şirket sahibi yönetir · **her reklam yayına girmeden admin onayından geçer** | ⬜ |
 | **10 — Araç** | Galeriden sıfır/ikinci el araç · bina kapısında sabit park, otopark · kiralık aracın kalan süresi (üst bar) | ⬜ |
 | **11 — Harita & şehirler** | Minimap (M tuşu, mobilde harita ikonu) · Türkiye haritasından şehir seçimi (bazıları Premium/"pek yakında") · otobüs terminali, şehirler arası seyahat (maliyet + süre), özel/kiralık araçla seyahat · aynı odada farklı şehirler | ⬜ |
@@ -27,6 +28,11 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - Oda sahibi = odaya ilk giren oyuncu; ayrılırsa sıradaki oyuncuya geçer. Admin için `adminSetSpeed` olayı hazır (arayüzü Sprint 16'da).
 - Kâr payı çekme artık kasadan fazla olamaz; eski "%20" davranışı, tutar verilmeyen çağrılarda (Öneri/Tamam, `/cek`) aynen duruyor.
 - Muhasebe ve İT güvenlik seviyeli/sabit işlemlerdir, çubuk gerektirmez. Çubuk, tutarı serbest olan her işleme (yatırım, kâr payı, pazarlama) eklendi.
+
+## Sprint 8a notları
+- `c.price` birincil ürünün liste fiyatı olarak kaldı; Öneri, raporlar ve sunum eskisi gibi çalışır. Ürünler `c.products` içinde.
+- Pasif (çalışan) satışlarda indirim talebi artırır (esneklik 1.5), her ek ürün pazarı %5 genişletir; yani %10–30 indirim hafif kazançlıdır, %40+ zarar yazar. Elle satışta ve alışta indirimli fiyat ödenir.
+- Ürün ekleme/düzenleme/silme yalnızca kurucular içindir; son ürün silinemez.
 
 ## Kararlar
 - **Veri saklama:** Şimdilik tarayıcıda (localStorage/çerez) yönetilir. SQLite/PostgreSQL daha sonra bağlanacak; bunun için durum okuma/yazma tek bir katmandan geçmeli (depolama arayüzü), böylece geçiş tek yerde yapılır.

@@ -294,6 +294,8 @@
     "npcBusy": "Bugün başka danışanı var.",
     "npcTaken": "Bu kişi zaten bir işe alındı.",
     "tooFar": "Çok uzaksın, yaklaş.",
+    "maxProducts": "En fazla 8 ürün/hizmet ekleyebilirsin.",
+    "lastProduct": "Son ürünü silemezsin.",
     "ownerOnly": "Bunu sadece oda sahibi yapabilir.",
     "slowDown": "Biraz yavaş, çok hızlı yazıyorsun.",
     "cannotBuy": "Satın almak için dükkânın tek kiracısı olmalısın.",
@@ -318,6 +320,9 @@
     "crisisOver": "✅ {{company}} krizi atlattı.",
     "campaign": "📣 {{player}}, {{company}} için {{days}} günlük kampanya başlattı.",
     "speed": "⏱ {{player}} oyun hızını {{speed}}x yaptı.",
+    "productAdded": "🆕 {{player}} yeni ürün ekledi: {{product}}.",
+    "productEdited": "✏ {{player}} ürünü güncelledi: {{product}}.",
+    "productRemoved": "🗑 {{player}} ürünü kaldırdı: {{product}}.",
     "itUpgrade": "🛡 {{company}} güvenliğini seviye {{level}} yaptı.",
     "hiredNpc": "🤝 {{company}} bir NPC çalışan işe aldı.",
     "badge": "🏅 {{player}} rozet kazandı: {{badge}}",
@@ -481,6 +486,11 @@
   "wiz": {
     "open": "Sihirbazla kur",
     "title": "Şirket Kurma Sihirbazı",
+    "chooseMode": "Nasıl bir kurulum istersin?",
+    "steps": "{{n}} adım",
+    "mode": { "quick": "⚡ Hızlı", "standard": "🧭 Standart", "detailed": "🔬 Ayrıntılı" },
+    "modeDesc": { "quick": "Sektör ve ürünü seç, yer ve isim ver, hemen kur.", "standard": "Sektör, ürün, yer ve isim: dört kısa adım.", "detailed": "Ek ürün/hizmet, indirim, yer, isim ve özet: tam kontrol." },
+    "extraNote": "Ana ürününün: {{name}}. İstersen ek ürün veya hizmet ekle (en fazla 7).",
     "back": "Geri",
     "next": "Sonraki",
     "deposit": "depozito {{dep}} · {{cost}}/gün",
@@ -488,9 +498,24 @@
       "sector": "Hangi sektörde iş kurmak istersin?",
       "product": "Ne satacaksın? Listeden seç ya da \"Diğer\" ile kendin ekle.",
       "place": "Nerede başlamak istersin?",
-      "name": "Şirketine bir isim ver (isteğe bağlı)."
+      "name": "Şirketine bir isim ver (isteğe bağlı).",
+      "sectorProduct": "Sektörünü ve ne satacağını seç.",
+      "placeName": "Yerini seç ve şirketine bir isim ver (isteğe bağlı).",
+      "extra": "Ek ürün veya hizmetler",
+      "discount": "Ürün başına indirim (%0–90). İndirim satışı artırır ama birim geliri düşürür.",
+      "summary": "Özetine bak ve şirketi kur."
     },
     "summary": "Özet: {{sector}} · {{product}} · {{place}}"
+  },
+  "prod": {
+    "add": "Ürün/hizmet ekle",
+    "edit": "Ürünü düzenle",
+    "namePh": "Ürün veya hizmet adı",
+    "name": "Ad",
+    "price": "Liste fiyatı",
+    "discount": "İndirim (%)",
+    "netInfo": "Müşteri öder: {{net}} (−%{{pct}})",
+    "save": "Kaydet"
   },
   "badge": {
     "title": "🏅 Rozetler",

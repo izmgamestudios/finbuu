@@ -251,9 +251,28 @@ function archiveCompany(st, c, status) {
   st.archive.push(c);
   if (st.archive.length > 200) st.archive.shift();
 }
+// ---------- Products / services (up to 8 per company, each with its own price and discount) ----------
+const MAX_PRODUCTS = 8, MAX_DISCOUNT = 90;
+const newPid = () => crypto.randomBytes(3).toString('hex');
+const priceOk = p => Number.isInteger(p) && p >= SEED.custom.minPrice && p <= SEED.custom.maxPrice;
+const discountOf = d => Math.max(0, Math.min(MAX_DISCOUNT, Math.floor(Number(d)) || 0));
+function ensureProducts(c) {
+  if (!c.products?.length) c.products = [{ id: 'p0', name: c.product || null, nameKey: c.nameKey || null, price: c.price, discount: 0 }];
+  return c.products;
+}
+// Price the customer actually pays for one product (list price minus its discount)
+const unitPrice = (c, pid) => { const ps = ensureProducts(c), p = ps.find(x => x.id === pid) || ps[0]; return Math.max(1, Math.round(p.price * (1 - (p.discount || 0) / 100))); };
+// Passive (staff) sales: average net price, plus demand: discounts raise volume (elasticity 1.5), each extra product widens the market (+5%)
+function portfolio(c) {
+  const ps = ensureProducts(c), n = ps.length;
+  const price = ps.reduce((s, p) => s + p.price * (1 - (p.discount || 0) / 100), 0) / n;
+  const avgDisc = ps.reduce((s, p) => s + (p.discount || 0), 0) / n / 100;
+  return { price, demand: (1 + 1.5 * avgDisc) * (1 + 0.05 * (n - 1)) };
+}
 function makeCompany({ id, name, nameKey, workspace, lotId, founders, cash, price, isNpc }) {
   const c = { id, name, nameKey, workspace, lotId, founders, employees: [], investors: {}, cash, price, sales: 0,
     npcEquity: 0, isNpc, benefits: emptyBenefits(), performance: 1, benefitCost: 0, status: 'active' };
+  ensureProducts(c);
   R.ensureFin(c);
   return c;
 }
@@ -454,6 +473,39 @@ io.on('connection', socket => {
     sync();
   });
 
+  // Add (no pid) or edit (pid) a product / service. Only founders; at most MAX_PRODUCTS.
+  socket.on('productSave', ({ cid, pid, name, price, discount } = {}) => {
+    const c = founderOf(cid); if (!c || limited()) return;
+    const ps = ensureProducts(c), cur = pid ? ps.find(p => p.id === pid) : null;
+    if (pid && !cur) return;
+    const pp = price == null ? cur?.price : Math.round(Number(price));
+    if (!priceOk(pp)) return socket.emit('toast', 'toast.badCustom');
+    const dd = discount == null ? (cur?.discount || 0) : discountOf(discount);
+    if (cur) {
+      if (name != null) { const nm = clean(name, 30); if (nm) cur.name = nm; }
+      cur.price = pp; cur.discount = dd;
+      addLog(street, 'log.productEdited', { player: me.name, product: cur.name || '—', ...cParams(c) });
+    } else {
+      const nm = clean(name, 30);
+      if (!nm) return socket.emit('toast', 'toast.badCustom');
+      if (ps.length >= MAX_PRODUCTS) return socket.emit('toast', 'toast.maxProducts');
+      ps.push({ id: newPid(), name: nm, nameKey: null, price: pp, discount: dd });
+      addLog(street, 'log.productAdded', { player: me.name, product: nm, ...cParams(c) });
+    }
+    c.price = ps[0].price; if (ps[0].name) c.product = ps[0].name;
+    sync();
+  });
+  socket.on('productRemove', ({ cid, pid } = {}) => {
+    const c = founderOf(cid); if (!c || limited()) return;
+    const ps = ensureProducts(c);
+    if (ps.length <= 1) return socket.emit('toast', 'toast.lastProduct');
+    const i = ps.findIndex(p => p.id === pid); if (i < 0) return;
+    const [gone] = ps.splice(i, 1);
+    c.price = ps[0].price; c.product = ps[0].name || null; if (i === 0) c.nameKey = ps[0].nameKey || c.nameKey;
+    addLog(street, 'log.productRemoved', { player: me.name, product: gone.name || '—', ...cParams(c) });
+    sync();
+  });
+
   socket.on('itUpgrade', ({ cid } = {}) => {
     const c = founderOf(cid); if (!c || limited() || !needDept(c, 'it')) return;
     if ((c.security || 0) >= SEED.itUpgrade.maxLevel) return socket.emit('toast', 'toast.maxLevel');
@@ -504,7 +556,7 @@ io.on('connection', socket => {
       const c = street.companies[cid];
       if (!c || !(c.founders.includes(me.id) || c.employees.includes(me.id))) return;
       if (!once('sell')) return socket.emit('npcResult', { npcId: id, kind, ok: false, key: 'toast.npcBoughtToday' });
-      const value = Math.max(1, Math.round(c.price * WS[c.workspace].salesMult * cfg.dealMult * incomeMult(street, c)));
+      const value = Math.max(1, Math.round(unitPrice(c) * WS[c.workspace].salesMult * cfg.dealMult * incomeMult(street, c)));
       c.cash += value; c.sales++; R.track(c, 'revenue', value); R.track(c, 'units', 1); addDelivery(street, c, 1);
       progress(street, me, 'sales'); progress(street, me, 'npcSale'); progress(street, me, 'revenue', value);
       gain(SEED.progression.xpPerClick * 2);
@@ -726,7 +778,7 @@ io.on('connection', socket => {
 
   socket.on('startOnline', () => socket.emit('toast', 'toast.onlineLocked'));
 
-  socket.on('found', ({ lotId, workspace, name, templateIdx, custom, ownership } = {}) => {
+  socket.on('found', ({ lotId, workspace, name, templateIdx, custom, ownership, products, discount } = {}) => {
     if (!street || limited()) return;
     const ws = Object.hasOwn(WS, workspace) ? workspace : null;
     if (!ws) return;
@@ -755,7 +807,15 @@ io.on('connection', socket => {
     street.companies[cid].sector = tpl.sector;
     if (buying) { lot.owner = cid; street.companies[cid].cash = 0; award(street, me, 'landlord'); addLog(street, 'log.boughtLot', { player: me.name, size: lot.size, ...cParams(street.companies[cid]) }); }
     award(street, me, 'firstCompany');
-    if (customLabel) street.companies[cid].product = customLabel;
+    if (customLabel) { street.companies[cid].product = customLabel; ensureProducts(street.companies[cid])[0].name = customLabel; }
+    { // detailed wizard: primary discount + extra products / services
+      const nc = street.companies[cid], ps = ensureProducts(nc);
+      ps[0].discount = discountOf(discount);
+      for (const x of Array.isArray(products) ? products.slice(0, MAX_PRODUCTS - 1) : []) {
+        const pn = clean(x?.name, 30), pp = Math.round(Number(x?.price));
+        if (pn && priceOk(pp)) ps.push({ id: newPid(), name: pn, nameKey: null, price: pp, discount: discountOf(x.discount) });
+      }
+    }
     if (lot) lot.companyIds.push(cid);
     me.role = 'role.founder';
     addLog(street, 'log.foundedWs', { player: me.name, wsKey: 'ws.' + ws, ...cParams(street.companies[cid]) });
@@ -790,11 +850,13 @@ io.on('connection', socket => {
     sync();
   });
 
-  socket.on('buy', ({ cid } = {}) => {
+  socket.on('buy', ({ cid, pid } = {}) => {
     const c = street?.companies[cid];
-    if (!c || limited() || me.coins < c.price || c.founders.includes(me.id)) return;
-    me.coins -= c.price; c.cash += c.price; c.sales++;
-    R.track(c, 'revenue', c.price); R.track(c, 'units', 1);
+    if (!c) return;
+    const price = unitPrice(c, pid);
+    if (limited() || me.coins < price || c.founders.includes(me.id)) return;
+    me.coins -= price; c.cash += price; c.sales++;
+    R.track(c, 'revenue', price); R.track(c, 'units', 1);
     sync();
   });
 
@@ -809,12 +871,12 @@ io.on('connection', socket => {
     sync();
   });
 
-  socket.on('click', ({ cid } = {}) => {
+  socket.on('click', ({ cid, pid } = {}) => {
     const c = street?.companies[cid];
     if (!c || limited() || !(c.founders.includes(me.id) || c.employees.includes(me.id))) return;
     const perf = c.employees.includes(me.id) ? c.performance : 1;
     const levelBonus = 1 + (me.stats.level - 1) * 0.05;
-    const value = Math.max(1, Math.round(c.price * WS[c.workspace].salesMult * perf * levelBonus * incomeMult(street, c)));
+    const value = Math.max(1, Math.round(unitPrice(c, pid) * WS[c.workspace].salesMult * perf * levelBonus * incomeMult(street, c)));
     c.cash += value; c.sales++;
     R.track(c, 'revenue', value); R.track(c, 'units', 1);
     addDelivery(street, c, 1);
@@ -904,7 +966,8 @@ function economyTick(only) {
       if (c.isNpc) { const income = Math.round(c.price * 15 * incomeMult(st, c)); c.cash += income; R.track(c, 'revenue', income); }
       if (c.npcStaff > 0) {
         const factor = Object.entries(mix).reduce((sum, [k, n]) => sum + n * ECON.collars[k].factor, 0);
-        const income = Math.round(factor * c.price * WS[c.workspace].salesMult * c.performance * incomeMult(st, c));
+        const pf = portfolio(c);
+        const income = Math.round(factor * pf.price * pf.demand * WS[c.workspace].salesMult * c.performance * incomeMult(st, c));
         c.cash += income; R.track(c, 'revenue', income); R.track(c, 'units', c.npcStaff);
         addDelivery(st, c, c.npcStaff);
       }
