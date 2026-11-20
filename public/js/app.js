@@ -196,6 +196,7 @@ socket.on('npcResult', r => {
   if (modalOpen && $('modalBody').dataset.npc == String(r.npcId)) { const w = npcs.walkers.find(x => x.id === r.npcId); if (w) openNpc(w); }
 });
 socket.on('joined', info => {
+  if (info.travel) { spawned = false; others.clear(); bubbles.clear(); lastDay = null; exitCompany(true); cancelPlan(); setAuto(false); $('travelOverlay').hidden = true; }
   joined = info;
   if (info.mode !== 'solo') history.replaceState(null, '', `?room=${encodeURIComponent(info.roomId)}`);
   closeModal(); renderRoomBar(); updateControls();
@@ -1115,7 +1116,7 @@ function timelineItems(log, time) {
 }
 function render() {
   if (!i18next.isInitialized) return;
-  $('day').textContent = state?.calendar ? t('ui.day', state.calendar) : '';
+  $('day').textContent = state ? [seed?.economy?.cityMap ? cityName(state.city) : '', state.calendar ? t('ui.day', state.calendar) : ''].filter(Boolean).join(' · ') : '';
   renderProfile(me());
   renderHud();
   renderAdvisor();
@@ -1461,6 +1462,7 @@ function openBuilding(b) {
   if (b.kind === 'demoday') return openDemoDay();
   if (b.kind === 'locked') return toast(t('ui.premiumAlert', { feature: t('locked.skyscraper') }));
   if (b.kind === 'parking') return openParking();
+  if (b.kind === 'terminal') return openTerminal();
   if (b.kind === 'lot' && !isPres()) {
     const mine = b.lot.companyIds.map(id => state.companies[id]).find(c => c?.founders.includes(myId()));
     if (mine) return enterCompany(mine); // own HQ: zoom straight into the building
@@ -1745,7 +1747,7 @@ setInterval(() => { adBannerIdx++; updateAdBanner(); }, 8000);
 // ---------- Minimap: the whole street at a glance (M key / map button), click to walk there ----------
 let minimapOpen = false, mmSig = '';
 function toggleMinimap(force) { minimapOpen = force ?? !minimapOpen; $('minimap').hidden = !minimapOpen; mmSig = ''; if (minimapOpen) renderMinimapList(); }
-const mmColor = b => { if (b.kind === 'guide') return '#f2b84b'; if (b.kind === 'plaza') return '#3987e5'; if (b.kind === 'demoday') return '#9b59b6'; if (b.kind === 'parking') return '#5b6475'; if (b.kind === 'locked') return '#b8c0cc';
+const mmColor = b => { if (b.kind === 'guide') return '#f2b84b'; if (b.kind === 'plaza') return '#3987e5'; if (b.kind === 'demoday') return '#9b59b6'; if (b.kind === 'parking') return '#5b6475'; if (b.kind === 'terminal') return '#e67e22'; if (b.kind === 'locked') return '#b8c0cc';
   const ts = b.lot.companyIds.map(id => state.companies[id]).filter(Boolean); return !ts.length ? '#a9adb8' : ts.some(c => isMember(c)) ? '#f2b84b' : ts.some(c => c.isNpc) ? '#9b7be0' : '#3fa36b'; };
 function drawMinimap() {
   const cv = $('mmCv'); if (!minimapOpen || !state || scene.name !== 'street') return;
@@ -1769,7 +1771,7 @@ function renderMinimapList() {
   const go = b => () => { walkTo(b.x + b.w / 2, () => openBuilding(b), b.id); if (touch) toggleMinimap(false); };
   for (const b of buildings) {
     if (b.kind === 'locked') continue;
-    const name = b.kind === 'guide' ? t('ui.guideSign') : b.kind === 'plaza' ? t('ui.plazaTitle') : b.kind === 'demoday' ? '🎤 Demo Day' : b.kind === 'parking' ? '🅿 ' + t('veh.parkingSign')
+    const name = b.kind === 'guide' ? t('ui.guideSign') : b.kind === 'plaza' ? t('ui.plazaTitle') : b.kind === 'demoday' ? '🎤 Demo Day' : b.kind === 'parking' ? '🅿 ' + t('veh.parkingSign') : b.kind === 'terminal' ? '🚌 ' + t('travel.sign')
       : b.lot.companyIds.length ? b.lot.companyIds.map(id => state.companies[id]).filter(Boolean).map(c => (isMember(c) ? '⭐ ' : '') + companyName(c)).join(', ') : null;
     if (name) items.push({ name, fn: go(b), color: mmColor(b) });
   }
@@ -1777,6 +1779,43 @@ function renderMinimapList() {
   box.replaceChildren(...items.map(it => { const b = btn(it.name, it.fn); b.style.borderLeft = `4px solid ${it.color}`; b.className = 'mmItem'; return b; }));
 }
 $('mapBtn').onclick = () => toggleMinimap(); $('mmClose').onclick = () => toggleMinimap(false);
+// ---------- Intercity travel: bus terminal, tickets, the road ----------
+const rad = d => (d * Math.PI) / 180;
+function cityKm(a, b) {
+  const I = seed.economy.intercity, A = seed.economy.cityMap.find(c => c.key === a), B = seed.economy.cityMap.find(c => c.key === b);
+  const h = Math.sin(rad(B.lat - A.lat) / 2) ** 2 + Math.cos(rad(A.lat)) * Math.cos(rad(B.lat)) * Math.sin(rad(B.lon - A.lon) / 2) ** 2;
+  return Math.round(2 * 6371 * Math.asin(Math.sqrt(h)) * I.roadFactor);
+}
+const tripHours = (km, mode) => km / (mode === 'car' ? seed.economy.intercity.carKmh : seed.economy.intercity.busKmh) + (mode === 'car' ? 0 : seed.economy.intercity.stopHours);
+const tripSecs = (km, mode) => Math.max(5, Math.min(90, Math.round((tripHours(km, mode) * (seed.tickSeconds / 24)) / (state.speed || 1))));
+const hm = h => `${Math.floor(h)} ${t('travel.h')} ${Math.round((h % 1) * 60)} ${t('travel.m')}`;
+const cityName = key => seed.economy.cityMap.find(c => c.key === key)?.name || key;
+function openTerminal() {
+  const I = seed.economy.intercity, here = state.city, myCars = Object.values(state.companies).filter(c => c.founders.includes(myId()) && c.vehicle);
+  openModal(body => {
+    body.append(el('h3', '🚌 ' + t('travel.sign') + ' · ' + cityName(here)), el('p', t('travel.note') + (I.est ? ' *' : ''), 'muted'));
+    if (!joined || joined.mode === 'presentation') return body.append(el('p', t('travel.notHere'), 'muted'));
+    const list = el('div', null, 'prodList');
+    seed.economy.cityMap.filter(c => c.status === 'open' && c.key !== here).forEach(c => {
+      const km = cityKm(here, c.key), fare = Math.max(1, Math.round(km * I.busPerKm)), row = el('div', null, 'prodRow'), label = el('div', null, 'prodName');
+      label.append(el('b', '🏙 ' + c.name), el('span', `${km} km · 🚌 ${money(fare)} · ${hm(tripHours(km, 'bus'))} (${tripSecs(km, 'bus')} ${t('travel.sec')})`, 'prodPrice'));
+      const acts = el('div', null, 'prodActs'), bus = btn('🚌 ' + t('travel.busGo'), () => { closeModal(); socket.emit('travel', { to: c.key, mode: 'bus' }); }); bus.disabled = (me()?.coins || 0) < fare; acts.append(bus);
+      if (myCars.length) { const car = myCars[0], fuel = Math.max(1, Math.round(km * seed.economy.vehicle.models[car.vehicle.model || 'sedan_new'].fuelPerKm * 2));
+        const b2 = btn('🚗 ' + t('travel.carGo', { fuel: money(fuel), secs: tripSecs(km, 'car') }), () => { closeModal(); socket.emit('travel', { to: c.key, mode: 'car', cid: car.id }); }); b2.disabled = car.cash < fuel; acts.append(b2); }
+      row.append(label, acts); list.append(row);
+    });
+    body.append(list, el('small', myCars.length ? t('travel.carNote', { company: companyName(myCars[0]) }) : t('travel.noCarNote'), 'muted'));
+  });
+}
+socket.on('travelStart', info => {
+  closeModal(); cancelPlan(); setAuto(false);
+  const ov = $('travelOverlay'), card = el('div', null, 'card travelCard');
+  card.append(el('div', info.mode === 'car' ? '🚗' : '🚌', 'travelIcon'), el('h3', t('travel.route', { from: cityName(info.from), to: cityName(info.to) })),
+    el('p', t('travel.onRoad', { km: info.km, secs: info.seconds, fare: money(info.fare) }), 'muted'));
+  const bar = el('div', null, 'bar'), fill = el('i'); bar.append(fill); card.append(bar); ov.replaceChildren(card); ov.hidden = false;
+  fill.style.width = '0%'; fill.style.transition = `width ${info.seconds}s linear`; requestAnimationFrame(() => requestAnimationFrame(() => (fill.style.width = '100%')));
+});
+socket.on('joined', info => { if (info.travel) toast('📍 ' + t('travel.arrived', { city: cityName(info.city) })); });
 // ---------- Amount pickers: a 1-100 slider and a manual number stay in sync ----------
 // moneyPicker: choose an amount of coins up to maxCoins. TR players type ₺, others coins.
 function moneyPicker({ title, note, maxCoins, defCoins, confirmLabel, onConfirm }) {

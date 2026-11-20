@@ -33,6 +33,8 @@ const TR2026 = {
     stampContract: 0.00948, stampPayroll: 0.00759,
     accountantMonthly: { basic: 2500, pro: 6000 }, noAccountantPenalty: 0.15, proSaving: 0.07, est2: true // muhasebe ücretleri ve ceza/tasarruf oranları tahmini
   },
+  // Şehirler arası seyahat (tahmini): otobüs bileti ₺/km, ortalama hızlar, kuş uçuşu yerine yol katsayısı
+  intercity: { busPerKm: 2.2, busKmh: 75, carKmh: 95, roadFactor: 1.25, stopHours: 0.5, est: true },
   courierPerKm: 18,                                             // kurye / taksi ile teslimat (est)
   busFare: 40,                                                  // toplu taşıma tek biniş (est)
   priceToRentMonths: 220,                                       // satış fiyatı ≈ 220 aylık kira (~%5,5 brüt getiri, est)
@@ -115,6 +117,7 @@ function build(blueSalaryCoins) {
     },
     busFare: Math.max(1, Math.round(c(TR2026.busFare))), busTopups: [10, 20, 50],
     deliveryKm: DELIVERY_KM, cityMap: TR2026.cityMap,
+    intercity: { busPerKm: c(TR2026.intercity.busPerKm), busKmh: TR2026.intercity.busKmh, carKmh: TR2026.intercity.carKmh, roadFactor: TR2026.intercity.roadFactor, stopHours: TR2026.intercity.stopHours, est: true },
     cities: Object.fromEntries(Object.entries(TR2026.cities).map(([k, v]) => [k, { ...v }])),
     lotRent: (cityKey, size) => Math.max(1, Math.ceil(c((size * (TR2026.cities[cityKey] || TR2026.cities.istanbul).rentM2) / 30))),
     lotPrice: (cityKey, size) => Math.ceil(c(size * (TR2026.cities[cityKey] || TR2026.cities.istanbul).rentM2 * TR2026.priceToRentMonths))

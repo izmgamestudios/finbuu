@@ -154,7 +154,7 @@ const SHARED_MODES = ['multiplayer', 'presentation'];
 // ---------- HELPERS ----------
 const rooms = {};
 const LOTS_PER_STREET = 12;
-const WORLD_MAX_X = 4600; // client street width is ~3800 world units
+const WORLD_MAX_X = 5400; // client street width (incl. car park and bus terminal at the end)
 const SPAWN_X = 120;     // in front of the guide building
 const clean = (s, max = 40) => String(s ?? '').replace(/[<>]/g, '').trim().slice(0, max);
 const cParams = c => (c.name ? { company: c.name } : { companyKey: c.nameKey });
@@ -187,7 +187,7 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(),
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
-  busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, cityMap: ECON.cityMap, tax: ECON.tax });
+  busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, cityMap: ECON.cityMap, intercity: ECON.intercity, tax: ECON.tax });
 const publicAdConfig = () => ({ kinds: ADS.KINDS, maxBoost: ADS.MAX_BOOST, maxSlots: ADS.MAX_SLOTS_PER_COMPANY, limits: ADS.LIMITS });
 const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops,
   teamColors: SEED.teams.colors, quests: SEED.quests, badges: SEED.badges, salary: SEED.salary, custom: SEED.custom, departments: SEED.departments, marketing: SEED.marketing, itUpgrade: SEED.itUpgrade, npcTalk: { serviceCost: SEED.npcTalk.serviceCost, ids: SEED.npcTalk.ids }, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
@@ -282,6 +282,29 @@ function costPerTick(st, c) {
 }
 // City-based real estate: daily rent and purchase price of a lot (₺/m² converted to coins)
 const cityOf = st => (ECON.cities[st.city] ? st.city : 'istanbul');
+// ---------- Intercity travel (Sprint 11b): rooms of the same world are the streets of different cities ----------
+const terminalX = st => 470 + 244 * st.lots.length + 1250 + 190;           // centre of the bus terminal (mirrors the client layout)
+const cityMeta = key => ECON.cityMap.find(c => c.key === key);
+const findCityRoom = (worldId, city) => Object.values(rooms).find(r => r.worldId === worldId && r.city === city);
+function distanceKm(a, b) { // great-circle distance x road factor
+  const A = cityMeta(a), B = cityMeta(b), rad = d => (d * Math.PI) / 180, R_EARTH = 6371;
+  const dLat = rad(B.lat - A.lat), dLon = rad(B.lon - A.lon);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(A.lat)) * Math.cos(rad(B.lat)) * Math.sin(dLon / 2) ** 2;
+  return Math.round(2 * R_EARTH * Math.asin(Math.sqrt(h)) * ECON.intercity.roadFactor);
+}
+// Real seconds a trip takes: game hours converted with the room's day length and speed
+function tripSeconds(st, km, mode) {
+  const I = ECON.intercity, hours = km / (mode === 'car' ? I.carKmh : I.busKmh) + (mode === 'car' ? 0 : I.stopHours);
+  return Math.max(5, Math.min(90, Math.round((hours * (SEED.tickSeconds / 24)) / (st.speed || 1))));
+}
+// The sister room for a city: created on first visit, clock copied from the home street
+function ensureCityRoom(home, city) {
+  let st = findCityRoom(home.worldId, city); if (st) return st;
+  const id = `${home.worldId}-${city}`;
+  st = createStreet(id, home.mode, home.pin, city); st.worldId = home.worldId;
+  st.day = home.day || 0; st.tickAt = home.tickAt; st.speed = home.speed || 1; rooms[id] = st;
+  return st;
+}
 const lotRent = (st, lot) => ECON.lotRent(cityOf(st), lot.size);
 const lotPrice = (st, lot) => ECON.lotPrice(cityOf(st), lot.size);
 // ---------- Company vehicles (Sprint 10): gallery models (new / used), timed rentals, parking ----------
@@ -353,7 +376,7 @@ function makeCompany({ id, name, nameKey, workspace, lotId, founders, cash, pric
 function createStreet(id, mode, pin, city) {
   const lots = Array.from({ length: LOTS_PER_STREET }, (_, i) => ({ id: i, ...SEED.lotPattern[i % SEED.lotPattern.length], companyIds: [] }));
   const st = { id, mode, pin: pin || null, city: ECON.cities[city] ? city : 'istanbul', teams: {}, tickAt: Date.now(), speed: 1, ownerId: null,
-    players: {}, pastPlayers: {}, companies: {}, lots, ideas: [], log: [], archive: [], ads: {}, day: 0, createdAt: Date.now() };
+    players: {}, pastPlayers: {}, companies: {}, lots, ideas: [], log: [], archive: [], ads: {}, day: 0, createdAt: Date.now(), worldId: id };
   SEED.npcCompanies.forEach((n, i) => {
     const lot = lots.find(l => l.type === n.lotType && l.size === n.size && l.companyIds.length === 0);
     const cid = 'npc' + i;
@@ -475,8 +498,20 @@ io.on('connection', socket => {
 
   socket.emit('seed', publicSeed());
 
+  let traveling = null, myWorld = null; // traveling: { timer } while on the road (the player is in no room)
+  function arrive(st) {
+    street = st; myWorld = st.worldId; me.x = terminalX(st); me.dir = 1; me.counters ||= {};
+    delete st.pastPlayers[socket.id]; ensureQuests(st, me);
+    st.players[socket.id] = me;
+    if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
+    socket.join(st.id);
+    addLog(st, 'log.arrivedCity', { player: me.name });
+    socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null, city: st.city, travel: true });
+    socket.emit('chatHistory', st.chat || []);
+    traveling = null; sync();
+  }
   function enter(st, name) {
-    street = st;
+    street = st; myWorld = st.worldId;
     me = { id: socket.id, name: clean(name, 20) || 'Anon-' + crypto.randomBytes(2).toString('hex'),
       coins: SEED.startCoins, role: 'role.candidate', stats: newStats(),
       x: SPAWN_X, dir: 1, avatar: crypto.randomInt(0, 1000), busCard: 0, badges: {}, counters: {}, team: null };
@@ -697,6 +732,35 @@ io.on('connection', socket => {
 
   // ---------- Chat (multiplayer & presentation rooms), moderated by admin ----------
   let lastChat = 0;
+  // Intercity travel: pay the fare (bus) or the fuel (company car), spend real time on the road, arrive at the other city's terminal
+  socket.on('travel', ({ to, mode, cid } = {}) => {
+    if (!street || !me || traveling || limited()) return;
+    if (!['solo', 'multiplayer'].includes(street.mode)) return;
+    const dest = cityMeta(to);
+    if (!dest || dest.status !== 'open' || !ECON.cities[to] || to === street.city) return socket.emit('toast', 'toast.cityLocked');
+    if (Math.abs((me.x ?? 0) - terminalX(street)) > 280) return socket.emit('toast', 'toast.notAtTerminal');
+    const km = distanceKm(street.city, to), by = mode === 'car' ? 'car' : 'bus';
+    let fare = 0, car = null;
+    if (by === 'bus') {
+      fare = Math.max(1, Math.round(km * ECON.intercity.busPerKm));
+      if (me.coins < fare) return socket.emit('toast', 'toast.noCoins');
+    } else {
+      car = founderOf(cid); if (!car?.vehicle) return socket.emit('toast', 'toast.noVehicle');
+      fare = Math.max(1, Math.round(km * vehModel(car.vehicle).fuelPerKm * 2)); // fuel there; the way back is paid on the next trip
+      if (car.cash < fare) return socket.emit('toast', 'toast.noCash');
+    }
+    const seconds = tripSeconds(street, km, by), from = street, target = ensureCityRoom(from, to);
+    if (by === 'bus') me.coins -= fare; else { car.cash -= fare; R.track(car, 'expenses', fare); R.track(car, 'fuel', fare); }
+    // leave the street like a disconnect would (jobs end), but keep solo streets alive: the player's companies keep running
+    for (const c of Object.values(from.companies)) c.employees = c.employees.filter(id => id !== socket.id);
+    from.pastPlayers[socket.id] = me; delete from.players[socket.id];
+    if (from.ownerId === socket.id) from.ownerId = Object.keys(from.players)[0] || null;
+    addLog(from, 'log.leftCity', { player: me.name });
+    socket.leave(from.id); syncRoom(from); street = null;
+    socket.emit('travelStart', { from: from.city, to, mode: by, seconds, km, fare });
+    traveling = { timer: setTimeout(() => arrive(target), seconds * 1000) };
+  });
+  socket.on('disconnect', () => { if (traveling) { clearTimeout(traveling.timer); traveling = null; for (const [id, r] of Object.entries(rooms)) if (r.mode === 'solo' && r.worldId === myWorld) delete rooms[id]; } });
   socket.on('setSpeed', ({ speed } = {}) => {
     if (!street || !me || street.mode === 'presentation') return;
     if (street.ownerId !== me.id) return socket.emit('toast', 'toast.ownerOnly');
@@ -1048,7 +1112,7 @@ io.on('connection', socket => {
     delete street.players[socket.id];
     if (street.ownerId === socket.id) street.ownerId = Object.keys(street.players)[0] || null;
     addLog(street, 'log.left', { player: me?.name });
-    if (street.mode === 'solo') { delete rooms[street.id]; return; } // solo streets are disposable
+    if (street.mode === 'solo') { for (const [id, r] of Object.entries(rooms)) if (r.worldId === street.worldId) delete rooms[id]; return; } // solo worlds are disposable
     sync();
   });
 });
@@ -1319,7 +1383,7 @@ admin.on('connection', socket => {
   push();
   const timer = setInterval(push, 3000);
   socket.on('disconnect', () => clearInterval(timer));
-  const room = id => rooms[clean(id, 20)];
+  const room = id => rooms[clean(id, 40)];
 
   socket.on('setConfig', patch => {
     if (typeof patch !== 'object' || !patch) return;

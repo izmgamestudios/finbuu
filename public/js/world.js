@@ -14,7 +14,7 @@ const GROUND_H = 86, FLOOR_H = 48, ROOF_H = 12;
 export const MAX_FLOORS = 6;
 
 export const lotX = i => LOTS_X + i * (LOT_W + LOT_GAP);
-export const worldWidth = lots => lotX(lots) + 1280; // +420: the car park at the end of the street
+export const worldWidth = lots => lotX(lots) + 1700; // car park and bus terminal at the end of the street
 // Building height follows the tenants' finances: big cash = tall tower, losses = it shrinks.
 // 1 floor < 250c, then one floor per doubling (500, 1k, 2k, 4k, 8k+).
 export const floorsFor = cash => Math.max(1, Math.min(MAX_FLOORS, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
@@ -34,6 +34,7 @@ export function layout(state) {
   list.push({ kind: 'demoday', id: 'demoday', seed: 904, x: lotX(lots.length || 12) + 10, w: 360, h: heightOf(3) });
   list.push({ kind: 'locked', id: 'locked', seed: 903, x: lotX(lots.length || 12) + 410, w: 380, h: 320 });
   list.push({ kind: 'parking', id: 'parking', seed: 905, x: lotX(lots.length || 12) + 830, w: 380, h: 70 });
+  list.push({ kind: 'terminal', id: 'terminal', seed: 906, x: lotX(lots.length || 12) + 1250, w: 380, h: 120 });
   return list;
 }
 
@@ -401,6 +402,18 @@ function drawParking(ctx, b, env) {
   parked.slice(0, 6).forEach((c, i) => drawVehicle(ctx, carOf(c, b.x + 40 + i * 60, GROUND + 18)));
   if (parked.length > 6) pill(ctx, b.x + b.w / 2, GROUND - 100, `+${parked.length - 6}`, 'rgba(35,40,55,.78)', '#fff', 11);
 }
+// Intercity bus terminal ("otogar") at the end of the street
+function drawTerminal(ctx, b, env) {
+  ctx.fillStyle = '#c9ccd4'; ctx.fillRect(b.x, GROUND - 6, b.w, 30);
+  ctx.fillStyle = '#e8ebf1'; ctx.fillRect(b.x + 10, GROUND - b.h, b.w - 20, b.h - 6);
+  ctx.fillStyle = '#4b5563'; ctx.fillRect(b.x, GROUND - b.h - 10, b.w, 12);
+  ctx.fillStyle = '#e67e22'; rr(ctx, b.x + 60, GROUND - b.h - 44, b.w - 120, 30, 6); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = '700 15px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🚌 ' + env.t('travel.sign'), b.x + b.w / 2, GROUND - b.h - 23); ctx.textAlign = 'left';
+  ctx.fillStyle = '#9fd3f0'; for (let i = 0; i < 3; i++) ctx.fillRect(b.x + 28 + i * 112, GROUND - b.h + 18, 90, 52);
+  ctx.fillStyle = '#6b7280'; ctx.fillRect(b.x + 28, GROUND - 38, b.w - 56, 4);
+  drawVehicle(ctx, { kind: 'bus', x: b.x + 90, y: GROUND + 34, dir: 1, w: 150, h: 52, color: '#e67e22', text: '' });
+  drawVehicle(ctx, { kind: 'bus', x: b.x + 290, y: GROUND + 34, dir: -1, w: 150, h: 52, color: '#2a9d8f', text: '' });
+}
 function drawLocked(ctx, b, env) {
   ctx.save();
   ctx.globalAlpha = 0.45;
@@ -653,6 +666,7 @@ export function draw(ctx, env) {
     else if (b.kind === 'lot') drawLot(ctx, b, env);
     else if (b.kind === 'demoday') drawDemoDay(ctx, b, env);
     else if (b.kind === 'parking') drawParking(ctx, b, env);
+    else if (b.kind === 'terminal') drawTerminal(ctx, b, env);
     else drawLocked(ctx, b, env);
     if (env.near?.id === b.id) { ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3; rr(ctx, b.x - 3, GROUND - b.h - 3, b.w + 6, b.h + 3, 6); ctx.stroke(); }
     if (env.targetId === b.id) {

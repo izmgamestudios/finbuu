@@ -273,6 +273,8 @@
   "toast": {
     "full": "Bu alanda yer kalmadı.",
     "noCoins": "Coin yetersiz.",
+    "notAtTerminal": "Önce otogara git.",
+    "noVehicle": "Araçla gitmek için şirket aracın olmalı.",
     "noDesk": "Boş masa/pozisyon yok.",
     "roomNotFound": "Oda bulunamadı.",
     "wrongPin": "Şifre yanlış.",
@@ -338,6 +340,8 @@
     "adRejected": "⛔ {{company}} reklamı reddedildi ({{kind}}).",
     "carDamaged": "🚗💥 {{company}}: kapı önünde park eden araç hasar gördü, onarım {{amount}}.",
     "rentEnded": "🔑 {{company}}: kiralık araç süresi doldu, iade edildi.",
+    "leftCity": "🚌 {{player}} başka bir şehre yola çıktı.",
+    "arrivedCity": "📍 {{player}} şehre geldi.",
     "productAdded": "🆕 {{player}} yeni ürün ekledi: {{product}}.",
     "productEdited": "✏ {{player}} ürünü güncelledi: {{product}}.",
     "productRemoved": "🗑 {{player}} ürünü kaldırdı: {{product}}.",
@@ -594,6 +598,21 @@
     "open": "Oynanabilir",
     "premium": "Premium",
     "soon": "Pek yakında"
+  },
+  "travel": {
+    "sign": "OTOGAR",
+    "note": "Şehirler arası otobüs ya da şirket aracıyla başka bir şehre git. Yolda zaman ve para harcarsın; şirketlerin kendi şehrinde çalışmaya devam eder, ama sen yokken orada işlem yapamazsın.",
+    "notHere": "Bu odada şehirler arası seyahat yok.",
+    "busGo": "Otobüsle git",
+    "carGo": "Araçla git (yakıt {{fuel}}, {{secs}} sn)",
+    "carNote": "Araç: {{company}} şirketinin aracı. Yakıt şirket kasasından ödenir, araç yolculuk boyunca seninle gelir.",
+    "noCarNote": "Araçla gitmek için şirket aracı kirala ya da satın al (Galeri).",
+    "sec": "sn",
+    "h": "sa",
+    "m": "dk",
+    "route": "{{from}} → {{to}}",
+    "onRoad": "{{km}} km · yolda ~{{secs}} saniye · bilet/yakıt {{fare}}",
+    "arrived": "{{city}}'e vardın"
   },
   "badge": {
     "title": "🏅 Rozetler",

@@ -273,6 +273,8 @@
   "toast": {
     "full": "No space left here.",
     "noCoins": "Not enough money.",
+    "notAtTerminal": "Go to the bus terminal first.",
+    "noVehicle": "You need a company vehicle to travel by car.",
     "noDesk": "No free desk/position.",
     "roomNotFound": "Room not found.",
     "wrongPin": "Wrong PIN.",
@@ -338,6 +340,8 @@
     "adRejected": "⛔ {{company}} ad rejected ({{kind}}).",
     "carDamaged": "🚗💥 {{company}}: the street-parked car was damaged, repair {{amount}}.",
     "rentEnded": "🔑 {{company}}: the rental period ended, the car was returned.",
+    "leftCity": "🚌 {{player}} left for another city.",
+    "arrivedCity": "📍 {{player}} arrived in the city.",
     "productAdded": "🆕 {{player}} added a product: {{product}}.",
     "productEdited": "✏ {{player}} updated a product: {{product}}.",
     "productRemoved": "🗑 {{player}} removed a product: {{product}}.",
@@ -594,6 +598,21 @@
     "open": "Playable",
     "premium": "Premium",
     "soon": "Coming soon"
+  },
+  "travel": {
+    "sign": "BUS TERMINAL",
+    "note": "Travel to another city by intercity bus or company car. The trip costs time and money; your companies keep running in their own city, but you cannot act there while you are away.",
+    "notHere": "There is no intercity travel in this room.",
+    "busGo": "Go by bus",
+    "carGo": "Go by car (fuel {{fuel}}, {{secs}} s)",
+    "carNote": "Vehicle: {{company}}'s car. Fuel is paid from the company cash.",
+    "noCarNote": "Rent or buy a company vehicle (Gallery) to travel by car.",
+    "sec": "s",
+    "h": "h",
+    "m": "min",
+    "route": "{{from}} → {{to}}",
+    "onRoad": "{{km}} km · about {{secs}} seconds on the road · ticket/fuel {{fare}}",
+    "arrived": "You arrived in {{city}}"
   },
   "badge": {
     "title": "🏅 Badges",
