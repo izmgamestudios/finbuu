@@ -312,6 +312,8 @@
     "certMax": "You can earn at most 3 certificates.",
     "notTeammate": "That player is not on your team.",
     "callSent": "Call sent.",
+    "resumeFailed": "Could not continue this game (the room is gone or the save is invalid).",
+    "alreadyOnline": "This game is already open in another tab.",
     "ownerOnly": "Only the room owner can do this.",
     "slowDown": "Slow down a little.",
     "cannotBuy": "You must be the only tenant to buy.",
@@ -349,6 +351,7 @@
     "arrivedCity": "📍 {{player}} arrived in the city.",
     "moved": "🏘 {{player}} moved: {{tier}}.",
     "evicted": "⚠ {{player}} could not pay the rent and moved back with the family.",
+    "rejoined": "🔄 {{player}} is back.",
     "productAdded": "🆕 {{player}} added a product: {{product}}.",
     "productEdited": "✏ {{player}} updated a product: {{product}}.",
     "productRemoved": "🗑 {{player}} removed a product: {{product}}.",
@@ -673,6 +676,19 @@
     "enterPin": "Room code filled in, now enter the password.",
     "none": "No listed rooms right now.",
     "refresh": "Refresh"
+  },
+  "away": {
+    "title": "Welcome back!",
+    "days": "{{n}} game days passed while you were away.",
+    "idle": "Your companies sold {{amount}} on their own while you were away (idle sales, half your normal pace).",
+    "companies": "Change in company cash (costs included):",
+    "coins": "Change in your pocket: {{amount}}"
+  },
+  "resume": {
+    "title": "Continue where you left off",
+    "note": "This browser has a saved game (room {{room}} {{city}}). Your companies kept running while you were away.",
+    "go": "Continue",
+    "forget": "Forget"
   },
   "badge": {
     "title": "🏅 Badges",

@@ -712,18 +712,18 @@ export function draw(ctx, env) {
   for (const v of env.npcs.visitors) people.push({ x: v.x, y: v.lane, look: v.look, o: { dir: v.dir, moving: Math.abs(v.tx - v.x) > 3, phase: v.phase, bubble: v.emoji, scale: 0.92 } });
   for (const [id, o] of env.others) {
     const p = env.state?.players[id]; if (!p || p.loc) continue;
-    people.push({ x: o.x, y: FEET + 2, look: teamLook(lookFor(p.avatar ?? 0), env.state.teams?.[p.team]?.color), o: { dir: o.dir, moving: o.moving, phase: o.phase, label: p.name, ...sayOf(env, id) } });
+    people.push({ x: o.x, y: FEET + 2, look: teamLook(lookFor(p.avatar ?? 0), env.state.teams?.[p.team]?.color), o: { dir: o.dir, moving: o.moving, phase: o.phase, label: (p.afk ? '💤 ' : '') + p.name, ...sayOf(env, id) } });
   }
   const meP = env.state?.players[env.myId];
   for (const d of env.traffic?.drops || []) people.push({ x: d.x, y: FEET - 4, look: d.look, o: { dir: Math.sign(d.tx - d.x) || 1, moving: Math.abs(d.tx - d.x) > 2, phase: d.t * 18, scale: 0.92 } });
-  if (meP && !env.hideMe && !env.riding) people.push({ x: env.player.x, y: FEET + 4, look: teamLook(lookFor(meP.avatar ?? 0), env.state.teams?.[meP.team]?.color), o: { dir: env.player.dir, moving: env.player.moving, phase: env.player.phase, label: meP.name, mine: true, ...sayOf(env, env.myId) } });
+  if (meP && !env.hideMe && !env.riding) people.push({ x: env.player.x, y: FEET + 4, look: teamLook(lookFor(meP.avatar ?? 0), env.state.teams?.[meP.team]?.color), o: { dir: env.player.dir, moving: env.player.moving, phase: env.player.phase, label: (meP.afk ? '💤 ' : '') + meP.name, mine: true, ...sayOf(env, env.myId) } });
   people.sort((a, b) => a.y - b.y);
   for (const p of people) {
     if (p.x < camX - 40 || p.x > camX + viewWorldW + 40) continue;
     drawPerson(ctx, p.x, p.y, p.look, p.o);
   }
   if (env.traffic) { env.traffic.bus.ad = env.ads?.['bus:0']?.live || null; env.traffic.draw(ctx, camX, viewWorldW, env.riding); }
-  for (const b of env.buildings) { // company cars parked at the building door (free, but street parking can get damaged)
+  if (env.state) for (const b of env.buildings) { // company cars parked at the building door (free, but street parking can get damaged)
     if (b.kind !== 'lot' || b.x > camX + viewWorldW + 80 || b.x + b.w < camX - 80) continue;
     let k = 0;
     for (const id of b.lot.companyIds) {

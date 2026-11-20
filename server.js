@@ -7,6 +7,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 
 // Load .env if present (Node >= 20.12 built-in, no dotenv dependency)
 try { if (typeof process.loadEnvFile === 'function') process.loadEnvFile(path.join(__dirname, '.env')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
@@ -179,7 +180,7 @@ const publicPresentation = st => st.presentation && {
     options: st.presentation.poll.options.map(o => ({ text: o.text, votes: o.votes })), total: Object.keys(st.presentation.poll.voters).length }
 };
 const publicPlayer = p => ({ id: p.id, name: p.name, coins: p.coins, role: p.role, stats: p.stats, x: p.x, dir: p.dir, avatar: p.avatar,
-  team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {}, life: publicLife(p), loc: p.loc?.cid || null });
+  team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {}, life: publicLife(p), loc: p.loc?.cid || null, afk: !!p.afk });
 const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: st.day ? R.calendar(st.day) : null,
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
@@ -307,6 +308,57 @@ function ensureCityRoom(home, city) {
 }
 const lotRent = (st, lot) => ECON.lotRent(cityOf(st), lot.size);
 const lotPrice = (st, lot) => ECON.lotPrice(cityOf(st), lot.size);
+// ---------- AFK / offline (Sprint 13b) ----------
+// While every member of a company is AFK or offline (up to 30 game days), the company still sells a little on its own:
+// 6 "clicks" a day at half value. Players get a summary of what happened while they were away.
+const IDLE_CLICKS = 6, IDLE_EFF = 0.5, IDLE_MAX_DAYS = 30;
+function awayBaseline(st, p) {
+  return { day: st.day || 0, coins: p.coins, idle: 0, cash: Object.fromEntries(Object.values(st.companies).filter(c => c.founders.includes(p.id)).map(c => [c.id, c.cash])) };
+}
+function awaySummary(st, p) {
+  const a = p.away; if (!a) return null;
+  const days = (st.day || 0) - a.day, idle = Math.round(a.idle || 0);
+  if (days < 1 && !idle) return null;
+  const companies = Object.values(st.companies).filter(c => c.founders.includes(p.id) && a.cash[c.id] != null)
+    .map(c => ({ id: c.id, name: c.name || null, nameKey: c.name ? null : c.nameKey, delta: Math.round(c.cash - a.cash[c.id]) }));
+  return { days, idle, coins: Math.round(p.coins - a.coins), companies };
+}
+function idleTick(st) {
+  for (const c of Object.values(st.companies)) {
+    if (c.isNpc || c.status !== 'active' || !WS[c.workspace]) continue;
+    const members = [...c.founders, ...c.employees];
+    if (members.some(id => st.players[id] && !st.players[id].afk)) continue;               // someone is actively playing
+    const who = members.map(id => st.players[id] || st.pastPlayers[id]).find(p => p && (p.afk || (p.offlineSince != null && (st.day || 0) - p.offlineSince <= IDLE_MAX_DAYS)));
+    if (!who) continue;
+    const perf = c.employees.includes(who.id) ? c.performance : 1;
+    const value = Math.max(1, Math.round(unitPrice(c) * WS[c.workspace].salesMult * perf * (1 + (who.stats.level - 1) * 0.05) * incomeMult(st, c) * lifeMult(who) * knowBonus(who) * IDLE_CLICKS * IDLE_EFF));
+    c.cash += value; c.sales += IDLE_CLICKS; R.track(c, 'revenue', value); R.track(c, 'units', IDLE_CLICKS); addDelivery(st, c, IDLE_CLICKS);
+    if (who.away) who.away.idle = (who.away.idle || 0) + value;
+  }
+}
+// Player ids are socket ids: when a player comes back on a new socket, every reference in the whole world is renamed
+function remapPlayerId(worldId, oldId, newId) {
+  for (const r of Object.values(rooms)) {
+    if (r.worldId !== worldId) continue;
+    const swap = arr => (Array.isArray(arr) ? arr.map(x => (x === oldId ? newId : x)) : arr);
+    for (const c of [...Object.values(r.companies), ...(r.archive || [])]) {
+      c.founders = swap(c.founders); c.employees = swap(c.employees);
+      if (c.investors && Object.hasOwn(c.investors, oldId)) { c.investors[newId] = c.investors[oldId]; delete c.investors[oldId]; }
+    }
+    if (r.ownerId === oldId) r.ownerId = newId;
+    if (r.presentation?.muted && r.presentation.muted[oldId]) { r.presentation.muted[newId] = true; delete r.presentation.muted[oldId]; }
+    delete r.pastPlayers[oldId];
+  }
+}
+// Solo worlds are kept for a day after the player leaves if there is something to come back to (a company); empty ones vanish at once
+const SOLO_TTL_MS = 24 * 3600 * 1000;
+function parkWorld(worldId) {
+  const mine = Object.entries(rooms).filter(([, r]) => r.worldId === worldId && r.mode === 'solo'); if (!mine.length) return;
+  const progress = mine.some(([, r]) => Object.values(r.companies).some(c => !c.isNpc));
+  for (const [id, r] of mine) { if (progress) r.dormantAt = Date.now(); else delete rooms[id]; }
+}
+setInterval(() => { const now = Date.now(); for (const [id, r] of Object.entries(rooms)) if (r.dormantAt && now - r.dormantAt > SOLO_TTL_MS) delete rooms[id]; }, 60000);
+
 // ---------- Personal life (Sprint 12): home, personal bills, spending, hobbies, self-development ----------
 // Happiness and health decay a little every game day; money spent on life keeps them up. Good shape = a small income bonus, bad shape = a malus.
 const LIFE = ECON.life, HOUSING = Object.keys(LIFE.housing), UTIL_KEYS = Object.keys(LIFE.utilitiesPerDay);
@@ -551,7 +603,7 @@ io.on('connection', socket => {
     if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
     socket.join(st.id);
     addLog(st, 'log.arrivedCity', { player: me.name });
-    socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null, city: st.city, travel: true });
+    socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null, city: st.city, travel: true, token: me.resumeToken });
     socket.emit('chatHistory', st.chat || []);
     traveling = null; sync();
   }
@@ -559,13 +611,13 @@ io.on('connection', socket => {
     street = st; myWorld = st.worldId;
     me = { id: socket.id, name: clean(name, 20) || 'Anon-' + crypto.randomBytes(2).toString('hex'),
       coins: SEED.startCoins, role: 'role.candidate', stats: newStats(),
-      x: SPAWN_X, dir: 1, avatar: crypto.randomInt(0, 1000), busCard: 0, badges: {}, counters: {}, team: null, life: newLife() };
+      x: SPAWN_X, dir: 1, avatar: crypto.randomInt(0, 1000), busCard: 0, badges: {}, counters: {}, team: null, life: newLife(), resumeToken: crypto.randomBytes(16).toString('hex') };
     ensureQuests(st, me);
     st.players[socket.id] = me;
     if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
     socket.join(st.id);
     addLog(st, 'log.joined', { player: me.name });
-    socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null });
+    socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null, city: st.city, token: me.resumeToken });
     socket.emit('chatHistory', st.chat || []);
     sync();
   }
@@ -870,7 +922,36 @@ io.on('connection', socket => {
     socket.emit('travelStart', { from: from.city, to, mode: by, seconds, km, fare });
     traveling = { timer: setTimeout(() => arrive(target), seconds * 1000) };
   });
-  socket.on('disconnect', () => { if (traveling) { clearTimeout(traveling.timer); traveling = null; for (const [id, r] of Object.entries(rooms)) if (r.mode === 'solo' && r.worldId === myWorld) delete rooms[id]; } });
+  socket.on('disconnect', () => { if (traveling) { clearTimeout(traveling.timer); traveling = null; if (me && me.offlineSince == null) me.offlineSince = Math.min(...Object.values(rooms).filter(r => r.worldId === myWorld).map(r => r.day || 0)); parkWorld(myWorld); } });
+  // ----- AFK: the client reports inactivity; coming back shows a summary -----
+  socket.on('afk', ({ on } = {}) => {
+    if (!street || !me || street.mode === 'presentation') return;
+    const flag = !!on; if (!!me.afk === flag) return;
+    if (flag) { me.afk = true; me.away = awayBaseline(street, me); }
+    else { me.afk = false; const sum = awaySummary(street, me); me.away = null; if (sum) socket.emit('awaySummary', sum); }
+    sync();
+  });
+  // ----- Resume: come back as the same player (new socket) with the secret token issued at the first join -----
+  socket.on('resume', ({ roomId, token } = {}) => {
+    if (street || traveling) return;
+    if (pinFails >= 5) return socket.emit('toast', 'toast.tooManyTries');
+    const st = rooms[clean(roomId, 40)], tok = String(token || '');
+    const found = st && tok.length === 32 && Object.entries(st.pastPlayers).find(([, p]) => p?.resumeToken && safeEqual(p.resumeToken, tok));
+    if (!found) { pinFails++; return socket.emit('toast', 'toast.resumeFailed'); }
+    if (Object.values(st.players).some(p => p.resumeToken === tok)) return socket.emit('toast', 'toast.alreadyOnline');
+    if (Object.keys(st.players).length >= SEED.maxPlayersPerRoom) return socket.emit('toast', 'toast.roomFull');
+    const [oldId, p] = found;
+    remapPlayerId(st.worldId, oldId, socket.id);
+    me = p; me.id = socket.id; me.afk = false; me.loc = null; delete me.offlineSince;
+    street = st; myWorld = st.worldId;
+    for (const r of Object.values(rooms)) if (r.worldId === st.worldId) delete r.dormantAt;
+    st.players[socket.id] = me; if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
+    socket.join(st.id); addLog(st, 'log.rejoined', { player: me.name });
+    socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null, city: st.city, token: me.resumeToken, resumed: true });
+    socket.emit('chatHistory', st.chat || []);
+    const sum = awaySummary(st, me); me.away = null; if (sum) socket.emit('awaySummary', sum);
+    sync();
+  });
   // ----- Presence inside buildings -----
   socket.on('enterBuilding', ({ cid } = {}) => {
     if (!street || !me || !street.companies[cid] || street.mode === 'presentation') return;
@@ -1242,12 +1323,12 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     if (!street) return;
     for (const c of Object.values(street.companies)) c.employees = c.employees.filter(id => id !== socket.id);
-    if (me) me.loc = null;
+    if (me) { me.loc = null; if (!me.afk) me.away = awayBaseline(street, me); me.afk = false; me.offlineSince = street.day || 0; }
     street.pastPlayers[socket.id] = me;
     delete street.players[socket.id];
     if (street.ownerId === socket.id) street.ownerId = Object.keys(street.players)[0] || null;
     addLog(street, 'log.left', { player: me?.name });
-    if (street.mode === 'solo') { for (const [id, r] of Object.entries(rooms)) if (r.worldId === street.worldId) delete rooms[id]; return; } // solo worlds are disposable
+    if (street.mode === 'solo') return parkWorld(street.worldId); // solo worlds are kept for a day when there is a company to come back to
     sync();
   });
 });
@@ -1335,6 +1416,7 @@ function economyTick(only) {
       }
       if (c.marketing && !marketingActive(st, c)) c.marketing = null;
     }
+    idleTick(st);
     for (const p of Object.values(st.players)) lifeTick(st, p);
     billAds(st);
     if (((st.day || 0) + 1) % 360 === 0) payIncomeTax(st);
@@ -1469,7 +1551,7 @@ adminApi.post('/import', (req, res) => {
   let count = 0;
   for (const [id, st] of Object.entries(data.rooms)) {
     if (!st || !Array.isArray(st.lots) || typeof st.companies !== 'object') continue;
-    const rid = clean(id, 20);
+    const rid = clean(id, 40);
     io.in(rid).disconnectSockets(true);
     rooms[rid] = { ...st, id: rid, players: {}, pastPlayers: st.pastPlayers || {}, archive: st.archive || [], ideas: st.ideas || [], log: st.log || [] };
     count++;
@@ -1702,5 +1784,36 @@ admin.on('connection', socket => {
     audit('announce', `${roomId || 'ALL'}: ${msg}`); push();
   });
 });
+
+// ---------- PERSISTENCE: rooms survive a server restart (data/rooms.json; swap for a database later) ----------
+// Everyone online at save time is stored as "offline": after a restart players come back with their resume token.
+const DATA_DIR = path.join(__dirname, 'data'), ROOMS_FILE = path.join(DATA_DIR, 'rooms.json'), ROOMS_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+function saveRooms() {
+  try {
+    const out = {};
+    for (const [id, st] of Object.entries(rooms)) out[id] = { ...st, players: {}, pastPlayers: { ...st.pastPlayers, ...st.players } };
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+    const tmp = ROOMS_FILE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify({ version: 1, savedAt: Date.now(), rooms: out }), { mode: 0o600 });
+    fs.renameSync(tmp, ROOMS_FILE);
+    return Object.keys(out).length;
+  } catch (e) { console.warn('rooms save failed:', e.message); return -1; }
+}
+function loadRooms() {
+  let data; try { data = JSON.parse(fs.readFileSync(ROOMS_FILE, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') console.warn('rooms load failed:', e.message); return 0; }
+  if (!data || data.version !== 1 || typeof data.rooms !== 'object' || Date.now() - (data.savedAt || 0) > ROOMS_MAX_AGE_MS) return 0;
+  let n = 0;
+  for (const [id, st] of Object.entries(data.rooms).slice(0, 300)) {
+    if (!st || !Array.isArray(st.lots) || typeof st.companies !== 'object' || rooms[id]) continue;
+    const rid = clean(id, 40);
+    rooms[rid] = { ...st, id: rid, players: {}, pastPlayers: st.pastPlayers || {}, archive: st.archive || [], ideas: st.ideas || [], log: st.log || [], ads: st.ads || {}, worldId: st.worldId || rid, tickAt: Date.now() };
+    for (const p of Object.values(rooms[rid].pastPlayers)) { if (p) { p.loc = null; p.afk = false; if (p.offlineSince == null) p.offlineSince = st.day || 0; if (!p.away) p.away = awayBaseline(rooms[rid], p); } }
+    n++;
+  }
+  return n;
+}
+const restored = loadRooms(); if (restored) console.log(`Restored ${restored} room(s) from ${ROOMS_FILE}`);
+setInterval(saveRooms, 60000);
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { const n = saveRooms(); console.log(`Saved ${n} room(s) on ${sig}`); process.exit(0); });
 
 server.listen(PORT, () => console.log(`Game: http://localhost:${PORT}  Admin: http://localhost:${PORT}/admin.html`));

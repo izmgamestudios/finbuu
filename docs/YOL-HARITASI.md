@@ -17,7 +17,7 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **11b — Şehirler arası seyahat** | Caddenin sonunda OTOGAR · şehirler arası otobüs (₺/km bilet, yolda gerçek süre) veya şirket aracıyla (yakıt şirket kasasından) seyahat · her şehir kendi caddesi (kardeş oda); şirketler kendi şehirlerinde çalışmaya devam eder, oyuncu aynı hesap/istatistikle taşınır, dönünce kendi şirketine kavuşur | ✅ Tamam (İstanbul, Ankara, İzmir, Bursa, Antalya) |
 | **12 — Ev** | Sokağın başında (kılavuzun solunda) ev · dışarıdan kişisel harcamalar (market, restoran, sinema, giyim, hediye, doktor, tatil, yürüyüş) · içeri girince 3 katlı ev: mutfak, salon (ev kirası ve kişisel faturalar), çalışma odası (kitap/kurs/mentor/sertifika), hobi odası (7 hobi, seviyeler), yatak odası, teras · mutluluk ve sağlık gelire etki eder | ✅ Tamam |
 | **13a — Çok oyunculu iç sahne** | Aynı binaya giren oyuncular iç sahnede birbirini görür (konum, hareket, konuşma baloncuğu), sokakta içeridekiler gizlenir · takım arkadaşını çağır (📣, 15 sn bekleme) / yanına git (🏃, içerideyse binaya da girer) · lobide açık odalar listesi (şifre gerekir, PIN sızmaz, oda kurarken gizlenebilir) | ✅ Tamam |
-| **13b — AFK & offline devam** | AFK algılama ve çevrimdışıyken şirketlerin devam etmesi (veri tarayıcıda saklandığı için tasarım gerektirir) | ⬜ |
+| **13b — AFK & offline devam** | 90 sn girdisiz kalınca 💤 AFK (başkaları görür) · AFK/çevrimdışıyken şirket günde 6 "tıklama" değerinde yarı hızla kendi kendine satar (en fazla 30 oyun günü) · geri dönünce "Sen yokken" özeti · tarayıcıda saklanan gizli jetonla aynı oyuncu olarak devam (ağ kopmasında otomatik) · sunucu yeniden başlasa da odalar `data/rooms.json` dosyasından geri yüklenir | ✅ Tamam |
 | **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ⬜ |
 | **15 — Başlangıç & yardım** | İlk girişte atlanabilir tutorial · chatbot · yardım penceresi · oyun içi ayrıntılı arama (işletme, üye, görev, özellik) | ⬜ |
 | **16 — Premium yönetimi** | Admin Premium'u aç/kapa, şehir ve özellik kilitlerini yönet | ⬜ |
@@ -79,6 +79,13 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - **Bina içi konum:** Sunucu `loc` (hangi binada) bilgisini durumda herkese, bina içi konumu (kat, x) 100 ms'lik toplu `innerBatch` paketleriyle yayınlar. İstemci yalnızca aynı binadakileri çizer. Konumlar sınırlandırılır (kat 0–3, x 0–960). Ev (Sprint 12) özeldir, görünürlük yok.
 - **Takım çağrısı:** Yalnızca aynı takımdaki oyuncular, aynı odada; 15 sn'de bir. Çağrılan kişiye "Yanına git" penceresi çıkar (çağıranın sokak konumu ve binası ile). "Yanına git" sunucu gerektirmez: istemci yürür ve gerekirse içeri girer.
 - **Açık odalar:** Çok oyunculu ve sunum odaları listelenir (solo ve kardeş şehir odaları değil); oda kurarken "listede göster" kapatılabilir. Liste isteği bağlantı başına saniyede bir ile sınırlı, hızlı isteğe son liste döner.
+
+## Sprint 13b notları
+- **Kimlik:** Oyuncu kimliği soket kimliğidir; yeniden bağlanınca kimlik değişir. Katılırken verilen 128 bitlik gizli **devam jetonu** tarayıcıda (`localStorage`) saklanır; `resume` olayı jetonu doğrular ve **tüm dünyada** (kardeş şehir odaları dahil) eski kimliği yenisiyle değiştirir (kurucu/çalışan listeleri, yatırımcılar, oda sahibi). Jeton yalnızca sahibine gönderilir, herkese açık durumda yoktur; 5 yanlış denemede kilitlenir.
+- **Boşta kazanç:** Üyelerinin hepsi AFK ya da çevrimdışıysa (30 oyun gününe kadar) şirket günde 6 satış × yarı değer üretir (teslimat yakıtı dahil). Aktif oyuncusu olan şirkette yok. Çevrimdışıyken iş akdi biter (kurucular kalır).
+- **Solo dünyalar:** Şirketi olan solo dünya, oyuncu çıkınca 24 saat saklanır ve ekonomisi işlemeye devam eder; şirketsiz solo dünya hemen silinir.
+- **Kalıcılık:** Sunucu her dakika ve `SIGTERM`/`SIGINT`'te (yeniden dağıtımda) `data/rooms.json` yazar, açılışta okur; o an çevrimiçi olanlar "çevrimdışı" kaydedilir ve jetonla dönerler. Dosya 7 günden eskiyse yok sayılır. **Coolify'da `/app/data` kalıcı volume olmalı**, yoksa her dağıtımda sıfırlanır. Veritabanına geçişte yalnızca `saveRooms`/`loadRooms` değişir.
+- **Sınır:** Veri sunucu dosyasında olduğundan tarayıcıdaki jetonu kaybeden oyuncu kendi oyununa dönemez (hesap/e-posta girişi yok).
 
 ## Kararlar
 - **Veri saklama:** Şimdilik tarayıcıda (localStorage/çerez) yönetilir. SQLite/PostgreSQL daha sonra bağlanacak; bunun için durum okuma/yazma tek bir katmandan geçmeli (depolama arayüzü), böylece geçiş tek yerde yapılır.

@@ -370,3 +370,7 @@ header h1 small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis
 .lifeBar { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: .85rem } .lifeBar span { min-width: 96px }
 .lifeBar .bar { flex: 1; margin: 0; height: 10px } .lifeBar b { min-width: 28px; text-align: right }
 .lifeBar .bar > i.bad { background: var(--bad) } .lifeBar .bar > i.good { background: var(--good) }
+
+/* ---- Sprint 13b: resume + away summary ---- */
+.resumeBox { border: 2px solid var(--accent) !important }
+.awayDelta { font-variant-numeric: tabular-nums; color: var(--good) } .awayDelta.neg { color: var(--bad) }

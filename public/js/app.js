@@ -196,6 +196,7 @@ socket.on('npcResult', r => {
   if (modalOpen && $('modalBody').dataset.npc == String(r.npcId)) { const w = npcs.walkers.find(x => x.id === r.npcId); if (w) openNpc(w); }
 });
 socket.on('joined', info => {
+  if (info.token) saveJSON('resume', { roomId: info.roomId, token: info.token, mode: info.mode, city: info.city, at: Date.now() }); // lets this browser come back as the same player
   if (info.travel) { spawned = false; others.clear(); bubbles.clear(); lastDay = null; exitCompany(true); cancelPlan(); setAuto(false); $('travelOverlay').hidden = true; }
   joined = info;
   if (info.mode !== 'solo') history.replaceState(null, '', `?room=${encodeURIComponent(info.roomId)}`);
@@ -212,6 +213,7 @@ socket.on('chat', m => { addChat(m); bubbles.set(m.pid, { text: m.text, until: p
 socket.on('emoji', ({ pid, e }) => bubbles.set(pid, { emoji: e, until: performance.now() + 3000 }));
 socket.on('chatDeleted', id => document.querySelector(`#chatList li[data-id="${CSS.escape(id)}"]`)?.remove());
 socket.on('disconnect', () => {
+  reconnectResume = !!joined; afkSent = false;
   joined = null; state = null; spawned = false; others.clear(); bubbles.clear(); setAuto(false); exitCompany(true);
   $('advisor').hidden = true; renderRoomBar(); render();
 });
@@ -257,6 +259,12 @@ function showModes() {
   openModal(body => {
     body.dataset.modes = '1';
     body.append(el('h3', t('ui.modeTitle')));
+    const saved = loadJSON('resume', null);
+    if (saved?.token && Date.now() - (saved.at || 0) < 7 * 24 * 3600 * 1000) {
+      const box = el('div', null, 'mode resumeBox'); box.append(el('b', '▶ ' + t('resume.title')), el('p', t('resume.note', { room: saved.roomId, city: saved.city && seed?.economy?.cityMap ? cityName(saved.city) : '' }), 'muted'));
+      const row = el('div', null, 'others'); row.append(btn(t('resume.go'), () => socket.emit('resume', { roomId: saved.roomId, token: saved.token }), { primary: true, isDefault: true }), btn(t('resume.forget'), () => { saveJSON('resume', null); showModes(); }));
+      box.append(row); body.append(box);
+    }
     const name = el('input'); name.placeholder = t('ui.namePh'); name.maxLength = 20; body.append(name);
     const city = el('select'); city.setAttribute('aria-label', t('city.label'));
     Object.entries(seed?.economy?.cities || {}).forEach(([k, c]) => city.append(new Option(`🏙 ${c.name} · ${t('city.rent', { m2: c.rentM2 })}${c.est ? ' *' : ''}`, k)));
@@ -1193,6 +1201,29 @@ function render() {
   } else { logSig = ''; $('log').replaceChildren(); $('ideas').replaceChildren(); $('hud').replaceChildren(); hudSig = ''; }
 }
 let profSig = '';
+// ---------- AFK: no input for 90 s (or the tab in the background) marks you 💤; any input clears it ----------
+const AFK_MS = 90000; let lastInput = performance.now(), afkSent = false, reconnectResume = false;
+function markActive() { lastInput = performance.now(); if (afkSent) { afkSent = false; socket.emit('afk', { on: false }); } }
+['pointerdown', 'pointermove', 'keydown', 'touchstart', 'wheel'].forEach(ev => addEventListener(ev, markActive, { passive: true }));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) markActive(); });
+setInterval(() => {
+  if (!state || !joined || isPres()) return;
+  if (auto) lastInput = performance.now();                              // the auto-player counts as playing
+  if (!afkSent && performance.now() - lastInput > AFK_MS) { afkSent = true; socket.emit('afk', { on: true }); }
+}, 5000);
+// What happened while you were away (AFK or offline)
+socket.on('awaySummary', s => {
+  openModal(body => {
+    body.append(el('h3', '👋 ' + t('away.title')), el('p', t('away.days', { n: s.days }), 'muted'));
+    if (s.idle) body.append(el('p', '💤 ' + t('away.idle', { amount: money(s.idle) })));
+    const list = el('div', null, 'prodList');
+    s.companies.forEach(c => { const row = el('div', null, 'prodRow'); row.append(el('div', c.name || t(c.nameKey), 'prodName'), el('b', (c.delta >= 0 ? '+' : '') + money(c.delta), 'awayDelta' + (c.delta < 0 ? ' neg' : ''))); list.append(row); });
+    if (s.companies.length) body.append(el('small', t('away.companies'), 'muted'), list);
+    if (s.coins) body.append(el('p', `💰 ${t('away.coins', { amount: (s.coins >= 0 ? '+' : '') + money(s.coins) })}`));
+  });
+});
+// Network blip: the socket reconnects with a new id, so ask the server to put us back as the same player
+socket.on('connect', () => { if (reconnectResume) { reconnectResume = false; const r = loadJSON('resume', null); if (r?.token) socket.emit('resume', { roomId: r.roomId, token: r.token }); } });
 // ---------- Team: walk to a teammate / call a teammate to you ----------
 function goToPlayer(id, hint) {
   const pl = state?.players[id]; if (!pl || id === myId()) return;
@@ -1212,7 +1243,7 @@ const BADGE_ICON = { hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sa
 let extraSig = '';
 function renderExtras(p) {
   const teams = state?.teams || {};
-  const sig = p ? JSON.stringify([p.quests, p.badges, p.team, teams, joined?.mode, i18next.language, Object.values(state.players).map(x => [x.id, x.team, x.loc, x.name])]) : '';
+  const sig = p ? JSON.stringify([p.quests, p.badges, p.team, teams, joined?.mode, i18next.language, Object.values(state.players).map(x => [x.id, x.team, x.loc, x.name, x.afk])]) : '';
   if (sig === extraSig) return;
   extraSig = sig;
   const qBox = $('quests'), tBox = $('teams'), bBox = $('badges');
@@ -1241,7 +1272,7 @@ function renderExtras(p) {
       tBox.append(row);
     });
     if (p.team) Object.values(state.players).filter(x => x.team === p.team && x.id !== p.id).forEach(x => {
-      const r = el('div', null, 'teamRow'); r.append(el('span', `👤 ${x.name}${x.loc ? ' 🏢' : ''}`), btn('📣 ' + t('team.call'), () => socket.emit('teamCall', { to: x.id })), btn('🏃 ' + t('team.goTo'), () => goToPlayer(x.id)));
+      const r = el('div', null, 'teamRow'); r.append(el('span', `👤 ${x.afk ? '💤 ' : ''}${x.name}${x.loc ? ' 🏢' : ''}`), btn('📣 ' + t('team.call'), () => socket.emit('teamCall', { to: x.id })), btn('🏃 ' + t('team.goTo'), () => goToPlayer(x.id)));
       tBox.append(r); });
     if (joined.mode === 'multiplayer' && list.length < 8) {
       const used = list.map(x => x.color), row = el('div', null, 'row');
