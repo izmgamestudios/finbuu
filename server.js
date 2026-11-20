@@ -188,12 +188,27 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   presentation: publicPresentation(st) || null,
   city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(),
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
+// ---------- PREMIUM FLAGS (Sprint 16): admin switches Premium features on/off globally; persisted in data/premium.json ----------
+// 'live' features change gameplay now; 'soon' features are only listed (voice/video arrive in Sprints 18-19) and cannot be switched on yet.
+const PREMIUM_FEATURES = [
+  { key: 'cities', live: true }, { key: 'voiceChat', live: false }, { key: 'videoMeeting', live: false }, { key: 'mediaIdeas', live: false }, { key: 'onlineMode', live: false }];
+const PREMIUM_FILE = path.join(__dirname, 'data', 'premium.json');
+const PREMIUM = Object.fromEntries(PREMIUM_FEATURES.map(f => [f.key, false]));
+for (const c of ECON.cityMap) c.baseStatus = c.status;
+function applyPremium() { for (const c of ECON.cityMap) if (c.baseStatus === 'premium') c.status = PREMIUM.cities ? 'open' : 'premium'; }
+function loadPremium() {
+  try { const d = JSON.parse(fs.readFileSync(PREMIUM_FILE, 'utf8')); for (const f of PREMIUM_FEATURES) if (f.live && d[f.key] === true) PREMIUM[f.key] = true; } catch { /* first run */ }
+  applyPremium();
+}
+function savePremium() { try { fs.mkdirSync(path.dirname(PREMIUM_FILE), { recursive: true, mode: 0o700 }); fs.writeFileSync(PREMIUM_FILE, JSON.stringify(PREMIUM), { mode: 0o600 }); } catch (e) { console.warn('premium save failed:', e.message); } }
+loadPremium();
+
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
   busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, cityMap: ECON.cityMap, intercity: ECON.intercity, life: ECON.life, tax: ECON.tax });
 const publicAdConfig = () => ({ kinds: ADS.KINDS, maxBoost: ADS.MAX_BOOST, maxSlots: ADS.MAX_SLOTS_PER_COMPANY, limits: ADS.LIMITS });
 const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops,
   teamColors: SEED.teams.colors, quests: SEED.quests, badges: SEED.badges, salary: SEED.salary, custom: SEED.custom, departments: SEED.departments, marketing: SEED.marketing, itUpgrade: SEED.itUpgrade, npcTalk: { serviceCost: SEED.npcTalk.serviceCost, ids: SEED.npcTalk.ids }, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
-  lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES, ads: publicAdConfig() });
+  lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES, ads: publicAdConfig(), premium: PREMIUM });
 const maxTenants = lot => (lot.type === 'coworking' ? WS.coworking.maxTenants : SEED.lotSizes[lot.size].maxTenants);
 const newStats = () => ({ xp: 0, knowledge: 0, success: 0, level: 1, performance: 1 });
 const levelOf = xp => Math.floor(Math.sqrt(xp / 10)) + 1;
@@ -1737,6 +1752,15 @@ admin.on('connection', socket => {
   const adList = st => ADS.allSlots(adCtx(st)).map(s => { const a = st.ads[s.id] || {}, c = st.companies[a.owner];
     return { id: s.id, kind: s.kind, price: s.price, owner: a.owner || null, ownerName: a.owner === 'admin' ? 'Admin' : c ? (c.name || c.nameKey) : null, ownerNameKey: !c?.name && c ? c.nameKey : null,
       live: a.live || null, pending: a.pending || null, rejected: a.rejected || null }; });
+  socket.on('adminGetPremium', (_, cb) => { if (typeof cb === 'function') cb({ features: PREMIUM_FEATURES.map(f => ({ ...f, on: !!PREMIUM[f.key] })), cities: ECON.cityMap.filter(c => c.baseStatus === 'premium').map(c => c.name) }); });
+  socket.on('adminSetPremium', ({ feature, on } = {}, cb) => {
+    const f = PREMIUM_FEATURES.find(x => x.key === feature);
+    if (!f || !f.live || typeof on !== 'boolean') return typeof cb === 'function' && cb({ ok: false });
+    PREMIUM[feature] = on; applyPremium(); savePremium();
+    audit('premium', `${feature}: ${on ? 'on' : 'off'}`);
+    io.emit('seed', publicSeed()); push();
+    if (typeof cb === 'function') cb({ ok: true, on });
+  });
   socket.on('adminListAds', ({ roomId } = {}, cb) => { const st = room(roomId); if (st && typeof cb === 'function') cb({ slots: adList(st) }); });
   socket.on('adminAdDecision', ({ roomId, slot, approve, reason } = {}) => {
     const st = room(roomId), s = st && adSlot(st, slot), a = s && st.ads[s.id]; if (!a?.pending) return;

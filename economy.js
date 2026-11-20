@@ -77,7 +77,11 @@ const TR2026 = {
     ankara: { name: 'Ankara', rentM2: 380 },                    // dükkan kira ₺/m²/ay
     izmir: { name: 'İzmir', rentM2: 455 },                      // dükkan kira ₺/m²/ay
     bursa: { name: 'Bursa', rentM2: 320, est: true },
-    antalya: { name: 'Antalya', rentM2: 400, est: true }
+    antalya: { name: 'Antalya', rentM2: 400, est: true },
+    adana: { name: 'Adana', rentM2: 300, est: true },            // Premium şehirler (tahmini kira ₺/m²/ay)
+    konya: { name: 'Konya', rentM2: 260, est: true },
+    gaziantep: { name: 'Gaziantep', rentM2: 280, est: true },
+    kayseri: { name: 'Kayseri', rentM2: 270, est: true }
   },
   // Türkiye haritasındaki şehirler: durum 'open' (oynanabilir) | 'premium' | 'soon' (pek yakında). Konumlar yaklaşık (boylam, enlem).
   cityMap: [

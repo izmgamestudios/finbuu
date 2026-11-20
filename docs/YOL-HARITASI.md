@@ -20,6 +20,7 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **13b — AFK & offline devam** | 90 sn girdisiz kalınca 💤 AFK (başkaları görür) · AFK/çevrimdışıyken şirket günde 6 "tıklama" değerinde yarı hızla kendi kendine satar (en fazla 30 oyun günü) · geri dönünce "Sen yokken" özeti · tarayıcıda saklanan gizli jetonla aynı oyuncu olarak devam (ağ kopmasında otomatik) · sunucu yeniden başlasa da odalar `data/rooms.json` dosyasından geri yüklenir | ✅ Tamam |
 | **14 — Satış roleplay** | Satış bölümünde 🗣 "Müşteriyle konuş": 4 müşteri tipi (güler yüzlü/aceleci/tutumlu/şüpheci, olumlu-kararsız-olumsuz) × 3 tur soru-cevap · her cevap ilgi barını artırır/düşürür · sonuç: büyük satış (5 adet) / normal / yarım kaldı / müşteri gitti · kazanç, XP, bilgi · 3 büyük satış → 🤝 Satış Ustası rozeti · 12 sn bekleme | ✅ Tamam |
 | **15 — Yardım & rehber** | Üstte ❓ (F1 / ?) yardım penceresi: 16 konuluk kural tabanlı sohbet botu (TR+EN, API maliyeti yok) + oyun içi arama (şirket/yer/oyuncu → tıkla, yürü) + sıradaki öneri · sahnede 6 adımlık otomatik işaretlenen başlangıç rehberi (yürü, gir, şirket kur, sat, işe al, finans) | ✅ Tamam |
+| **16 — Premium yönetimi** | Admin panelinde ⭐ Premium sekmesi: Premium şehirleri (Adana, Konya, Gaziantep, Kayseri) tüm oyunculara aç/kapa · anında yansır (`seed` yeniden yayınlanır) · `data/premium.json` ile kalıcı · sesli/görüntülü/online mod "pek yakında" olarak listelenir, açılamaz · denetim kaydı | ✅ Tamam |
 | **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ⬜ |
 | **15 — Başlangıç & yardım** | İlk girişte atlanabilir tutorial · chatbot · yardım penceresi · oyun içi ayrıntılı arama (işletme, üye, görev, özellik) | ⬜ |
 | **16 — Premium yönetimi** | Admin Premium'u aç/kapa, şehir ve özellik kilitlerini yönet | ⬜ |
@@ -111,3 +112,9 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - `public/js/help.js`: FAQ puanlama (`rankFaq`), arama (`searchItems`), rehber adımları (`TUTORIAL_STEPS`, durumdan türetilir; sunucu değişikliği yok).
 - Metinler `help.*` (TR+EN); yeni konu eklemek için `FAQ_IDS` + `help.faq.<id>.{q,a,kw}`. `kw` = boşlukla ayrılmış anahtar kelimeler (aksansız).
 - Gerçek LLM chatbot bilerek yapılmadı (maliyet/güvenlik); ileride aynı arayüze API bağlanabilir.
+
+## Sprint 16 notları
+- Bayraklar `server.js` → `PREMIUM_FEATURES`; yeni Premium özellik eklemek için listeye `{ key, live:true }` ve etkisini `applyPremium()`'a ekle.
+- Premium şehirlerin kira verileri **tahmin** (`est`): Adana 300, Konya 260, Gaziantep 280, Kayseri 270 ₺/m²/ay — gerçek veriyle güncellenmeli.
+- Kapatınca şehirdeki mevcut oyuncular atılmaz; yeni oda/seyahat engellenir.
+- Hesap bazlı (ödemeli) Premium için kullanıcı hesabı/DB gerekir; şimdilik küresel bayrak.

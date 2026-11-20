@@ -78,6 +78,7 @@
     <button data-tab="reports">Finans Raporları</button>
     <button data-tab="ideas">Fikirler</button>
     <button data-tab="ads">📢 Reklamlar <b id="adsBadge" class="pill s-atRisk" hidden></b></button>
+    <button data-tab="premium">⭐ Premium</button>
     <button data-tab="audit">Denetim Kaydı</button>
   </div>
 
@@ -171,6 +172,13 @@
   </main>
 
   <main id="ideas"><div class="card"><table><thead><tr><th>Oda</th><th>Kim</th><th>Fikir</th><th>Tarih</th><th></th></tr></thead><tbody id="ideaBody"></tbody></table></div></main>
+  <main id="premium">
+    <div class="card">
+      <h3>Premium Yönetimi</h3>
+      <p class="muted">Premium özellikleri tüm oyuncular için açıp kapatın (ör. beta/kampanya dönemi). Ayar sunucuda saklanır ve anında tüm oyunculara yansır. Kapatınca zaten o şehirde olan oyuncular atılmaz; yeni giriş/seyahat engellenir.</p>
+      <table><thead><tr><th>Özellik</th><th>Açıklama</th><th>Durum</th><th></th></tr></thead><tbody id="premBody"></tbody></table>
+    </div>
+  </main>
   <main id="ads">
     <div class="card">
       <h3>Reklam Onayı ve Yönetimi</h3>
@@ -282,7 +290,30 @@ $('tabs').onclick = e => {
   document.querySelectorAll('main').forEach(m => m.classList.toggle('active', m.id === b.dataset.tab));
   if (b.dataset.tab === 'reports' && !report) loadReport();
   if (b.dataset.tab === 'ads') loadAds();
+  if (b.dataset.tab === 'premium') loadPremium();
 };
+
+
+// ---------- Premium flags ----------
+const PREM_TXT = {
+  cities: ['Premium şehirler', 'Adana, Konya, Gaziantep, Kayseri: oda kurma ve şehirler arası seyahat'],
+  voiceChat: ['Yakın sesli sohbet', 'Sprint 18 ile gelecek (şimdilik "pek yakında")'],
+  videoMeeting: ['Sesli/görüntülü toplantı', 'Sprint 19 ile gelecek (şimdilik "pek yakında")'],
+  mediaIdeas: ['Sesli/görüntülü fikir kaydı', 'Depolama (R2) hazır olunca'],
+  onlineMode: ['Online mod', 'Veritabanı sonrası']
+};
+function loadPremium() {
+  socket.emit('adminGetPremium', {}, res => {
+    if (!res) return;
+    $('premBody').replaceChildren(...res.features.map(f => {
+      const tr = document.createElement('tr'), [name, desc] = PREM_TXT[f.key] || [f.key, ''];
+      const st = document.createElement('td'); st.innerHTML = f.live ? (f.on ? '<span class="pill s-ok">Herkese açık</span>' : '<span class="pill">Kilitli</span>') : '<span class="pill">Pek yakında</span>';
+      const act = document.createElement('td');
+      if (f.live) { const b = document.createElement('button'); b.textContent = f.on ? 'Kapat' : 'Aç'; if (!f.on) b.className = 'primary'; b.onclick = () => socket.emit('adminSetPremium', { feature: f.key, on: !f.on }, () => loadPremium()); act.append(b); }
+      tr.append(Object.assign(document.createElement('td'), { textContent: name }), Object.assign(document.createElement('td'), { textContent: desc }), st, act); return tr;
+    }));
+  });
+}
 
 // ---------- Advertising moderation ----------
 let adsMod = null; import('/js/ads.js').then(m => { adsMod = m; });
