@@ -23,7 +23,7 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **16 — Premium yönetimi** | Admin panelinde ⭐ Premium sekmesi: Premium şehirleri (Adana, Konya, Gaziantep, Kayseri) tüm oyunculara aç/kapa · anında yansır (`seed` yeniden yayınlanır) · `data/premium.json` ile kalıcı · sesli/görüntülü/online mod "pek yakında" olarak listelenir, açılamaz · denetim kaydı | ✅ Tamam |
 | **17a — Mini SaaS: CRM + KPI** | Bilgi İşlem (IT) bölümünde 📇 CRM & KPI: satışlar ve müşteri görüşmeleri otomatik müşteri kaydı oluşturur (aday/aktif/pasif) · 10 KPI (müşteri sayısı, tekrar alan %, ort. sipariş, LTV, 30 gün gelir, kâr marjı, CAC…) · ₺ karşılığı "Takip et": aday/pasif müşteriyi geri kazanma şansı (%30–50), 10 gün bekleme | ✅ Tamam |
 | **17b — Mini SaaS: Takvim + Gantt** | IT bölümünde 📅 Takvim & Gantt: görev ekle (ad, başlangıç, süre ≤30 gün, en fazla 20) · Gantt çubukları (planlı/devam/gecikti/tamam renkleri, bugün çizgisi) · 30 günlük ay takvimi · görev başladıktan ≥1 oyun günü sonra bitirilebilir; süre içinde +3 XP/+1 bilgi, geç +1 XP | ✅ Tamam |
-| 17c — ERP (stok/sipariş) | Sonraki | ⏳ |
+| **17c — Mini SaaS: ERP** | IT bölümünde 📦 ERP: ürün başına stok (başlangıçta ücretsiz 20) · stoktaki satış +%5, stok bitince gelir %60 (satış durmaz) · tedarik siparişi (birim maliyet %40, 2–5 gün teslim, IT güvenliği süreyi kısaltır, en fazla 5 bekleyen) · sipariş Gantt'a otomatik görev düşer · "stoksuz satıştan kayıp gelir" KPI · hizmet sektörlerinde "Kapasite" etiketi · 30 gün stoksuz kalmama → 📦 Stok Ustası rozeti | ✅ Tamam |
 | **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ⬜ |
 | **15 — Başlangıç & yardım** | İlk girişte atlanabilir tutorial · chatbot · yardım penceresi · oyun içi ayrıntılı arama (işletme, üye, görev, özellik) | ⬜ |
 | **16 — Premium yönetimi** | Admin Premium'u aç/kapa, şehir ve özellik kilitlerini yönet | ⬜ |
@@ -132,3 +132,9 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - `planner.js` saf yardımcılar; olaylar `planGet/planAdd/planDone/planDel` (IT bölümü açık + şirket üyesi). Plan verisi herkese yayınlanan state'e girmez.
 - Anti-farm: görev anında bitirilemez (başladıktan ≥1 oyun günü), 20 görev sınırı, işlem hız limiti.
 - Takvim 30 günlük ay × 12 ay (oyunun takvimiyle aynı). Görevler şirkete ait, tüm üyeler görür/düzenler.
+
+## Sprint 17c notları
+- `erp.js` saf yardımcılar; olaylar `erpGet/erpOrder`; satış çarpanı tek yerde (`stockAdjust` in server.js) tıklama, müşteri görüşmesi ve CRM takibine uygulanır. AFK/offline satış (13b) stok tüketmez.
+- Mevcut şirketler ürün başına ilk kullanımda 20 birim alır (lazy init) — migration gerekmez.
+- Denge değerleri `erp.js` başında: INITIAL_STOCK, IN_STOCK_BONUS, OUT_MULT, UNIT_COST_PCT. Oyun verisi geldikçe ayarla.
+- Henüz yok: Danışman önerisine "ERP kur" adımı, vergi/fatura olaylarının takvime düşmesi.

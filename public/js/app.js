@@ -1241,6 +1241,32 @@ socket.on('teamCall', c => {
   openModal(body => { body.append(el('h3', '📣 ' + msg), btn('🏃 ' + t('team.goTo'), () => goToPlayer(c.from, c), { primary: true, isDefault: true })); });
 });
 // ---------- Quests, teams, badges (profile card) ----------
+// ---- Sprint 17c: Mini SaaS ERP (stock / capacity + supply orders) ----
+function openErp(c, data) {
+  if (!data) return socket.emit('erpGet', { cid: c.id }, g => { if (g) openErp(c, g); });
+  const sv = data.service, again = r => { if (!r) return; if (r.key) toast(t(r.key)); if (r.ok) openErp(c, r); };
+  openModal(body => {
+    body.append(el('h3', `${t('erp.title')} · ${companyName(c)}`), el('p', t(sv ? 'erp.introService' : 'erp.intro'), 'muted'));
+    const tiles = el('div', null, 'mini');
+    tiles.append(kpi(t('erp.lost'), fmt(data.lost), data.lost > 0 ? '#dc2626' : undefined), kpi(t('erp.streak'), t('erp.streakVal', { n: Math.min(data.streak, data.goal), goal: data.goal })));
+    body.append(tiles, el('small', t('erp.lead', { n: data.lead }), 'muted'));
+    const list = el('div', null, 'prodList');
+    data.products.forEach(p => {
+      const row = el('div', null, 'prodRow'), info = el('div'), name = p.name || (p.nameKey ? t(p.nameKey) : '—');
+      const state_ = p.stock <= 0 ? '🔴' : p.stock < 6 ? '🟡' : '🟢';
+      info.append(el('b', `${state_} ${name}`), el('small', ` ${t(sv ? 'erp.capacity' : 'erp.stock')}: ${p.stock} · ${t('erp.unit')}: ${fmt(p.unitCost)}`, 'muted'));
+      if (p.stock <= 0) info.append(el('small', ' ' + t('erp.out', { p: Math.round(data.outMult * 100) }), 'muted'));
+      const q = el('input'); q.type = 'number'; q.min = 1; q.max = data.maxQty; q.value = 20; q.style.width = '72px';
+      const total = el('small', fmt(p.unitCost * 20), 'muted'); q.oninput = () => { total.textContent = fmt(p.unitCost * Math.max(0, Math.floor(Number(q.value) || 0))); };
+      const go = btn(t('erp.order'), () => socket.emit('erpOrder', { cid: c.id, pid: p.id, qty: Number(q.value) }, again), { primary: p.stock <= 5 });
+      const act = el('div', null, 'row'); act.append(q, total, go); act.style.alignItems = 'center'; row.append(info, act); list.append(row);
+    });
+    body.append(list, el('h4', t('erp.pending')));
+    if (!data.orders.length) body.append(el('small', t('erp.noPending'), 'muted'));
+    data.orders.forEach(o => { const p = data.products.find(x => x.id === o.pid); body.append(el('div', `📦 ${p?.name || (p?.nameKey ? t(p.nameKey) : '')} ×${o.qty} · ${t('erp.due', { d: o.due })}`)); });
+    body.append(el('small', t('erp.tip'), 'muted'));
+  });
+}
 // ---- Sprint 17b: Mini SaaS planner (tasks + Gantt + calendar) ----
 const PLAN_COLOR = { planned: '#94a3b8', active: '#2563eb', overdue: '#dc2626', done: '#16a34a' };
 let planTab = 'gantt', planMonth = null;
@@ -1426,7 +1452,7 @@ $('helpBtn').onclick = openHelp;
 addEventListener('keydown', e => { if ((e.key === 'F1' || (e.key === '?' && !typing(e))) && !modalOpen) { e.preventDefault(); openHelp(); } });
 
 const BADGE_ICON = { hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
-  social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗', closer: '🤝' };
+  social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗', closer: '🤝', stockMaster: '📦' };
 let extraSig = '';
 function renderExtras(p) {
   const teams = state?.teams || {};
@@ -2347,7 +2373,7 @@ function openDept(c, d) {
         box.append(el('p', t('dept.itInfo', { lvl, max: it.maxLevel, pct: Math.round(lvl * it.cyberShield * 100) })));
         if (founder && lvl < it.maxLevel) rec(t('dept.itUpgrade', { cost: it.cost }), emit('itUpgrade'), t('dept.itWhy'));
         else if (!founder) visitorNote();
-        if (member) box.append(btn(t('crm.open'), () => openCrm(c)), btn(t('plan.open'), () => openPlan(c)));
+        if (member) box.append(btn(t('crm.open'), () => openCrm(c)), btn(t('plan.open'), () => openPlan(c)), btn(t(['sector.service', 'sector.tech', 'sector.education', 'sector.creative', 'sector.health'].includes(c.sector) ? 'erp.openService' : 'erp.open'), () => openErp(c)));
         break;
       }
       default: box.append(el('p', t('dept.premium')));

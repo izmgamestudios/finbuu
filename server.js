@@ -16,6 +16,7 @@ const ADS = require('./ads');
 const PITCH = require('./pitch');
 const CRM = require('./crm');
 const PLAN = require('./planner');
+const ERP = require('./erp');
 const { createAuth } = require('./auth');
 const ECON = require('./economy').build(25); // 25 coins = blue-collar daily employer cost (2026 minimum wage)
 
@@ -118,7 +119,7 @@ const SEED = {
     { id: 'chat', metric: 'chat', goal: 1, xp: 5, coins: 10, shared: true }
   ],
   badges: ['firstCompany', 'sales10', 'sales100', 'sales1000', 'floor3', 'floor6', 'firstHire', 'marketer', 'secure', 'social',
-    'commuter', 'teamPlayer', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer'],
+    'commuter', 'teamPlayer', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster'],
   demoDay: { canvasMax: 300, pitchMax: 900, demoCooldown: 30, angelCooldown: 15, offerDays: 3, grantAmount: 2000, grantMinDays: 10, grantMinBlocks: 7, demoMin: 60, angelMin: 45 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3, sector: 'sector.food' },
@@ -168,7 +169,7 @@ const addLog = (st, key, params = {}) => { st.log.unshift({ at: Date.now(), day:
 const publicCompany = (c, monthKey) => {
   const f = c.fin || {}, d = f.daily || [];
   const recent = d.slice(-30);
-  const { canvas, pitch, crm, plan, ...rest } = c; // heavy data is fetched on demand ('pitchGet', 'crmGet')
+  const { canvas, pitch, crm, plan, erp, ...rest } = c; // heavy data is fetched on demand ('pitchGet', 'crmGet')
   return { ...rest, canvasFilled: canvasFilled(c), pitchWords: (pitch || '').trim().split(/\s+/).filter(Boolean).length, fin: { today: f.today, foundedDay: f.foundedDay, lastDay: d.at(-1) || null, prevCash: d.at(-2)?.cash ?? null,
     month: f.monthly?.[monthKey] || null, bestUnits: recent.reduce((m, x) => Math.max(m, x.units || 0), 0) } };
 };
@@ -468,6 +469,12 @@ function ensureProducts(c) {
 }
 // Price the customer actually pays for one product (list price minus its discount)
 const unitPrice = (c, pid) => { const ps = ensureProducts(c), p = ps.find(x => x.id === pid) || ps[0]; return Math.max(1, Math.round(p.price * (1 - (p.discount || 0) / 100))); };
+// Sprint 17c: apply the ERP stock multiplier to a sale of `units` items; tracks revenue lost to missing stock
+function stockAdjust(c, pid, units, value) {
+  const ps = ensureProducts(c), id = ps.find(x => x.id === pid)?.id || ps[0].id, mult = ERP.consume(c, id, units), out = Math.max(1, Math.round(value * mult));
+  if (mult < 1) ERP.book(c).lost += Math.round(value * ERP.IN_STOCK_BONUS - out);
+  return out;
+}
 // Passive (staff) sales: average net price, plus demand: discounts raise volume (elasticity 1.5), each extra product widens the market (+5%)
 function portfolio(c) {
   const ps = ensureProducts(c), n = ps.length;
@@ -862,6 +869,7 @@ io.on('connection', socket => {
     if (won) {
       const perf = c.employees.includes(me.id) ? c.performance : 1;
       revenue = Math.max(1, Math.round(unitPrice(c) * WS[c.workspace].salesMult * perf * incomeMult(street, c) * 3));
+      revenue = stockAdjust(c, null, 2, revenue);
       c.cash += revenue; c.sales += 2; R.track(c, 'revenue', revenue); R.track(c, 'units', 2); addDelivery(street, c, 2);
       progress(street, me, 'sales', 2); progress(street, me, 'revenue', revenue); CRM.record(c, day, { id: cu.id, amount: revenue });
     }
@@ -886,6 +894,23 @@ io.on('connection', socket => {
   socket.on('planDel', ({ cid, id } = {}, cb) => {
     const c = crmCo(cid); if (!c || limited()) return typeof cb === 'function' && cb({ ok: false });
     PLAN.remove(c, Number(id)); if (typeof cb === 'function') cb(planReply(c));
+  });
+
+  // ---- Sprint 17c: Mini SaaS ERP (stock / capacity, supply orders) ----
+  const erpReply = (c, extra = {}) => { const b = ERP.book(c), ps = ensureProducts(c);
+    return { ok: true, day: street.day || 0, service: ERP.isService(c), initial: ERP.INITIAL_STOCK, lost: Math.round(b.lost), streak: b.okDays, goal: ERP.STREAK_GOAL, maxQty: ERP.MAX_QTY, lead: ERP.leadDays(c), outMult: ERP.OUT_MULT,
+      products: ps.map(p => ({ id: p.id, name: p.name || null, nameKey: p.nameKey || null, stock: ERP.stockOf(c, p.id), unitCost: Math.max(1, Math.round(unitPrice(c, p.id) * ERP.UNIT_COST_PCT)) })),
+      orders: b.orders.map(o => ({ ...o })), ...extra }; };
+  socket.on('erpGet', ({ cid } = {}, cb) => { const c = crmCo(cid); if (c && typeof cb === 'function') cb(erpReply(c)); });
+  socket.on('erpOrder', ({ cid, pid, qty } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = crmCo(cid); if (!c || limited()) return reply({ ok: false });
+    const ps = ensureProducts(c), prod = ps.find(x => x.id === pid); if (!prod) return reply({ ok: false, key: 'toast.erpBad' });
+    const r = ERP.order(c, street.day || 0, prod.id, qty, unitPrice(c, prod.id)); if (!r.ok) return reply(r);
+    if (c.cash < r.cost) return reply({ ok: false, key: 'toast.noCash' });
+    c.cash -= r.cost; R.track(c, 'expenses', r.cost); ERP.place(c, r.order);
+    const label = prod.name || (prod.nameKey ? prod.nameKey.split('.').pop() : 'x');
+    PLAN.add(c, street.day || 0, { name: `📦 ${label} x${r.order.qty}`, start: street.day || 0, dur: r.order.due - (street.day || 0) });
+    sync(); reply(erpReply(c));
   });
 
   socket.on('itUpgrade', ({ cid } = {}) => {
@@ -1017,6 +1042,7 @@ io.on('connection', socket => {
       const perf = c.employees.includes(me.id) ? c.performance : 1, levelBonus = 1 + (me.stats.level - 1) * 0.05;
       const click = Math.max(1, Math.round(unitPrice(c, pt.pid) * WS[c.workspace].salesMult * perf * levelBonus * incomeMult(street, c) * lifeMult(me) * knowBonus(me)));
       revenue = Math.round(click * R_.mult);
+      if (revenue > 0 && R_.units > 0) revenue = stockAdjust(c, pt.pid, R_.units, revenue);
       if (revenue > 0) { c.cash += revenue; c.sales += R_.units; R.track(c, 'revenue', revenue); R.track(c, 'units', R_.units); addDelivery(street, c, R_.units); progress(street, me, 'sales', R_.units); progress(street, me, 'revenue', revenue); }
     }
     if (c && c.status === 'active') CRM.record(c, street.day || 0, { name: CRM.randomName(n => crypto.randomInt(0, n)), persona: pt.persona, amount: revenue });
@@ -1387,7 +1413,8 @@ io.on('connection', socket => {
     if (!c || limited() || !(c.founders.includes(me.id) || c.employees.includes(me.id))) return;
     const perf = c.employees.includes(me.id) ? c.performance : 1;
     const levelBonus = 1 + (me.stats.level - 1) * 0.05;
-    const value = Math.max(1, Math.round(unitPrice(c, pid) * WS[c.workspace].salesMult * perf * levelBonus * incomeMult(street, c) * lifeMult(me) * knowBonus(me)));
+    let value = Math.max(1, Math.round(unitPrice(c, pid) * WS[c.workspace].salesMult * perf * levelBonus * incomeMult(street, c) * lifeMult(me) * knowBonus(me)));
+    value = stockAdjust(c, pid, 1, value);
     c.cash += value; c.sales++;
     R.track(c, 'revenue', value); R.track(c, 'units', 1);
     addDelivery(street, c, 1);
@@ -1530,6 +1557,7 @@ function economyTick(only) {
       if (c.crisis && !crisisActive(st, c)) { addLog(st, 'log.crisisOver', cParams(c)); c.crisis = null; c.founders.forEach(pid => award(st, st.players[pid], 'survivor')); }
       const fl = floorsOf(st, c);
       c.founders.forEach(pid => { const p = st.players[pid]; if (!p) return; if (fl >= 3) award(st, p, 'floor3'); if (fl >= 6) award(st, p, 'floor6'); if (c.cash >= 10000) award(st, p, 'tycoon'); });
+      if (!c.isNpc && c.erp) { const r = ERP.tick(c, st.day || 0, ensureProducts(c).map(x => x.id)); if (r.streakReached) c.founders.forEach(pid => award(st, st.players[pid], 'stockMaster')); }
       if (c.cash < -200) { addLog(st, 'log.bankrupt', cParams(c)); archiveCompany(st, c, 'bankrupt'); }
     }
     syncRoom(st);

@@ -327,7 +327,9 @@
     "crmCooldown": "This customer was followed up very recently.",
     "planBad": "Invalid task details.",
     "planFull": "Task list is full (max 20).",
-    "planTooEarly": "This task cannot be completed yet; at least 1 day must pass after it starts."
+    "planTooEarly": "This task cannot be completed yet; at least 1 day must pass after it starts.",
+    "erpBad": "Invalid order (1–200 units).",
+    "erpFull": "You can have at most 5 pending orders."
   },
   "log": {
     "joined": "{{player}} entered the street.",
@@ -912,7 +914,8 @@
     "scholar": "Bookworm",
     "pitcher": "On Stage",
     "funded": "Funded",
-    "grantee": "Grantee"
+    "grantee": "Grantee",
+    "stockMaster": "Stock Master"
   },
   "badgeDesc": {
     "firstCompany": "Found your first company",
@@ -938,7 +941,8 @@
     "scholar": "Complete 5 courses / books",
     "pitcher": "Pitch at Demo Day or to an angel",
     "funded": "Accept an investment offer",
-    "grantee": "Receive a grant"
+    "grantee": "Receive a grant",
+    "stockMaster": "Never run out of stock for 30 days"
   },
   "bus": {
     "arrived": "You arrived at the stop.",
@@ -1382,5 +1386,29 @@
     "late": "Finished late. +{{xp}} XP",
     "tip": "A task can be completed at least 1 game day after it starts. Finish within its duration for more XP.",
     "pick": "Day {{d}}"
+  },
+  "erp": {
+    "open": "📦 ERP: Stock & Orders",
+    "openService": "📦 ERP: Capacity & Supply",
+    "title": "Mini SaaS · ERP",
+    "intro": "When stock runs out sales do not stop, but earn less. Place supply orders in time.",
+    "introService": "When capacity runs out service does not stop, but earns less. Place capacity/supply orders in time.",
+    "stock": "Stock",
+    "capacity": "Capacity",
+    "unit": "Unit cost",
+    "qty": "Quantity",
+    "order": "Order",
+    "total": "Total",
+    "pending": "Pending orders",
+    "noPending": "No pending orders.",
+    "due": "arrives on day {{d}}",
+    "lead": "Lead time: {{n}} days (IT security level shortens it)",
+    "lost": "Revenue lost to missing stock",
+    "streak": "Never-out-of-stock streak",
+    "streakVal": "{{n}}/{{goal}} days",
+    "out": "Out of stock: revenue drops to {{p}}%!",
+    "low": "Running low",
+    "ok": "Healthy",
+    "tip": "Tip: items in stock earn 5% more. Stay in stock for 30 days to earn the 📦 badge."
   }
 }

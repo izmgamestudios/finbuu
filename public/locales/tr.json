@@ -327,7 +327,9 @@
     "crmCooldown": "Bu müşteri çok yakın zamanda takip edildi.",
     "planBad": "Görev bilgileri geçersiz.",
     "planFull": "Görev listesi dolu (en fazla 20).",
-    "planTooEarly": "Bu görev henüz bitirilemez; başladıktan en az 1 gün geçmeli."
+    "planTooEarly": "Bu görev henüz bitirilemez; başladıktan en az 1 gün geçmeli.",
+    "erpBad": "Sipariş bilgisi geçersiz (1–200 adet).",
+    "erpFull": "En fazla 5 bekleyen sipariş olabilir."
   },
   "log": {
     "joined": "{{player}} caddeye girdi.",
@@ -912,7 +914,8 @@
     "scholar": "Kitap Kurdu",
     "pitcher": "Sahneye Çıktı",
     "funded": "Yatırım Aldı",
-    "grantee": "Hibe Aldı"
+    "grantee": "Hibe Aldı",
+    "stockMaster": "Stok Ustası"
   },
   "badgeDesc": {
     "firstCompany": "İlk şirketini kur",
@@ -938,7 +941,8 @@
     "scholar": "5 kurs / kitap tamamla",
     "pitcher": "Demo Day'de ya da melek yatırımcıya sun",
     "funded": "Bir yatırım teklifini kabul et",
-    "grantee": "Hibe al"
+    "grantee": "Hibe al",
+    "stockMaster": "30 gün boyunca hiç stoksuz kalma"
   },
   "bus": {
     "arrived": "Durağa vardın.",
@@ -1382,5 +1386,29 @@
     "late": "Geç bitti. +{{xp}} XP",
     "tip": "Görev başladıktan en az 1 oyun günü sonra bitirilebilir. Süre içinde bitirirsen daha çok XP alırsın.",
     "pick": "Gün {{d}}"
+  },
+  "erp": {
+    "open": "📦 ERP: Stok & Sipariş",
+    "openService": "📦 ERP: Kapasite & Tedarik",
+    "title": "Mini SaaS · ERP",
+    "intro": "Stok biterse satış durmaz ama geliri düşer. Zamanında tedarik siparişi ver.",
+    "introService": "Kapasite biterse hizmet durmaz ama geliri düşer. Zamanında kapasite/tedarik siparişi ver.",
+    "stock": "Stok",
+    "capacity": "Kapasite",
+    "unit": "Birim maliyet",
+    "qty": "Miktar",
+    "order": "Sipariş ver",
+    "total": "Toplam",
+    "pending": "Bekleyen siparişler",
+    "noPending": "Bekleyen sipariş yok.",
+    "due": "gün {{d}}'de gelir",
+    "lead": "Teslim süresi: {{n}} gün (IT güvenlik seviyesi süreyi kısaltır)",
+    "lost": "Stoksuz satıştan kayıp gelir",
+    "streak": "Stoksuz kalmama serisi",
+    "streakVal": "{{n}}/{{goal}} gün",
+    "out": "Stok yok: gelir %{{p}}'e düşüyor!",
+    "low": "Azalıyor",
+    "ok": "Yeterli",
+    "tip": "İpucu: stoktaki ürünler %5 fazla kazandırır. 30 gün hiç stoksuz kalmazsan 📦 rozeti kazanırsın."
   }
 }
