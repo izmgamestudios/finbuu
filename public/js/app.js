@@ -193,6 +193,7 @@ socket.on('state', s => {
   perf.syncTimes.push(now); if (perf.syncTimes.length > 10) perf.syncTimes.shift();
   if (perf.stateCount++ % 5 === 0) perf.stateKB = JSON.stringify(s).length / 1024;
   clockOffset = (s.serverNow || Date.now()) - Date.now();
+  setTimeout(updateDoorBtn, 0);
   if (lastDay != null && s.day > lastDay) setTimeout(() => { if (state) morningRush(state); }, (390 / 1440) * (seed?.tickSeconds || 60) * 1000 / (s.speed || 1));   // shuttles arrive at 06:30 game time
   lastDay = s.day;
   state = s;
@@ -205,7 +206,7 @@ socket.on('state', s => {
     if (!others.has(id)) others.set(id, { x: p.x ?? 120, tx: p.x ?? 120, dir: p.dir || 1, phase: 0, moving: false });
   }
   for (const id of others.keys()) if (!s.players[id]) others.delete(id);
-  if (scene.cid && !state.companies[scene.cid] && scene.name !== 'street') exitCompany(true);
+  if (scene.cid && scene.kind !== 'home' && !state.companies[scene.cid] && scene.name !== 'street') exitCompany(true);
   render();
 });
 socket.on('posBatch', list => { for (const [id, x, dir] of list) { const o = others.get(id); if (o) { o.tx = x; o.dir = dir; } } });
@@ -373,6 +374,7 @@ function updateControls() {
   $('hint').textContent = isPres() ? t('ui.presHint') : t(touch ? 'ui.moveHintTouch' : 'ui.moveHint');
   $('actBtn').textContent = inside ? '⬆ ' + t('ui.open') : '⬆ ' + t('ui.enter');
   $('innerBar').hidden = !inside;
+  $('budgetBtn').hidden = $('doorBtn').hidden = !inOwnFlat();
   $('advisor').hidden = !joined || scene.name !== 'street';
   $('advChip').hidden = $('advisor').hidden;
   const mapOk = !!joined && scene.name === 'street' && !isPres(); $('mapBtn').hidden = !mapOk; if (!mapOk && minimapOpen) toggleMinimap(false);
@@ -522,9 +524,9 @@ function enterCompany(c) {
 }
 function exitCompany(instant) {
   if (scene.name === 'street') return;
-  if (scene.kind === 'company') socket.emit('leaveBuilding');
+  if (scene.kind === 'company' || scene.kind === 'home') socket.emit('leaveBuilding');
   keys.clear(); closeModal();
-  if (instant) Object.assign(scene, { name: 'street', b: null, cid: null, kind: null });
+  if (instant) Object.assign(scene, { name: 'street', b: null, cid: null, kind: null, owner: null });
   else Object.assign(scene, { name: 'zoomOut', t0: performance.now() });
   updateControls();
 }
@@ -549,14 +551,23 @@ socket.on('innerBatch', list => {
   }
 });
 const sayFor = id => { const b = bubbles.get(id); return b && b.until > performance.now() ? (b.text ? { say: b.text } : { bubble: b.emoji }) : {}; };
-function enterHome() {
-  const b = buildings.find(x => x.kind === 'home'); if (!b || isPres() || !joined) return;
-  closeModal(); cancelPlan(); setAuto(false); keys.clear();
-  Object.assign(scene, { name: 'zoomIn', t0: performance.now(), b, cid: null, kind: 'home' });
-  Object.assign(inner, { x: ELEV.x - 60, floor: 0, dir: -1, target: null, onArrive: null });
-  $('innerTitle').textContent = '🏠 ' + t('home.title');
-  updateControls();
+// ---------- Apartment (Sprint 23b): enter your own flat or visit a friend's ----------
+function enterFlat(ownerId) {
+  const b = buildings.find(x => x.kind === 'home'); if (!b || isPres() || !joined || typeof ownerId !== 'string') return;
+  socket.emit('enterFlat', { owner: ownerId }, r => {
+    if (!r?.ok) return r?.key && toast(t(r.key));
+    closeModal(); cancelPlan(); setAuto(false); keys.clear();
+    Object.assign(scene, { name: 'zoomIn', t0: performance.now(), b, cid: 'home:' + ownerId, kind: 'home', owner: ownerId });
+    Object.assign(inner, { x: ELEV.x - 60, floor: 0, dir: -1, target: null, onArrive: null });
+    const f = (state?.flats || []).find(x => x.id === ownerId);
+    $('innerTitle').textContent = ownerId === myId() ? '🏠 ' + t('home.title') : '🏠 ' + t('home.flatOf', { name: f?.name || '?' });
+    innerOthers.clear(); updateControls();
+    if (ownerId === myId()) setTimeout(() => { if (scene.kind === 'home' && scene.owner === myId() && !modalOpen) openHomeBudget(); }, 800);   // entering your flat opens the home budget
+  });
 }
+const enterHome = () => enterFlat(myId());
+const inOwnFlat = () => scene.name === 'interior' && scene.kind === 'home' && scene.owner === myId();
+const inGuestFlat = () => scene.kind === 'home' && scene.owner && scene.owner !== myId();
 const floorsUnlocked = c => Math.min(FLOORS - 1, floorsOfCompany(state, c)); // last floor is premium
 const unlocked = (c, f) => f < floorsUnlocked(c);
 function changeFloor(d) {
@@ -573,7 +584,7 @@ function innerTap(e) {
     const p = toInner(e.clientX, e.clientY), f = floorAtY(p.y); if (f == null || f >= HOME_FLOORS) return;
     inner.floor = f; const d = roomOf(HOME_ROOMS, p.x, f);
     if (!d) { inner.target = clamp(p.x, 20, IW - 20); inner.onArrive = null; return; }
-    inner.target = roomCenter(p.x < ELEV.x ? 0 : 1); inner.onArrive = () => openHomeRoom(d.key); return;
+    inner.target = roomCenter(p.x < ELEV.x ? 0 : 1); inner.onArrive = () => (inGuestFlat() ? toast(t('home.guestOnly')) : openHomeRoom(d.key)); return;
   }
   const c = company(); if (!c) return;
   const p = toInner(e.clientX, e.clientY), f = floorAtY(p.y);
@@ -585,7 +596,7 @@ function innerTap(e) {
   inner.target = roomCenter(side); inner.onArrive = () => openDept(c, d);
 }
 function openDeptHere() {
-  if (scene.kind === 'home') { const d = roomOf(HOME_ROOMS, inner.x, inner.floor); return d ? openHomeRoom(d.key) : toast(t('home.useStairs')); }
+  if (scene.kind === 'home') { if (inGuestFlat()) return toast(t('home.guestOnly')); const d = roomOf(HOME_ROOMS, inner.x, inner.floor); return d ? openHomeRoom(d.key) : toast(t('home.useStairs')); }
   const c = company(); if (!c) return;
   const d = roomOf(seed.departments, inner.x, inner.floor);
   if (d) openDept(c, d); else toast(t('ui.useElevator'));
@@ -796,7 +807,7 @@ function updateInner(dt) {
   inner.x = clamp(inner.x + vx * dt, 20, IW - 20);
   inner.moving = vx !== 0;
   if (vx) { inner.dir = Math.sign(vx); inner.phase += dt * 16 * (Math.abs(vx) > SPEED * 1.2 ? 1.6 : 1); }
-  if (scene.kind === 'company' && state) {
+  if ((scene.kind === 'company' || scene.kind === 'home') && state) {
     updateInnerOthers(dt);
     const t0 = performance.now();
     if ((Math.abs(inner.x - lastInnerSent.x) > 1 || inner.floor !== lastInnerSent.floor) && t0 - lastInnerSent.at > 100) { socket.emit('innerMove', { floor: inner.floor, x: Math.round(inner.x), dir: inner.dir }); Object.assign(lastInnerSent, { x: inner.x, floor: inner.floor, at: t0 }); }
@@ -813,7 +824,8 @@ function renderInterior(now) {
   if (now - scene.t0 < 30) { iview.camX = tx; iview.camY = ty; }
   const p = me();
   if (home) drawInterior(ctx, { view: iview, time: now, theme: 'home', floors: HOME_FLOORS, depts: HOME_ROOMS, t, unlocked: () => true, threshold: () => 0, goods: [], staff: [],
-    player: inner, myName: p?.name, myLook: lookFor(p?.avatar ?? 0), highlight: roomOf(HOME_ROOMS, inner.x, inner.floor)?.key, security: 0, trend: 0 });
+    player: inner, myName: p?.name, myLook: lookFor(p?.avatar ?? 0), highlight: roomOf(HOME_ROOMS, inner.x, inner.floor)?.key, security: 0, trend: 0, mySay: sayFor(myId()),
+    others: [...innerOthers].map(([id, o]) => { const pl = state.players[id]; return pl ? { ...o, look: teamLook(lookFor(pl.avatar ?? 0), state.teams?.[pl.team]?.color), label: pl.name, say: sayFor(id) } : null; }).filter(Boolean) });
   else {
   const lotCash = c.lotId == null ? c.cash : state.lots[c.lotId].companyIds.reduce((s, id) => s + (state.companies[id]?.cash || 0), 0);
   drawInterior(ctx, {
@@ -2006,7 +2018,7 @@ function openBuilding(b) {
   if (b.kind === 'grants') return openGrants();
   if (b.kind === 'gamfed') return openGamFed();
   if (b.kind === 'locked') return toast(t('ui.premiumAlert', { feature: t('locked.skyscraper') }));
-  if (b.kind === 'home') return isPres() ? null : openHome();
+  if (b.kind === 'home') return isPres() ? null : openApartment();
   if (b.kind === 'parking') return openParking();
   if (b.kind === 'terminal') return openTerminal();
   if (b.kind === 'lot' && !isPres()) {
@@ -2377,11 +2389,16 @@ const doneToday = key => { const L = lifeOf(); return L.today.day === (state.day
 const cooldownLeft = (key, cd) => { const L = lifeOf(), at = L.cooldowns?.[key]; return cd && at != null ? Math.max(0, at + cd - (state.day || 0)) : 0; };
 const hobbyLvl = pts => Math.floor(Math.sqrt(pts || 0));
 // Daily personal bill (coins/day): rent of the chosen housing + switched-on utilities (gas is seasonal)
-function dailyBill(L = lifeOf()) {
-  const E = LIFE(), month = state.calendar?.month || 1; let due = E.housing[L.housing].perDay * cityRentFactorC();
-  if (L.housing !== 'family') for (const [k, v] of Object.entries(E.utilitiesPerDay)) if (L.utilities[k] !== false) due += v * (k === 'gas' ? (month >= 11 || month <= 3 ? 1.8 : 0.3) : 1);
-  return due;
+const billShare = L => (L.housing === 'family' ? 0.5 : 1);
+const billMonth = () => gameDate().monthIdx + 1;
+// every flat has its own meters (Sprint 23b); living with family shares the bills
+function billLines(L = lifeOf()) {
+  const E = LIFE(), month = billMonth(), share = billShare(L), icon = { electricity: '⚡', water: '💧', gas: '🔥', internet: '🌐' };
+  const lines = [{ key: 'rent', icon: '🏘', label: t('home.housing.' + L.housing), perDay: E.housing[L.housing].perDay * cityRentFactorC(), on: true, fixed: true }];
+  for (const [k, v] of Object.entries(E.utilitiesPerDay)) lines.push({ key: k, icon: icon[k], label: t('acc.util.' + k), perDay: v * share * (k === 'gas' ? (month >= 11 || month <= 3 ? 1.8 : 0.3) : 1), on: L.utilities[k] !== false });
+  return lines;
 }
+function dailyBill(L = lifeOf()) { return billLines(L).reduce((sum, l) => sum + (l.on ? l.perDay : 0), 0); }
 const effChips = e => [e.h ? `😊 ${e.h > 0 ? '+' : ''}${e.h}` : '', e.hp ? `❤️ ${e.hp > 0 ? '+' : ''}${e.hp}` : '', e.k ? `🧠 +${e.k}` : '', e.xp ? `⭐ +${e.xp} XP` : ''].filter(Boolean).join(' · ');
 function lifeBars(box) {
   const L = lifeOf(), mk = (icon, label, v) => { const row = el('div', null, 'lifeBar'); const bar = el('div', null, 'bar'), fill = el('i'); fill.style.width = v + '%'; fill.className = v < 30 ? 'bad' : v >= 70 ? 'good' : ''; bar.append(fill);
@@ -2416,14 +2433,13 @@ function homeBillsPanel(box) {
   Object.keys(E.housing).forEach(k => { const h = E.housing[k], label = `${t('home.housing.' + k)} · ${k === 'family' ? t('home.free') : t('home.rentDay', { amount: money(h.perDay * f) })}`;
     const b = btn(label, () => socket.emit('housing', { tier: k })); if (L.housing === k) b.className = 'sel'; b.disabled = L.housing !== k && k !== 'family' && L.housing === 'family' && (me()?.coins || 0) < Math.round(h.deposit * f); row.append(b); });
   box.append(row);
-  if (L.housing !== 'family') {
-    box.append(el('small', t('home.depositNote', { amount: money(Math.round(E.housing[L.housing].deposit * f)) }), 'muted'));
-    const list = el('div', null, 'prodList'), month = state.calendar?.month || 1;
-    Object.entries(E.utilitiesPerDay).forEach(([k, v]) => { const on = L.utilities[k] !== false, r = el('div', null, 'prodRow'), lab = el('div', null, 'prodName');
-      lab.append(el('b', `${({ electricity: '⚡', water: '💧', gas: '🔥', internet: '🌐' })[k]} ${t('acc.util.' + k)}`), el('span', on ? t('acc.billDay', { amount: money(v * (k === 'gas' ? (month >= 11 || month <= 3 ? 1.8 : 0.3) : 1)) }) : t('home.utilOff.' + k), 'prodPrice'));
-      const sw = btn(on ? t('acc.on') : t('acc.off'), () => socket.emit('homeUtility', { key: k, on: !on })); if (on) sw.className = 'sel'; r.append(lab, sw); list.append(r); });
-    box.append(list);
-  }
+  if (L.housing !== 'family') box.append(el('small', t('home.depositNote', { amount: money(Math.round(E.housing[L.housing].deposit * f)) }), 'muted'));
+  else box.append(el('small', t('home.budget.shareNote'), 'muted'));
+  const list = el('div', null, 'prodList');
+  billLines(L).filter(l => !l.fixed).forEach(l => { const r = el('div', null, 'prodRow'), lab = el('div', null, 'prodName');
+    lab.append(el('b', `${l.icon} ${l.label}`), el('span', l.on ? t('acc.billDay', { amount: money(l.perDay) }) : t('home.budget.off') || '', 'muted'));
+    const sw = btn(l.on ? t('acc.on') : t('acc.off'), () => socket.emit('homeUtility', { key: l.key, on: !l.on })); if (l.on) sw.className = 'sel'; r.append(lab, sw); list.append(r); });
+  box.append(list);
   box.append(el('p', `🧾 ${t('home.dailyBill', { amount: money(dailyBill(L)) })}` + (L.unpaid ? ` · ⚠ ${t('home.unpaid', { n: L.unpaid })}` : '')));
 }
 function homeHeader(body, title) {
@@ -2448,6 +2464,45 @@ function openHomeRoom(key) {
   }, { onClose: () => { homeRoomOpen = null; } });
 }
 // Outside the house: everything personal in one place, plus a button to walk in
+function openHomeBudget() {
+  if (!state || !me()) return;
+  openModal(body => {
+    homeRoomOpen = 'budget'; homeHeader(body, '📒 ' + t('home.budget.title')); body.append(el('p', t('home.budget.intro'), 'muted'));
+    const L = lifeOf(), daily = dailyBill(L), coins = me().coins || 0, runway = daily > 0 ? Math.floor(coins / daily) : null;
+    const tiles = el('div', null, 'mini');
+    tiles.append(kpi(t('home.budget.daily'), money(daily)), kpi(t('home.budget.monthly'), money(daily * 30)), kpi(t('home.budget.runway'), runway == null ? t('home.budget.never') : t('home.budget.days', { n: runway }), runway != null && runway < 15 ? '#dc2626' : undefined), kpi(t('home.budget.unpaid'), String(L.unpaid || 0), L.unpaid ? '#dc2626' : undefined));
+    body.append(tiles, el('p', runway != null && runway < 15 ? '⚠ ' + t('home.budget.warn', { n: runway }) : '✅ ' + t('home.budget.ok'), runway != null && runway < 15 ? '' : 'muted'));
+    const box = el('div', null, 'co'); homeBillsPanel(box); body.append(box);
+    body.append(el('h4', t('home.budget.spend'))); const list = el('div', null, 'prodList'); spendRows(list, ['groceries', 'restaurant', 'cinema', 'clothes', 'gift', 'doctor', 'vacation', 'walk']); body.append(list, el('small', t('home.estNote'), 'muted'));
+  }, { onClose: () => { homeRoomOpen = null; } });
+}
+function openApartment() {
+  if (!state) return showModes();
+  openModal(body => {
+    const flats = state.flats || [], mine = flats.find(f => f.id === myId());
+    body.append(el('h3', '🏢 ' + t('home.apt.title')), el('p', t('home.apt.intro', { n: flats.length }), 'muted'));
+    if (mine && !isPres()) {
+      const row = el('div', null, 'row');
+      row.append(btn('🚪 ' + t('home.apt.enterMine'), () => enterFlat(myId()), { primary: true, isDefault: true }), btn('📒 ' + t('home.budget.open'), () => { closeModal(); openHomeBudget(); }),
+        btn(mine.open ? '🔓 ' + t('home.apt.doorClose') : '🔒 ' + t('home.apt.doorOpen'), () => socket.emit('setFlatDoor', { open: !mine.open }, r => { if (r?.ok) { mine.open = r.open; openApartment(); } })));
+      body.append(row, el('small', t('home.apt.toggleHint'), 'muted'));
+    }
+    const list = el('div', null, 'prodList');
+    flats.map((f, i) => ({ f, floor: i + 1 })).reverse().forEach(({ f, floor }) => {
+      const row = el('div', null, 'prodRow'), info = el('div'), online = !!state.players[f.id];
+      info.append(el('b', `${t('home.apt.floor', { n: floor })} · ${f.name}${f.id === myId() ? ' (' + t('home.apt.you') + ')' : ''}`), el('small', ` ${online ? '🟢' : '⚪'} ${f.open ? t('home.apt.open') : '🔒 ' + t('home.apt.closed')}`, 'muted'));
+      const act = el('div', null, 'row');
+      if (f.id !== myId() && !isPres()) { const v = btn('👋 ' + t('home.apt.visit'), () => enterFlat(f.id)); v.disabled = !f.open; act.append(v); }
+      row.append(info, act); list.append(row);
+    });
+    body.append(list);
+  });
+}
+$('budgetBtn').onclick = () => openHomeBudget();
+$('doorBtn').onclick = () => { const mine = (state?.flats || []).find(f => f.id === myId()); if (!mine) return; socket.emit('setFlatDoor', { open: !mine.open }, r => { if (r?.ok) { toast(r.open ? '🔓 ' + t('home.apt.open') : '🔒 ' + t('home.apt.doorClosedNote')); updateDoorBtn(); } }); };
+function updateDoorBtn() { const mine = (state?.flats || []).find(f => f.id === myId()); $('doorBtn').textContent = mine && !mine.open ? '🔒' : '🔓'; $('doorBtn').title = t(mine && !mine.open ? 'home.apt.doorOpen' : 'home.apt.doorClose'); }
+socket.on('flatClosed', ({ name }) => { if (inGuestFlat()) { exitCompany(true); toast(t('home.apt.kicked', { name })); } });
+socket.on('flatGuest', ({ name }) => toast('👋 ' + t('home.apt.guestIn', { name })));
 function openHome() {
   if (!state) return showModes();
   openModal(body => {
@@ -2463,7 +2518,7 @@ function refreshHome() {
   if (!homeRoomOpen || !modalOpen || !state) return;
   const L = lifeOf(), sig = [state.day, me()?.coins, L.happiness, L.health, L.housing, JSON.stringify(L.utilities), JSON.stringify(L.hobbies), L.courses, L.certs, JSON.stringify(L.today), JSON.stringify(L.cooldowns)].join('|');
   if (sig === homeSig) return; homeSig = sig;
-  const y = $('modalBody').scrollTop, k = homeRoomOpen; if (k === 'outside') openHome(); else openHomeRoom(k); $('modalBody').scrollTop = y;
+  const y = $('modalBody').scrollTop, k = homeRoomOpen; if (k === 'outside') openHome(); else if (k === 'budget') openHomeBudget(); else openHomeRoom(k); $('modalBody').scrollTop = y;
 }
 socket.on('homeResult', r => {
   const name = t(`home.${r.kind === 'spend' ? 'spend' : r.kind === 'hobby' ? 'hobby' : 'course'}.${r.id}`);

@@ -346,7 +346,8 @@
     "toolHave": "Bu araç zaten kurulu.",
     "toolFull": "En fazla 12 araç kurulabilir.",
     "toolLevel": "Bu aracın seviye şartını henüz karşılamıyorsun.",
-    "toolSoon": "Bu aracın etkisi henüz oyuna bağlı değil (yakında)."
+    "toolSoon": "Bu aracın etkisi henüz oyuna bağlı değil (yakında).",
+    "flatClosed": "Bu dairenin kapısı kapalı."
   },
   "log": {
     "joined": "{{player}} caddeye girdi.",
@@ -706,7 +707,7 @@
     "hobbyLvl": "seviye {{lvl}} ({{now}}/{{next}} seans)",
     "certNote": "{{n}}/{{max}} sertifika, her biri satışı +%2 artırır",
     "housingTitle": "Barınma ve kişisel faturalar",
-    "housingNote": "Kira, {{city}} şehrinin kira seviyesine göre ölçeklenir. Ailenin evinde fatura yok; kirada günlük kira + faturalar kasandan çıkar.",
+    "housingNote": "Kira, {{city}} şehrinin kira seviyesine göre ölçeklenir. Her dairenin kendi sayacı var: ailenle yaşıyorsan faturaların %50'sini ödersin, kirada kira + faturaların tamamı cüzdanından çıkar.",
     "housing": {
       "family": "Ailenin evi",
       "studio": "Kiralık stüdyo",
@@ -756,6 +757,43 @@
       "language": "Yabancı dil",
       "mentor": "Mentorluk",
       "cert": "Sertifika programı"
+    },
+    "aptSign": "APARTMAN",
+    "flatOf": "{{name}} adlı oyuncunun dairesi",
+    "guestOnly": "Misafirsin: odalardaki işlemleri sadece ev sahibi yapabilir.",
+    "apt": {
+      "title": "Apartman",
+      "intro": "Odadaki her oyuncunun bir dairesi (bir katı) var: şu an {{n}} daire. Açık kapıları olan arkadaşlarını ziyaret edebilirsin.",
+      "floor": "Kat {{n}}",
+      "you": "sen",
+      "open": "Kapı açık",
+      "closed": "Kapı kapalı",
+      "enterMine": "Evime gir",
+      "visit": "Ziyaret et",
+      "doorClose": "Kapıyı kapat",
+      "doorOpen": "Kapıyı aç",
+      "doorClosedNote": "Kapı kapalı: içerideki misafirler dışarı çıkarıldı, yenileri giremez.",
+      "guestIn": "{{name}} evinize geldi",
+      "kicked": "{{name}} kapıyı kapattı, dışarı çıktın.",
+      "toggleHint": "Kapıyı kapatırsan misafirler çıkarılır."
+    },
+    "budget": {
+      "open": "Ev bütçesi",
+      "title": "Ev Bütçesi",
+      "daily": "Günlük gider",
+      "monthly": "30 günlük gider",
+      "runway": "Kalan para kaç gün yeter",
+      "days": "{{n}} gün",
+      "never": "∞",
+      "unpaid": "Ödenmemiş fatura",
+      "intro": "Her dairenin kendi sayacı var: kira ve faturalar her gün cüzdanından düşer. Ailenle yaşıyorsan faturaları paylaşırsın (%50).",
+      "lines": "Faturalarım",
+      "shareNote": "Aileyle paylaşım: faturaların %50'si",
+      "spend": "Harcamalar",
+      "ok": "Bütçe dengede görünüyor.",
+      "warn": "Dikkat: bu tempoda paran {{n}} gün içinde biter.",
+      "bills": "Kira ve faturalar",
+      "off": "Kapalı"
     }
   },
   "rooms": {

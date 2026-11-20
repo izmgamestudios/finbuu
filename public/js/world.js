@@ -14,6 +14,8 @@ export const PLAZA = { x: 475, w: 200 };
 export const LOTS_X = 720, LOT_W = 200, LOT_GAP = 44;
 const GROUND_H = 86, FLOOR_H = 48, ROOF_H = 12;
 export const MAX_FLOORS = 6;
+export const APT_GROUND_H = 62, APT_FLOOR_H = 40, APT_MAX_DRAWN = 9;   // apartment: one floor per player (Sprint 23b)
+export const aptHeight = n => APT_GROUND_H + Math.min(APT_MAX_DRAWN, Math.max(1, n)) * APT_FLOOR_H + ROOF_H;
 
 export const lotX = i => LOTS_X + i * (LOT_W + LOT_GAP);
 export const worldWidth = lots => lotX(lots) + 3000; // support buildings, car park and bus terminal at the end of the street
@@ -27,7 +29,7 @@ const GAMFED_H = GROUND_H + GAMFED_FLOORS * GAMFED_FLOOR_H + ROOF_H; // 458: ten
 export function layout(state) {
   const lots = state?.lots || [];
   const list = [
-    { kind: 'home', id: 'home', seed: 900, x: HOME.x, w: HOME.w, h: 150 },
+    { kind: 'home', id: 'home', seed: 900, x: HOME.x, w: HOME.w, h: aptHeight(state?.flats?.length || 1) },
     { kind: 'guide', id: 'guide', seed: 901, x: GUIDE.x, w: GUIDE.w, h: heightOf(2) },
     { kind: 'plaza', id: 'plaza', seed: 902, x: PLAZA.x, w: PLAZA.w, h: heightOf(4) }
   ];
@@ -354,21 +356,34 @@ function drawLot(ctx, b, env) {
 }
 
 // The player's home at the start of the street: a small house with a garden fence and a mailbox
-function drawHome(ctx, b, env) {
-  const x = b.x, w = b.w, top = GROUND - b.h, wallTop = GROUND - 92, night = NIGHT > 0.3;
-  ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(x + 8, GROUND - 2, w - 16, 3);
-  ctx.fillStyle = '#f3e3c8'; ctx.fillRect(x + 10, wallTop, w - 20, 92); ctx.fillStyle = 'rgba(0,0,0,.06)'; ctx.fillRect(x + w - 18, wallTop, 8, 92);
-  ctx.fillStyle = '#b5523b'; ctx.beginPath(); ctx.moveTo(x - 6, wallTop); ctx.lineTo(x + w / 2, top); ctx.lineTo(x + w + 6, wallTop); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#8a4a3a'; ctx.fillRect(x + w - 54, top + 16, 15, 34);
-  ctx.fillStyle = night ? '#ffe9a8' : '#a9d8f2'; ctx.fillRect(x + 26, wallTop + 22, 36, 30); ctx.fillRect(x + w - 62, wallTop + 22, 36, 30);
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.strokeRect(x + 26, wallTop + 22, 36, 30); ctx.strokeRect(x + w - 62, wallTop + 22, 36, 30);
-  ctx.beginPath(); ctx.moveTo(x + 44, wallTop + 22); ctx.lineTo(x + 44, wallTop + 52); ctx.moveTo(x + w - 44, wallTop + 22); ctx.lineTo(x + w - 44, wallTop + 52); ctx.stroke();
-  ctx.fillStyle = '#7a4b2a'; rr(ctx, x + w / 2 - 15, GROUND - 58, 30, 58, 3); ctx.fill(); ctx.fillStyle = '#f2b84b'; ctx.beginPath(); ctx.arc(x + w / 2 + 8, GROUND - 28, 2.5, 0, 7); ctx.fill();
-  ctx.fillStyle = '#fff'; for (let k = 0; k < w - 20; k += 12) { if (Math.abs(x + 10 + k - (x + w / 2)) < 22) continue; ctx.fillRect(x + 10 + k, GROUND - 20, 7, 20); }
-  ctx.fillRect(x + 10, GROUND - 14, w - 20, 3);
-  ctx.fillStyle = '#6dbb6b'; ctx.beginPath(); ctx.arc(x + 14, GROUND - 22, 13, 0, 7); ctx.arc(x + w - 14, GROUND - 22, 11, 0, 7); ctx.fill();
+function drawHome(ctx, b, env) {   // the apartment block: one floor (flat) per player of the room
+  const flats = env.state?.flats || [], n = Math.min(APT_MAX_DRAWN, Math.max(1, flats.length)), x = b.x, w = b.w, top = GROUND - b.h, night = NIGHT > 0.45;
+  ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(x + 6, GROUND - 2, w - 12, 3);
+  ctx.fillStyle = '#e7d3b5'; ctx.fillRect(x, top + ROOF_H, w, b.h - ROOF_H); ctx.fillStyle = 'rgba(0,0,0,.06)'; ctx.fillRect(x + w - 10, top + ROOF_H, 10, b.h - ROOF_H);
+  ctx.fillStyle = '#8a5a44'; ctx.fillRect(x - 6, top, w + 12, ROOF_H);
+  ctx.fillStyle = '#7d828f'; ctx.fillRect(x + w - 40, top - 22, 22, 22); ctx.fillStyle = '#5b6070'; ctx.fillRect(x + w - 44, top - 26, 30, 5);        // water tank on the roof
+  for (let f = 0; f < n; f++) {
+    const fy = GROUND - APT_GROUND_H - (f + 1) * APT_FLOOR_H, flat = flats[f], online = !!(flat && env.state.players?.[flat.id]), mine = !!flat && flat.id === env.myId;
+    ctx.fillStyle = f % 2 ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.05)'; ctx.fillRect(x, fy, w, APT_FLOOR_H);
+    [x + 12, x + w - 44].forEach(wx => { windowAt(ctx, wx, fy + 7, 32, 22, null); if (night && !online) { ctx.fillStyle = 'rgba(20,28,48,.55)'; ctx.fillRect(wx, fy + 7, 32, 22); } });
+    if (flat) {
+      const label = (flat.open ? '' : '🔒 ') + flat.name, pw = w - 96, px = x + w / 2 - pw / 2;
+      ctx.fillStyle = mine ? '#ffb703' : '#1d2b53'; rr(ctx, px, fy + 12, pw, 16, 6); ctx.fill();
+      ctx.font = '700 9px Nunito, system-ui, sans-serif'; ctx.fillStyle = mine ? '#1d2b53' : '#fff4dd'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(fitText(ctx, label, pw - 8), x + w / 2, fy + 20.5); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      if (online) { ctx.fillStyle = '#3ccfb4'; circle(ctx, px + pw - 5, fy + 14, 2.5); }
+    }
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(x, fy + APT_FLOOR_H - 1, w, 1);
+  }
+  if (flats.length > APT_MAX_DRAWN) pill(ctx, x + 30, top - 6, `+${flats.length - APT_MAX_DRAWN}`, 'rgba(35,40,55,.78)', '#fff', 10);
+  // lobby
+  ctx.fillStyle = '#cdb892'; ctx.fillRect(x, GROUND - APT_GROUND_H, w, APT_GROUND_H);
+  ctx.fillStyle = '#7a4b2a'; rr(ctx, x + w / 2 - 20, GROUND - 52, 40, 52, 3); ctx.fill();
+  ctx.fillStyle = night ? '#ffe2a0' : '#a9d8f2'; ctx.fillRect(x + w / 2 - 15, GROUND - 46, 13, 36); ctx.fillRect(x + w / 2 + 2, GROUND - 46, 13, 36);
+  ctx.fillStyle = '#6dbb6b'; ctx.beginPath(); ctx.arc(x + 14, GROUND - 14, 11, 0, 7); ctx.arc(x + w - 14, GROUND - 14, 10, 0, 7); ctx.fill();
   ctx.fillStyle = '#4b5563'; ctx.fillRect(x + w + 12, GROUND - 34, 3, 34); ctx.fillStyle = '#e63946'; ctx.fillRect(x + w + 6, GROUND - 44, 16, 11);
-  pill(ctx, x + w / 2, GROUND - 100, '🏠 ' + env.t('home.sign'), '#e67e22', '#fff', 11);
+  pill(ctx, x + w / 2, GROUND - APT_GROUND_H + 12, '🏢 ' + env.t('home.aptSign'), '#e67e22', '#fff', 11);
+  if (env.myId && flats.some(f => f.id === env.myId)) pill(ctx, x + 28, GROUND - APT_GROUND_H + 30, '🏠', '#ffb703', '#1d2b53', 10);
 }
 function drawGuide(ctx, b, env) {
   shell(ctx, b, '#f6d77a', '#c99a3c');

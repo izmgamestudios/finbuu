@@ -346,7 +346,8 @@
     "toolHave": "This tool is already installed.",
     "toolFull": "You can install at most 12 tools.",
     "toolLevel": "You do not meet this tool's level requirement yet.",
-    "toolSoon": "This tool's effect is not wired into the game yet (coming soon)."
+    "toolSoon": "This tool's effect is not wired into the game yet (coming soon).",
+    "flatClosed": "This flat's door is closed."
   },
   "log": {
     "joined": "{{player}} entered the street.",
@@ -706,7 +707,7 @@
     "hobbyLvl": "level {{lvl}} ({{now}}/{{next}} sessions)",
     "certNote": "{{n}}/{{max}} certificates, each +2% sales",
     "housingTitle": "Housing and personal bills",
-    "housingNote": "Rent scales with {{city}}'s rent level. Living with family has no bills; a rented home costs daily rent + utilities from your pocket.",
+    "housingNote": "Rent scales with {{city}}'s rent level. Every flat has its own meters: living with family you pay 50% of the bills; renting you pay rent plus all bills from your wallet.",
     "housing": {
       "family": "Family home",
       "studio": "Rented studio",
@@ -756,6 +757,43 @@
       "language": "Language lessons",
       "mentor": "Mentoring",
       "cert": "Certificate programme"
+    },
+    "aptSign": "APARTMENTS",
+    "flatOf": "{{name}}'s flat",
+    "guestOnly": "You are a guest: only the host can use the rooms.",
+    "apt": {
+      "title": "Apartment block",
+      "intro": "Every player in the room has a flat (one floor): {{n}} flats right now. You can visit friends whose door is open.",
+      "floor": "Floor {{n}}",
+      "you": "you",
+      "open": "Door open",
+      "closed": "Door closed",
+      "enterMine": "Enter my flat",
+      "visit": "Visit",
+      "doorClose": "Close door",
+      "doorOpen": "Open door",
+      "doorClosedNote": "Door closed: guests inside were sent out, new ones cannot enter.",
+      "guestIn": "{{name}} came to your flat",
+      "kicked": "{{name}} closed the door, you are outside.",
+      "toggleHint": "Closing the door sends guests out."
+    },
+    "budget": {
+      "open": "Home budget",
+      "title": "Home Budget",
+      "daily": "Daily cost",
+      "monthly": "30-day cost",
+      "runway": "Days your money lasts",
+      "days": "{{n}} days",
+      "never": "∞",
+      "unpaid": "Unpaid bills",
+      "intro": "Every flat has its own meters: rent and bills are taken from your wallet daily. Living with family shares the bills (50%).",
+      "lines": "My bills",
+      "shareNote": "Family share: 50% of the bills",
+      "spend": "Spending",
+      "ok": "Your budget looks balanced.",
+      "warn": "Careful: at this pace your money runs out in {{n}} days.",
+      "bills": "Rent and bills",
+      "off": "Off"
     }
   },
   "rooms": {
