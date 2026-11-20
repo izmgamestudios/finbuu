@@ -103,7 +103,7 @@ const SEED = {
   itUpgrade: { cost: 150, maxLevel: 3, cyberShield: 0.25 },
   npcStaff: { incomeFactor: 4 },
   npcTalk: { ids: 64, serviceCost: 30, meetXp: 2, serviceXp: 5, serviceKnowledge: 2, dealMult: 2 },
-  busStops: [447, 1180, 2156, 3132],   // world x of bus stops (gaps between buildings, mirrored by the client)
+  busStops: [697, 1430, 2406, 3382],   // world x of bus stops (gaps between buildings, mirrored by the client)
   teams: { max: 8, colors: ['#e63946', '#1d70f5', '#2a9d4b', '#f4a300', '#8e44ad', '#00a8a8', '#ff6fa1', '#4b5563'] },
   quests: [
     { id: 'sell10', metric: 'sales', goal: 10, xp: 10, coins: 30 }, { id: 'sell30', metric: 'sales', goal: 30, xp: 20, coins: 60 },
@@ -114,7 +114,7 @@ const SEED = {
     { id: 'chat', metric: 'chat', goal: 1, xp: 5, coins: 10, shared: true }
   ],
   badges: ['firstCompany', 'sales10', 'sales100', 'sales1000', 'floor3', 'floor6', 'firstHire', 'marketer', 'secure', 'social',
-    'commuter', 'teamPlayer', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee'],
+    'commuter', 'teamPlayer', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar'],
   demoDay: { canvasMax: 300, pitchMax: 900, demoCooldown: 30, angelCooldown: 15, offerDays: 3, grantAmount: 2000, grantMinDays: 10, grantMinBlocks: 7, demoMin: 60, angelMin: 45 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3, sector: 'sector.food' },
@@ -154,8 +154,8 @@ const SHARED_MODES = ['multiplayer', 'presentation'];
 // ---------- HELPERS ----------
 const rooms = {};
 const LOTS_PER_STREET = 12;
-const WORLD_MAX_X = 5400; // client street width (incl. car park and bus terminal at the end)
-const SPAWN_X = 120;     // in front of the guide building
+const WORLD_MAX_X = 5650; // client street width (incl. car park and bus terminal at the end)
+const SPAWN_X = 370;     // in front of the guide building
 const clean = (s, max = 40) => String(s ?? '').replace(/[<>]/g, '').trim().slice(0, max);
 const cParams = c => (c.name ? { company: c.name } : { companyKey: c.nameKey });
 const addLog = (st, key, params = {}) => { st.log.unshift({ at: Date.now(), day: st.day || 0, key, params }); st.log.length = Math.min(st.log.length, 80); };
@@ -179,7 +179,7 @@ const publicPresentation = st => st.presentation && {
     options: st.presentation.poll.options.map(o => ({ text: o.text, votes: o.votes })), total: Object.keys(st.presentation.poll.voters).length }
 };
 const publicPlayer = p => ({ id: p.id, name: p.name, coins: p.coins, role: p.role, stats: p.stats, x: p.x, dir: p.dir, avatar: p.avatar,
-  team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {} });
+  team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {}, life: publicLife(p) });
 const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: st.day ? R.calendar(st.day) : null,
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
@@ -187,7 +187,7 @@ const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: 
   city: cityOf(st), teams: st.teams || {}, tickAt: st.tickAt, speed: st.speed || 1, ownerId: st.ownerId || null, ads: publicAds(st), serverNow: Date.now(),
   lots: st.lots.map(l => ({ ...l, rent: lotRent(st, l), price: lotPrice(st, l) })), log: st.log, ideas: st.ideas });
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
-  busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, cityMap: ECON.cityMap, intercity: ECON.intercity, tax: ECON.tax });
+  busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, cityMap: ECON.cityMap, intercity: ECON.intercity, life: ECON.life, tax: ECON.tax });
 const publicAdConfig = () => ({ kinds: ADS.KINDS, maxBoost: ADS.MAX_BOOST, maxSlots: ADS.MAX_SLOTS_PER_COMPANY, limits: ADS.LIMITS });
 const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops,
   teamColors: SEED.teams.colors, quests: SEED.quests, badges: SEED.badges, salary: SEED.salary, custom: SEED.custom, departments: SEED.departments, marketing: SEED.marketing, itUpgrade: SEED.itUpgrade, npcTalk: { serviceCost: SEED.npcTalk.serviceCost, ids: SEED.npcTalk.ids }, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
@@ -283,7 +283,7 @@ function costPerTick(st, c) {
 // City-based real estate: daily rent and purchase price of a lot (₺/m² converted to coins)
 const cityOf = st => (ECON.cities[st.city] ? st.city : 'istanbul');
 // ---------- Intercity travel (Sprint 11b): rooms of the same world are the streets of different cities ----------
-const terminalX = st => 470 + 244 * st.lots.length + 1250 + 190;           // centre of the bus terminal (mirrors the client layout)
+const terminalX = st => 720 + 244 * st.lots.length + 1250 + 190;           // centre of the bus terminal (mirrors the client layout)
 const cityMeta = key => ECON.cityMap.find(c => c.key === key);
 const findCityRoom = (worldId, city) => Object.values(rooms).find(r => r.worldId === worldId && r.city === city);
 function distanceKm(a, b) { // great-circle distance x road factor
@@ -307,6 +307,45 @@ function ensureCityRoom(home, city) {
 }
 const lotRent = (st, lot) => ECON.lotRent(cityOf(st), lot.size);
 const lotPrice = (st, lot) => ECON.lotPrice(cityOf(st), lot.size);
+// ---------- Personal life (Sprint 12): home, personal bills, spending, hobbies, self-development ----------
+// Happiness and health decay a little every game day; money spent on life keeps them up. Good shape = a small income bonus, bad shape = a malus.
+const LIFE = ECON.life, HOUSING = Object.keys(LIFE.housing), UTIL_KEYS = Object.keys(LIFE.utilitiesPerDay);
+const newLife = () => ({ happiness: 60, health: 80, housing: 'family', utilities: { electricity: true, water: true, gas: true, internet: true },
+  hobbies: {}, courses: 0, certs: [], unpaid: 0, billAcc: 0, today: { day: -1, done: {} }, cooldowns: {} });
+const ensureLife = p => (p.life ||= newLife());
+const clampLife = L => { L.happiness = Math.max(0, Math.min(100, L.happiness)); L.health = Math.max(0, Math.min(100, L.health)); };
+const lifeToday = (st, L) => { if (L.today.day !== (st.day || 0)) L.today = { day: st.day || 0, done: {} }; return L.today; };
+const cityRentFactor = st => (ECON.cities[cityOf(st)]?.rentM2 || 850) / ECON.cities.istanbul.rentM2;   // personal rent follows the city's rent level
+const hobbyLevel = pts => Math.floor(Math.sqrt(pts || 0));
+const lifeMult = p => {
+  const L = p?.life; if (!L) return 1;
+  let m = 1; m *= L.happiness >= 70 ? 1.03 : L.happiness < 30 ? 0.9 : 1; m *= L.health >= 70 ? 1.02 : L.health < 30 ? 0.9 : 1;
+  return m * (1 + 0.02 * Math.min(3, L.certs.length));
+};
+const knowBonus = p => 1 + Math.min(0.15, (p?.stats?.knowledge || 0) * 0.0005);
+// Once per game day for every player in the street: bills, decay, comfort
+function lifeTick(st, p) {
+  const L = ensureLife(p), month = R.calendar((st.day || 0) + 1).month;
+  let due = LIFE.housing[L.housing].perDay * cityRentFactor(st);
+  if (L.housing !== 'family') for (const k of UTIL_KEYS) if (L.utilities[k]) due += LIFE.utilitiesPerDay[k] * (k === 'gas' ? (isWinter(month) ? 1.8 : 0.3) : 1);
+  L.billAcc = Math.min(L.billAcc + due, due * 10);
+  const pay = Math.floor(L.billAcc);
+  if (pay > 0) {
+    if (p.coins >= pay) { p.coins -= pay; L.billAcc -= pay; L.unpaid = 0; }
+    else { L.unpaid++; L.happiness -= 5; if (L.unpaid >= 3) { L.housing = 'family'; L.unpaid = 0; L.billAcc = 0; addLog(st, 'log.evicted', { player: p.name }); } }
+  }
+  L.happiness += LIFE.housing[L.housing].comfort - 1.2; L.health -= 0.4;
+  if (L.housing !== 'family') {
+    if (!L.utilities.electricity) L.happiness -= 2;
+    if (!L.utilities.internet) L.happiness -= 1;
+    if (!L.utilities.water) L.health -= 2;
+    if (!L.utilities.gas && isWinter(month)) L.health -= 1.5;
+  }
+  clampLife(L);
+}
+const publicLife = p => { const L = p.life; return L ? { happiness: Math.round(L.happiness), health: Math.round(L.health), housing: L.housing, utilities: L.utilities, hobbies: L.hobbies, courses: L.courses,
+  certs: L.certs.length, today: L.today, cooldowns: L.cooldowns, unpaid: L.unpaid } : null; };
+
 // ---------- Company vehicles (Sprint 10): gallery models (new / used), timed rentals, parking ----------
 const VM = id => ECON.vehicle.models[id] || null;
 const vehModel = v => VM(v?.model) || ECON.vehicle.models.sedan_new;
@@ -514,7 +553,7 @@ io.on('connection', socket => {
     street = st; myWorld = st.worldId;
     me = { id: socket.id, name: clean(name, 20) || 'Anon-' + crypto.randomBytes(2).toString('hex'),
       coins: SEED.startCoins, role: 'role.candidate', stats: newStats(),
-      x: SPAWN_X, dir: 1, avatar: crypto.randomInt(0, 1000), busCard: 0, badges: {}, counters: {}, team: null };
+      x: SPAWN_X, dir: 1, avatar: crypto.randomInt(0, 1000), busCard: 0, badges: {}, counters: {}, team: null, life: newLife() };
     ensureQuests(st, me);
     st.players[socket.id] = me;
     if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
@@ -618,6 +657,63 @@ io.on('connection', socket => {
     sync();
   });
 
+  // ----- Home (personal life) -----
+  const lifeReady = () => !!street && !!me && ['solo', 'multiplayer'].includes(street.mode);
+  // shared by spending / hobbies / courses: pays from the player's pocket, applies effects, answers with the deltas
+  const applyLife = (id, kind, eff, cost) => {
+    const L = ensureLife(me); me.coins -= cost; L.happiness += eff.h || 0; L.health += eff.hp || 0; clampLife(L);
+    if (eff.k) me.stats.knowledge = +(me.stats.knowledge + eff.k).toFixed(1);
+    if (eff.xp) { me.stats.xp += eff.xp; me.stats.level = levelOf(me.stats.xp); }
+    socket.emit('homeResult', { id, kind, cost, h: eff.h || 0, hp: eff.hp || 0, k: eff.k || 0, xp: eff.xp || 0 });
+  };
+  socket.on('homeSpend', ({ item } = {}) => {
+    if (!lifeReady() || limited() || !Object.hasOwn(LIFE.spend, item)) return;
+    const s = LIFE.spend[item], L = ensureLife(me), td = lifeToday(street, L);
+    if (td.done[item]) return socket.emit('toast', 'toast.homeToday');
+    if (s.cooldown && (street.day || 0) < (L.cooldowns[item] ?? -1e9) + s.cooldown) return socket.emit('toast', 'toast.homeCooldown');
+    if (me.coins < s.cost) return socket.emit('toast', 'toast.noCoins');
+    td.done[item] = 1; if (s.cooldown) L.cooldowns[item] = street.day || 0;
+    applyLife(item, 'spend', s, s.cost); sync();
+  });
+  socket.on('hobby', ({ id } = {}) => {
+    if (!lifeReady() || limited() || !Object.hasOwn(LIFE.hobbies, id)) return;
+    const h = LIFE.hobbies[id], L = ensureLife(me), td = lifeToday(street, L), key = 'hobby:' + id;
+    if (td.done[key]) return socket.emit('toast', 'toast.homeToday');
+    if (me.coins < h.cost) return socket.emit('toast', 'toast.noCoins');
+    td.done[key] = 1; const lvl = hobbyLevel(L.hobbies[id] || 0);
+    L.hobbies[id] = (L.hobbies[id] || 0) + 1;                     // sessions; level = floor(sqrt(sessions))
+    applyLife(id, 'hobby', { ...h, h: h.h + Math.min(4, lvl * 0.5) }, h.cost);
+    if (hobbyLevel(L.hobbies[id]) >= 5) award(street, me, 'hobbyist');
+    sync();
+  });
+  socket.on('learn', ({ id } = {}) => {
+    if (!lifeReady() || limited() || !Object.hasOwn(LIFE.courses, id)) return;
+    const c = LIFE.courses[id], L = ensureLife(me), td = lifeToday(street, L), key = 'course:' + id;
+    if (td.done[key]) return socket.emit('toast', 'toast.homeToday');
+    if (c.cooldown && (street.day || 0) < (L.cooldowns[key] ?? -1e9) + c.cooldown) return socket.emit('toast', 'toast.homeCooldown');
+    if (c.cert && L.certs.length >= 3) return socket.emit('toast', 'toast.certMax');
+    if (me.coins < c.cost) return socket.emit('toast', 'toast.noCoins');
+    td.done[key] = 1; if (c.cooldown) L.cooldowns[key] = street.day || 0;
+    if (c.cert) L.certs.push(street.day || 0);
+    L.courses++; applyLife(id, 'course', c, c.cost);
+    if (L.courses >= 5) award(street, me, 'scholar');
+    sync();
+  });
+  // Housing: family (free) / rented studio / rented flat. Moving into a rented home costs one month's rent as a deposit.
+  socket.on('housing', ({ tier } = {}) => {
+    if (!lifeReady() || limited() || !HOUSING.includes(tier)) return;
+    const L = ensureLife(me); if (L.housing === tier) return;
+    const deposit = Math.round(LIFE.housing[tier].deposit * cityRentFactor(street));
+    if (tier !== 'family' && L.housing === 'family' && me.coins < deposit) return socket.emit('toast', 'toast.noCoins');
+    if (tier !== 'family' && L.housing === 'family') me.coins -= deposit;
+    L.housing = tier; L.unpaid = 0; L.billAcc = 0;
+    addLog(street, 'log.moved', { player: me.name, tierKey: 'home.housing.' + tier }); sync();
+  });
+  socket.on('homeUtility', ({ key, on } = {}) => {
+    if (!lifeReady() || limited() || !UTIL_KEYS.includes(key) || typeof on !== 'boolean') return;
+    ensureLife(me).utilities[key] = on; sync();
+  });
+
   // Advertising: rent a slot, submit a creative (needs admin approval), release the slot
   socket.on('adRent', ({ cid, slot } = {}) => {
     const c = founderOf(cid); if (!c || limited() || c.isNpc) return;
@@ -711,7 +807,7 @@ io.on('connection', socket => {
       const c = street.companies[cid];
       if (!c || !(c.founders.includes(me.id) || c.employees.includes(me.id))) return;
       if (!once('sell')) return socket.emit('npcResult', { npcId: id, kind, ok: false, key: 'toast.npcBoughtToday' });
-      const value = Math.max(1, Math.round(unitPrice(c) * WS[c.workspace].salesMult * cfg.dealMult * incomeMult(street, c)));
+      const value = Math.max(1, Math.round(unitPrice(c) * WS[c.workspace].salesMult * cfg.dealMult * incomeMult(street, c) * lifeMult(me) * knowBonus(me)));
       c.cash += value; c.sales++; R.track(c, 'revenue', value); R.track(c, 'units', 1); addDelivery(street, c, 1);
       progress(street, me, 'sales'); progress(street, me, 'npcSale'); progress(street, me, 'revenue', value);
       gain(SEED.progression.xpPerClick * 2);
@@ -1069,7 +1165,7 @@ io.on('connection', socket => {
     if (!c || limited() || !(c.founders.includes(me.id) || c.employees.includes(me.id))) return;
     const perf = c.employees.includes(me.id) ? c.performance : 1;
     const levelBonus = 1 + (me.stats.level - 1) * 0.05;
-    const value = Math.max(1, Math.round(unitPrice(c, pid) * WS[c.workspace].salesMult * perf * levelBonus * incomeMult(street, c)));
+    const value = Math.max(1, Math.round(unitPrice(c, pid) * WS[c.workspace].salesMult * perf * levelBonus * incomeMult(street, c) * lifeMult(me) * knowBonus(me)));
     c.cash += value; c.sales++;
     R.track(c, 'revenue', value); R.track(c, 'units', 1);
     addDelivery(street, c, 1);
@@ -1200,6 +1296,7 @@ function economyTick(only) {
       }
       if (c.marketing && !marketingActive(st, c)) c.marketing = null;
     }
+    for (const p of Object.values(st.players)) lifeTick(st, p);
     billAds(st);
     if (((st.day || 0) + 1) % 360 === 0) payIncomeTax(st);
     R.closeDay(st);

@@ -35,6 +35,40 @@ const TR2026 = {
   },
   // Şehirler arası seyahat (tahmini): otobüs bileti ₺/km, ortalama hızlar, kuş uçuşu yerine yol katsayısı
   intercity: { busPerKm: 2.2, busKmh: 75, carKmh: 95, roadFactor: 1.25, stopHours: 0.5, est: true },
+  // Kişisel hayat (Sprint 12): ev, kişisel faturalar, harcamalar, hobiler ve kurslar. Tüm tutarlar ₺ ve TAHMİNİDİR (şehre göre kira katsayısıyla ölçeklenir).
+  life: {
+    est: true,
+    housing: { family: { monthly: 0, comfort: 0 }, studio: { monthly: 18000, comfort: 0.5 }, flat: { monthly: 32000, comfort: 1.0 } }, // İstanbul baz alınır
+    utilitiesMonthly: { electricity: 1500, water: 400, gas: 1800, internet: 600 },
+    // limit: günde kaç kez; cooldown: tekrar için gün (varsa)
+    spend: {
+      groceries:  { cat: 'food',   tl: 1200,  h: 1,  hp: 3 },
+      restaurant: { cat: 'food',   tl: 900,   h: 6,  hp: 0 },
+      cinema:     { cat: 'fun',    tl: 350,   h: 5,  hp: 0 },
+      clothes:    { cat: 'fun',    tl: 2000,  h: 7,  hp: 0 },
+      gift:       { cat: 'fun',    tl: 800,   h: 4,  hp: 0 },
+      doctor:     { cat: 'health', tl: 1500,  h: 0,  hp: 15 },
+      vacation:   { cat: 'travel', tl: 15000, h: 40, hp: 10, cooldown: 30 },
+      walk:       { cat: 'free',   tl: 0,     h: 2,  hp: 1 },
+      rest:       { cat: 'free',   tl: 0,     h: 3,  hp: 6 }
+    },
+    hobbies: {
+      music:    { tl: 400, h: 8, hp: 0,  k: 0 },
+      sport:    { tl: 300, h: 3, hp: 10, k: 0 },
+      painting: { tl: 250, h: 7, hp: 0,  k: 0 },
+      photo:    { tl: 350, h: 6, hp: 0,  k: 0 },
+      gaming:   { tl: 200, h: 9, hp: 0,  k: 0 },
+      garden:   { tl: 150, h: 5, hp: 4,  k: 0 },
+      chess:    { tl: 100, h: 4, hp: 0,  k: 0.5 }
+    },
+    courses: {
+      book:     { tl: 300,   k: 3,  xp: 10 },
+      online:   { tl: 1500,  k: 12, xp: 40 },
+      language: { tl: 2500,  k: 15, xp: 60 },
+      mentor:   { tl: 5000,  k: 30, xp: 120 },
+      cert:     { tl: 12000, k: 80, xp: 300, cert: true, cooldown: 360 } // her sertifika satışları +%2 artırır (en fazla 3)
+    }
+  },
   courierPerKm: 18,                                             // kurye / taksi ile teslimat (est)
   busFare: 40,                                                  // toplu taşıma tek biniş (est)
   priceToRentMonths: 220,                                       // satış fiyatı ≈ 220 aylık kira (~%5,5 brüt getiri, est)
@@ -117,6 +151,17 @@ function build(blueSalaryCoins) {
     },
     busFare: Math.max(1, Math.round(c(TR2026.busFare))), busTopups: [10, 20, 50],
     deliveryKm: DELIVERY_KM, cityMap: TR2026.cityMap,
+    life: (() => {
+      const L = TR2026.life, coins = tl => (tl === 0 ? 0 : Math.max(1, Math.round(c(tl))));
+      return {
+        est: true,
+        housing: Object.fromEntries(Object.entries(L.housing).map(([k, v]) => [k, { perDay: c(v.monthly / 30), deposit: coins(v.monthly), comfort: v.comfort }])),
+        utilitiesPerDay: Object.fromEntries(Object.entries(L.utilitiesMonthly).map(([k, v]) => [k, c(v / 30)])),
+        spend: Object.fromEntries(Object.entries(L.spend).map(([k, v]) => [k, { cat: v.cat, cost: coins(v.tl), h: v.h, hp: v.hp, cooldown: v.cooldown || 0 }])),
+        hobbies: Object.fromEntries(Object.entries(L.hobbies).map(([k, v]) => [k, { cost: coins(v.tl), h: v.h, hp: v.hp, k: v.k }])),
+        courses: Object.fromEntries(Object.entries(L.courses).map(([k, v]) => [k, { cost: coins(v.tl), k: v.k, xp: v.xp, cert: !!v.cert, cooldown: v.cooldown || 0 }]))
+      };
+    })(),
     intercity: { busPerKm: c(TR2026.intercity.busPerKm), busKmh: TR2026.intercity.busKmh, carKmh: TR2026.intercity.carKmh, roadFactor: TR2026.intercity.roadFactor, stopHours: TR2026.intercity.stopHours, est: true },
     cities: Object.fromEntries(Object.entries(TR2026.cities).map(([k, v]) => [k, { ...v }])),
     lotRent: (cityKey, size) => Math.max(1, Math.ceil(c((size * (TR2026.cities[cityKey] || TR2026.cities.istanbul).rentM2) / 30))),

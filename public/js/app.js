@@ -6,7 +6,7 @@ import { layout, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, M
 import { paintAd, AD_SIZE } from './ads.js';
 import { renderTrMap } from './trmap.js';
 import { suggestions, companyActions, employeeCap, maxTenants, staffOf, floorsFor, floorsOfCompany, deptOpen } from './advisor.js';
-import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON } from './interior.js';
+import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON, HOME_ROOMS, HOME_FLOORS } from './interior.js';
 
 const { i18next, io, Chart } = window;
 const $ = id => document.getElementById(id);
@@ -36,7 +36,7 @@ const met = new Set(loadJSON('met', []));
 const votedPolls = new Set();
 const histCache = new Map(); // cid -> { at, data }
 // scene: street | zoomIn | interior | zoomOut
-const scene = { name: 'street', t0: 0, b: null, cid: null };
+const scene = { name: 'street', t0: 0, b: null, cid: null, kind: null }; // kind: 'company' | 'home' while inside a building
 const inner = { x: 120, floor: 0, dir: 1, moving: false, phase: 0, target: null, onArrive: null };
 const iview = { w: 0, h: 0, s: 1, camX: 0, camY: 0, dpr: 1 };
 // perf / status
@@ -467,7 +467,7 @@ const ease = p => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
 function enterCompany(c) {
   const b = buildingOfCompany(c); if (!b || isPres()) return;
   closeModal(); cancelPlan(); setAuto(false); keys.clear();
-  Object.assign(scene, { name: 'zoomIn', t0: performance.now(), b, cid: c.id });
+  Object.assign(scene, { name: 'zoomIn', t0: performance.now(), b, cid: c.id, kind: 'company' });
   Object.assign(inner, { x: ELEV.x - 60, floor: 0, dir: -1, target: null, onArrive: null });
   $('innerTitle').textContent = `🏢 ${companyName(c)}`;
   updateControls();
@@ -475,14 +475,23 @@ function enterCompany(c) {
 function exitCompany(instant) {
   if (scene.name === 'street') return;
   keys.clear(); closeModal();
-  if (instant) Object.assign(scene, { name: 'street', b: null, cid: null });
+  if (instant) Object.assign(scene, { name: 'street', b: null, cid: null, kind: null });
   else Object.assign(scene, { name: 'zoomOut', t0: performance.now() });
   updateControls();
 }
 const company = () => state?.companies[scene.cid];
+function enterHome() {
+  const b = buildings.find(x => x.kind === 'home'); if (!b || isPres() || !joined) return;
+  closeModal(); cancelPlan(); setAuto(false); keys.clear();
+  Object.assign(scene, { name: 'zoomIn', t0: performance.now(), b, cid: null, kind: 'home' });
+  Object.assign(inner, { x: ELEV.x - 60, floor: 0, dir: -1, target: null, onArrive: null });
+  $('innerTitle').textContent = '🏠 ' + t('home.title');
+  updateControls();
+}
 const floorsUnlocked = c => Math.min(FLOORS - 1, floorsOfCompany(state, c)); // last floor is premium
 const unlocked = (c, f) => f < floorsUnlocked(c);
 function changeFloor(d) {
+  if (scene.kind === 'home') { const f = inner.floor + d; if (f < 0 || f >= HOME_FLOORS) return; inner.floor = f; inner.x = clamp(inner.x, 20, IW - 20); inner.target = null; return; }
   const c = company(); if (!c) return;
   const f = inner.floor + d;
   if (f < 0 || f >= FLOORS) return;
@@ -491,6 +500,12 @@ function changeFloor(d) {
 }
 const floorAtY = y => { for (let f = 0; f < FLOORS; f++) if (y <= floorBase(f) && y >= floorBase(f) - FH) return f; return null; };
 function innerTap(e) {
+  if (scene.kind === 'home') {
+    const p = toInner(e.clientX, e.clientY), f = floorAtY(p.y); if (f == null || f >= HOME_FLOORS) return;
+    inner.floor = f; const d = roomOf(HOME_ROOMS, p.x, f);
+    if (!d) { inner.target = clamp(p.x, 20, IW - 20); inner.onArrive = null; return; }
+    inner.target = roomCenter(p.x < ELEV.x ? 0 : 1); inner.onArrive = () => openHomeRoom(d.key); return;
+  }
   const c = company(); if (!c) return;
   const p = toInner(e.clientX, e.clientY), f = floorAtY(p.y);
   if (f == null) return;
@@ -501,6 +516,7 @@ function innerTap(e) {
   inner.target = roomCenter(side); inner.onArrive = () => openDept(c, d);
 }
 function openDeptHere() {
+  if (scene.kind === 'home') { const d = roomOf(HOME_ROOMS, inner.x, inner.floor); return d ? openHomeRoom(d.key) : toast(t('home.useStairs')); }
   const c = company(); if (!c) return;
   const d = roomOf(seed.departments, inner.x, inner.floor);
   if (d) openDept(c, d); else toast(t('ui.useElevator'));
@@ -638,7 +654,7 @@ function renderStreet(now) {
     white = scene.name === 'zoomIn' ? clamp((p - 0.55) / 0.45, 0, 1) : clamp(1 - p / 0.45, 0, 1);
     if (p >= 1) {
       if (scene.name === 'zoomIn') { scene.name = 'interior'; scene.t0 = now; updateControls(); }
-      else { Object.assign(scene, { name: 'street', b: null, cid: null }); updateControls(); }
+      else { Object.assign(scene, { name: 'street', b: null, cid: null, kind: null }); updateControls(); }
     }
   }
   draw(ctx, {
@@ -704,7 +720,7 @@ function updateInner(dt) {
   $('actBtn').hidden = !touch;
 }
 function renderInterior(now) {
-  const c = company(); if (!c || !iview.w) return;
+  const home = scene.kind === 'home', c = home ? null : company(); if ((!home && !c) || !iview.w) return;
   const vw = iview.w / iview.s, vh = iview.h / iview.s;
   const tx = vw >= IW ? (IW - vw) / 2 : clamp(inner.x - vw / 2, 0, IW - vw);
   const padB = INNER_PAD_BOTTOM / iview.s, padT = INNER_PAD_TOP / iview.s;
@@ -712,6 +728,9 @@ function renderInterior(now) {
   iview.camX += (tx - iview.camX) * 0.15; iview.camY += (ty - iview.camY) * 0.15;
   if (now - scene.t0 < 30) { iview.camX = tx; iview.camY = ty; }
   const p = me();
+  if (home) drawInterior(ctx, { view: iview, time: now, theme: 'home', floors: HOME_FLOORS, depts: HOME_ROOMS, t, unlocked: () => true, threshold: () => 0, goods: [], staff: [],
+    player: inner, myName: p?.name, myLook: lookFor(p?.avatar ?? 0), highlight: roomOf(HOME_ROOMS, inner.x, inner.floor)?.key, security: 0, trend: 0 });
+  else {
   const lotCash = c.lotId == null ? c.cash : state.lots[c.lotId].companyIds.reduce((s, id) => s + (state.companies[id]?.cash || 0), 0);
   drawInterior(ctx, {
     view: iview, time: now, company: c, depts: seed.departments, t,
@@ -722,6 +741,7 @@ function renderInterior(now) {
     campaign: c.marketing && c.marketing.until > (state.day || 0), campaignText: t('dept.campaignOn'),
     security: c.security || 0, trend: lotCash
   });
+  }
   const fade = clamp(1 - (now - scene.t0) / FADE_MS, 0, 1);
   if (fade > 0) { ctx.setTransform(iview.dpr, 0, 0, iview.dpr, 0, 0); ctx.fillStyle = `rgba(255,255,255,${fade})`; ctx.fillRect(0, 0, iview.w, iview.h); }
 }
@@ -1123,7 +1143,7 @@ function render() {
   renderFinance();
   renderPoll();
   if (boardOpen) renderBoard();
-  updateSpeedBtn(); updateAdBanner(); updateVehBar();
+  updateSpeedBtn(); updateAdBanner(); updateVehBar(); refreshHome();
   if (state) {
     const sig = `${state.log[0]?.at}|${state.log.length}|${state.ideas.length}|${i18next.language}`;
     if (sig !== logSig) {
@@ -1136,7 +1156,7 @@ function render() {
 }
 let profSig = '';
 // ---------- Quests, teams, badges (profile card) ----------
-const BADGE_ICON = { firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
+const BADGE_ICON = { hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
   social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗' };
 let extraSig = '';
 function renderExtras(p) {
@@ -1208,7 +1228,7 @@ function renderRealData() {
 function renderProfile(p) {
   renderExtras(p);
   const box = $('profile');
-  const sig = p ? `${p.coins}|${p.busCard}|${Math.round(p.stats.xp)}|${p.stats.knowledge}|${p.stats.success}|${p.role}|${i18next.language}` : '';
+  const sig = p ? `${p.coins}|${p.busCard}|${Math.round(p.stats.xp)}|${p.stats.knowledge}|${p.stats.success}|${p.role}|${p.life?.happiness}|${p.life?.health}|${i18next.language}` : '';
   if (sig === profSig) return;
   profSig = sig; box.replaceChildren();
   if (!p) return;
@@ -1222,6 +1242,7 @@ function renderProfile(p) {
   row(t('ui.success'), s.success);
   row(t('ui.performance'), 'x' + s.performance);
   row('💰', money(p.coins));
+  if (p.life) { row('😊 ' + t('home.happiness'), p.life.happiness + '/100'); row('❤️ ' + t('home.health'), p.life.health + '/100'); }
   row('💳 ' + t('bus.card'), money(p.busCard || 0));
   row('🎭', t(p.role));
 }
@@ -1461,6 +1482,7 @@ function openBuilding(b) {
   if (b.kind === 'guide') return openModal(body => { body.append(el('h3', t('ui.guide'))); seed.tutorial.forEach(k => body.append(el('p', t(k)))); });
   if (b.kind === 'demoday') return openDemoDay();
   if (b.kind === 'locked') return toast(t('ui.premiumAlert', { feature: t('locked.skyscraper') }));
+  if (b.kind === 'home') return isPres() ? null : openHome();
   if (b.kind === 'parking') return openParking();
   if (b.kind === 'terminal') return openTerminal();
   if (b.kind === 'lot' && !isPres()) {
@@ -1747,7 +1769,7 @@ setInterval(() => { adBannerIdx++; updateAdBanner(); }, 8000);
 // ---------- Minimap: the whole street at a glance (M key / map button), click to walk there ----------
 let minimapOpen = false, mmSig = '';
 function toggleMinimap(force) { minimapOpen = force ?? !minimapOpen; $('minimap').hidden = !minimapOpen; mmSig = ''; if (minimapOpen) renderMinimapList(); }
-const mmColor = b => { if (b.kind === 'guide') return '#f2b84b'; if (b.kind === 'plaza') return '#3987e5'; if (b.kind === 'demoday') return '#9b59b6'; if (b.kind === 'parking') return '#5b6475'; if (b.kind === 'terminal') return '#e67e22'; if (b.kind === 'locked') return '#b8c0cc';
+const mmColor = b => { if (b.kind === 'guide') return '#f2b84b'; if (b.kind === 'plaza') return '#3987e5'; if (b.kind === 'demoday') return '#9b59b6'; if (b.kind === 'home') return '#e67e22'; if (b.kind === 'parking') return '#5b6475'; if (b.kind === 'terminal') return '#e67e22'; if (b.kind === 'locked') return '#b8c0cc';
   const ts = b.lot.companyIds.map(id => state.companies[id]).filter(Boolean); return !ts.length ? '#a9adb8' : ts.some(c => isMember(c)) ? '#f2b84b' : ts.some(c => c.isNpc) ? '#9b7be0' : '#3fa36b'; };
 function drawMinimap() {
   const cv = $('mmCv'); if (!minimapOpen || !state || scene.name !== 'street') return;
@@ -1771,7 +1793,7 @@ function renderMinimapList() {
   const go = b => () => { walkTo(b.x + b.w / 2, () => openBuilding(b), b.id); if (touch) toggleMinimap(false); };
   for (const b of buildings) {
     if (b.kind === 'locked') continue;
-    const name = b.kind === 'guide' ? t('ui.guideSign') : b.kind === 'plaza' ? t('ui.plazaTitle') : b.kind === 'demoday' ? '🎤 Demo Day' : b.kind === 'parking' ? '🅿 ' + t('veh.parkingSign') : b.kind === 'terminal' ? '🚌 ' + t('travel.sign')
+    const name = b.kind === 'guide' ? t('ui.guideSign') : b.kind === 'plaza' ? t('ui.plazaTitle') : b.kind === 'demoday' ? '🎤 Demo Day' : b.kind === 'home' ? '🏠 ' + t('home.title') : b.kind === 'parking' ? '🅿 ' + t('veh.parkingSign') : b.kind === 'terminal' ? '🚌 ' + t('travel.sign')
       : b.lot.companyIds.length ? b.lot.companyIds.map(id => state.companies[id]).filter(Boolean).map(c => (isMember(c) ? '⭐ ' : '') + companyName(c)).join(', ') : null;
     if (name) items.push({ name, fn: go(b), color: mmColor(b) });
   }
@@ -1816,6 +1838,109 @@ socket.on('travelStart', info => {
   fill.style.width = '0%'; fill.style.transition = `width ${info.seconds}s linear`; requestAnimationFrame(() => requestAnimationFrame(() => (fill.style.width = '100%')));
 });
 socket.on('joined', info => { if (info.travel) toast('📍 ' + t('travel.arrived', { city: cityName(info.city) })); });
+// ---------- Home: personal life (spending, bills, hobbies, self-development) ----------
+const LIFE = () => seed.economy.life;
+const HOME_ICON = { groceries: '🛒', restaurant: '🍽', cinema: '🎬', clothes: '👕', gift: '🎁', doctor: '🏥', vacation: '✈️', walk: '🚶', rest: '😴',
+  music: '🎸', sport: '🏋️', painting: '🎨', photo: '📷', gaming: '🎮', garden: '🌱', chess: '♟',
+  book: '📖', online: '💻', language: '🗣', mentor: '🧑‍🏫', cert: '🎓' };
+const lifeOf = () => me()?.life || { happiness: 60, health: 80, housing: 'family', utilities: {}, hobbies: {}, courses: 0, certs: 0, today: { day: -1, done: {} }, cooldowns: {} };
+const cityRentFactorC = () => (seed.economy.cities[state.city]?.rentM2 || 850) / seed.economy.cities.istanbul.rentM2;
+const doneToday = key => { const L = lifeOf(); return L.today.day === (state.day || 0) && !!L.today.done[key]; };
+const cooldownLeft = (key, cd) => { const L = lifeOf(), at = L.cooldowns?.[key]; return cd && at != null ? Math.max(0, at + cd - (state.day || 0)) : 0; };
+const hobbyLvl = pts => Math.floor(Math.sqrt(pts || 0));
+// Daily personal bill (coins/day): rent of the chosen housing + switched-on utilities (gas is seasonal)
+function dailyBill(L = lifeOf()) {
+  const E = LIFE(), month = state.calendar?.month || 1; let due = E.housing[L.housing].perDay * cityRentFactorC();
+  if (L.housing !== 'family') for (const [k, v] of Object.entries(E.utilitiesPerDay)) if (L.utilities[k] !== false) due += v * (k === 'gas' ? (month >= 11 || month <= 3 ? 1.8 : 0.3) : 1);
+  return due;
+}
+const effChips = e => [e.h ? `😊 ${e.h > 0 ? '+' : ''}${e.h}` : '', e.hp ? `❤️ ${e.hp > 0 ? '+' : ''}${e.hp}` : '', e.k ? `🧠 +${e.k}` : '', e.xp ? `⭐ +${e.xp} XP` : ''].filter(Boolean).join(' · ');
+function lifeBars(box) {
+  const L = lifeOf(), mk = (icon, label, v) => { const row = el('div', null, 'lifeBar'); const bar = el('div', null, 'bar'), fill = el('i'); fill.style.width = v + '%'; fill.className = v < 30 ? 'bad' : v >= 70 ? 'good' : ''; bar.append(fill);
+    row.append(el('span', `${icon} ${label}`), bar, el('b', String(v))); return row; };
+  box.append(mk('😊', t('home.happiness'), L.happiness), mk('❤️', t('home.health'), L.health));
+}
+// one row of an action list: name + effects + price + button (disabled when done today / cooling down / too poor)
+function lifeRow(list, { id, kind, name, eff, cost, cd = 0, extra }) {
+  const key = kind === 'spend' ? id : kind + ':' + id, row = el('div', null, 'prodRow'), label = el('div', null, 'prodName');
+  label.append(el('b', `${HOME_ICON[id] || '•'} ${name}`), el('span', [effChips(eff), cost ? money(cost) : t('home.free'), extra].filter(Boolean).join(' · '), 'prodPrice'));
+  const cool = cooldownLeft(key, cd), done = doneToday(key), poor = (me()?.coins || 0) < cost;
+  const ev = kind === 'spend' ? 'homeSpend' : kind === 'hobby' ? 'hobby' : 'learn', pay = kind === 'spend' ? { item: id } : { id };
+  const b = btn(cool ? t('home.coolIn', { n: cool }) : done ? t('home.doneToday') : t('home.do'), () => socket.emit(ev, pay));
+  b.disabled = !!cool || done || poor; if (poor && !done && !cool) b.title = t('toast.noCoins');
+  row.append(label, b); list.append(row);
+}
+function spendRows(list, ids) { ids.forEach(id => lifeRow(list, { id, kind: 'spend', name: t('home.spend.' + id), eff: LIFE().spend[id], cost: LIFE().spend[id].cost, cd: LIFE().spend[id].cooldown })); }
+function hobbyRows(list) {
+  const L = lifeOf();
+  Object.entries(LIFE().hobbies).forEach(([id, h]) => { const pts = L.hobbies[id] || 0, lvl = hobbyLvl(pts);
+    lifeRow(list, { id, kind: 'hobby', name: t('home.hobby.' + id), eff: { ...h, h: h.h + Math.min(4, lvl * 0.5) }, cost: h.cost, extra: t('home.hobbyLvl', { lvl, now: pts, next: (lvl + 1) ** 2 }) }); });
+}
+function courseRows(list) {
+  const L = lifeOf();
+  Object.entries(LIFE().courses).forEach(([id, c]) => lifeRow(list, { id, kind: 'course', name: t('home.course.' + id), eff: c, cost: c.cost, cd: c.cooldown, extra: c.cert ? t('home.certNote', { n: L.certs, max: 3 }) : '' }));
+}
+// Housing + personal bills: family home is free; rented homes cost daily rent + optional utilities
+function homeBillsPanel(box) {
+  const L = lifeOf(), E = LIFE(), f = cityRentFactorC();
+  box.append(el('h4', t('home.housingTitle')), el('small', t('home.housingNote', { city: cityName(state.city) }) + (E.est ? ' *' : ''), 'muted'));
+  const row = el('div', null, 'others');
+  Object.keys(E.housing).forEach(k => { const h = E.housing[k], label = `${t('home.housing.' + k)} · ${k === 'family' ? t('home.free') : t('home.rentDay', { amount: money(h.perDay * f) })}`;
+    const b = btn(label, () => socket.emit('housing', { tier: k })); if (L.housing === k) b.className = 'sel'; b.disabled = L.housing !== k && k !== 'family' && L.housing === 'family' && (me()?.coins || 0) < Math.round(h.deposit * f); row.append(b); });
+  box.append(row);
+  if (L.housing !== 'family') {
+    box.append(el('small', t('home.depositNote', { amount: money(Math.round(E.housing[L.housing].deposit * f)) }), 'muted'));
+    const list = el('div', null, 'prodList'), month = state.calendar?.month || 1;
+    Object.entries(E.utilitiesPerDay).forEach(([k, v]) => { const on = L.utilities[k] !== false, r = el('div', null, 'prodRow'), lab = el('div', null, 'prodName');
+      lab.append(el('b', `${({ electricity: '⚡', water: '💧', gas: '🔥', internet: '🌐' })[k]} ${t('acc.util.' + k)}`), el('span', on ? t('acc.billDay', { amount: money(v * (k === 'gas' ? (month >= 11 || month <= 3 ? 1.8 : 0.3) : 1)) }) : t('home.utilOff.' + k), 'prodPrice'));
+      const sw = btn(on ? t('acc.on') : t('acc.off'), () => socket.emit('homeUtility', { key: k, on: !on })); if (on) sw.className = 'sel'; r.append(lab, sw); list.append(r); });
+    box.append(list);
+  }
+  box.append(el('p', `🧾 ${t('home.dailyBill', { amount: money(dailyBill(L)) })}` + (L.unpaid ? ` · ⚠ ${t('home.unpaid', { n: L.unpaid })}` : '')));
+}
+function homeHeader(body, title) {
+  body.append(el('h3', title)); const card = el('div', null, 'co');
+  card.append(el('p', `💰 ${money(me()?.coins || 0)} · 🏘 ${t('home.housing.' + lifeOf().housing)}`)); lifeBars(card); body.append(card);
+}
+const ROOM_ICON = { kitchen: '🍳', living: '🛋', study: '📚', hobby: '🎨', bedroom: '🛏', balcony: '🌿' };
+let homeRoomOpen = null;
+function openHomeRoom(key) {
+  if (!state) return;
+  openModal(body => {
+    homeRoomOpen = key; homeHeader(body, `${ROOM_ICON[key]} ${t('dept.' + key)}`); body.append(el('p', t('home.room.' + key), 'muted'));
+    const list = el('div', null, 'prodList');
+    if (key === 'kitchen') spendRows(list, ['groceries', 'restaurant']);
+    else if (key === 'study') courseRows(list);
+    else if (key === 'hobby') hobbyRows(list);
+    else if (key === 'bedroom') spendRows(list, ['rest', 'doctor']);
+    else if (key === 'balcony') spendRows(list, ['walk', 'vacation']);
+    else if (key === 'living') spendRows(list, ['cinema', 'clothes', 'gift']);
+    body.append(list); if (key === 'living') homeBillsPanel(body);
+    body.append(el('small', t('home.estNote'), 'muted'));
+  }, { onClose: () => { homeRoomOpen = null; } });
+}
+// Outside the house: everything personal in one place, plus a button to walk in
+function openHome() {
+  if (!state) return showModes();
+  openModal(body => {
+    homeRoomOpen = 'outside'; homeHeader(body, '🏠 ' + t('home.title')); body.append(el('p', t('home.intro'), 'muted'));
+    if (!isPres()) body.append(btn('🚪 ' + t('home.enter'), () => enterHome(), { primary: true, isDefault: true }));
+    body.append(el('h4', t('home.spendTitle'))); const list = el('div', null, 'prodList'); spendRows(list, ['groceries', 'restaurant', 'cinema', 'clothes', 'gift', 'doctor', 'vacation', 'walk']); body.append(list);
+    body.append(el('small', t('home.estNote'), 'muted'));
+  }, { onClose: () => { homeRoomOpen = null; } });
+}
+// keep an open home panel in sync with the state (after every action the server pushes a new state)
+let homeSig = '';
+function refreshHome() {
+  if (!homeRoomOpen || !modalOpen || !state) return;
+  const L = lifeOf(), sig = [state.day, me()?.coins, L.happiness, L.health, L.housing, JSON.stringify(L.utilities), JSON.stringify(L.hobbies), L.courses, L.certs, JSON.stringify(L.today), JSON.stringify(L.cooldowns)].join('|');
+  if (sig === homeSig) return; homeSig = sig;
+  const y = $('modalBody').scrollTop, k = homeRoomOpen; if (k === 'outside') openHome(); else openHomeRoom(k); $('modalBody').scrollTop = y;
+}
+socket.on('homeResult', r => {
+  const name = t(`home.${r.kind === 'spend' ? 'spend' : r.kind === 'hobby' ? 'hobby' : 'course'}.${r.id}`);
+  toast(`${HOME_ICON[r.id] || '✓'} ${name}: ${effChips(r) || '✓'}${r.cost ? ' · −' + money(r.cost) : ''}`);
+});
 // ---------- Amount pickers: a 1-100 slider and a manual number stay in sync ----------
 // moneyPicker: choose an amount of coins up to maxCoins. TR players type ₺, others coins.
 function moneyPicker({ title, note, maxCoins, defCoins, confirmLabel, onConfirm }) {

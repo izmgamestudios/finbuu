@@ -7,9 +7,11 @@ import { drawAd } from './ads.js';
 export const WORLD_H = 540;
 export const GROUND = 460; // building base line
 export const FEET = 478;   // player walking line on the sidewalk
-export const GUIDE = { x: 30, w: 160 };
-export const PLAZA = { x: 225, w: 200 };
-export const LOTS_X = 470, LOT_W = 200, LOT_GAP = 44;
+// The street starts with the player's home; everything else is shifted right by 250 (server mirrors: SPAWN_X, busStops, terminalX, WORLD_MAX_X)
+export const HOME = { x: 30, w: 190 };
+export const GUIDE = { x: 280, w: 160 };
+export const PLAZA = { x: 475, w: 200 };
+export const LOTS_X = 720, LOT_W = 200, LOT_GAP = 44;
 const GROUND_H = 86, FLOOR_H = 48, ROOF_H = 12;
 export const MAX_FLOORS = 6;
 
@@ -23,6 +25,7 @@ const heightOf = floors => GROUND_H + floors * FLOOR_H + ROOF_H;
 export function layout(state) {
   const lots = state?.lots || [];
   const list = [
+    { kind: 'home', id: 'home', seed: 900, x: HOME.x, w: HOME.w, h: 150 },
     { kind: 'guide', id: 'guide', seed: 901, x: GUIDE.x, w: GUIDE.w, h: heightOf(1) },
     { kind: 'plaza', id: 'plaza', seed: 902, x: PLAZA.x, w: PLAZA.w, h: heightOf(4) }
   ];
@@ -329,6 +332,23 @@ function drawLot(ctx, b, env) {
   if (tenants.length && tenants.length < max) pill(ctx, b.x + b.w - 26, gy - 4, `${tenants.length}/${max}`, 'rgba(35,40,55,.6)', '#fff', 9);
 }
 
+// The player's home at the start of the street: a small house with a garden fence and a mailbox
+function drawHome(ctx, b, env) {
+  const x = b.x, w = b.w, top = GROUND - b.h, wallTop = GROUND - 92, night = NIGHT > 0.3;
+  ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(x + 8, GROUND - 2, w - 16, 3);
+  ctx.fillStyle = '#f3e3c8'; ctx.fillRect(x + 10, wallTop, w - 20, 92); ctx.fillStyle = 'rgba(0,0,0,.06)'; ctx.fillRect(x + w - 18, wallTop, 8, 92);
+  ctx.fillStyle = '#b5523b'; ctx.beginPath(); ctx.moveTo(x - 6, wallTop); ctx.lineTo(x + w / 2, top); ctx.lineTo(x + w + 6, wallTop); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#8a4a3a'; ctx.fillRect(x + w - 54, top + 16, 15, 34);
+  ctx.fillStyle = night ? '#ffe9a8' : '#a9d8f2'; ctx.fillRect(x + 26, wallTop + 22, 36, 30); ctx.fillRect(x + w - 62, wallTop + 22, 36, 30);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.strokeRect(x + 26, wallTop + 22, 36, 30); ctx.strokeRect(x + w - 62, wallTop + 22, 36, 30);
+  ctx.beginPath(); ctx.moveTo(x + 44, wallTop + 22); ctx.lineTo(x + 44, wallTop + 52); ctx.moveTo(x + w - 44, wallTop + 22); ctx.lineTo(x + w - 44, wallTop + 52); ctx.stroke();
+  ctx.fillStyle = '#7a4b2a'; rr(ctx, x + w / 2 - 15, GROUND - 58, 30, 58, 3); ctx.fill(); ctx.fillStyle = '#f2b84b'; ctx.beginPath(); ctx.arc(x + w / 2 + 8, GROUND - 28, 2.5, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; for (let k = 0; k < w - 20; k += 12) { if (Math.abs(x + 10 + k - (x + w / 2)) < 22) continue; ctx.fillRect(x + 10 + k, GROUND - 20, 7, 20); }
+  ctx.fillRect(x + 10, GROUND - 14, w - 20, 3);
+  ctx.fillStyle = '#6dbb6b'; ctx.beginPath(); ctx.arc(x + 14, GROUND - 22, 13, 0, 7); ctx.arc(x + w - 14, GROUND - 22, 11, 0, 7); ctx.fill();
+  ctx.fillStyle = '#4b5563'; ctx.fillRect(x + w + 12, GROUND - 34, 3, 34); ctx.fillStyle = '#e63946'; ctx.fillRect(x + w + 6, GROUND - 44, 16, 11);
+  pill(ctx, x + w / 2, GROUND - 100, '🏠 ' + env.t('home.sign'), '#e67e22', '#fff', 11);
+}
 function drawGuide(ctx, b, env) {
   shell(ctx, b, '#f6d77a', '#c99a3c');
   drawUpperFloors(ctx, b, 1, env.time);
@@ -661,7 +681,8 @@ export function draw(ctx, env) {
     heightAnim.set(target.id, hNow);
     const b = hNow === target.h ? target : { ...target, h: hNow };
     if (b.x > camX + viewWorldW + 60 || b.x + b.w < camX - 60) continue;
-    if (b.kind === 'guide') drawGuide(ctx, b, env);
+    if (b.kind === 'home') drawHome(ctx, b, env);
+    else if (b.kind === 'guide') drawGuide(ctx, b, env);
     else if (b.kind === 'plaza') drawPlaza(ctx, b, env);
     else if (b.kind === 'lot') drawLot(ctx, b, env);
     else if (b.kind === 'demoday') drawDemoDay(ctx, b, env);

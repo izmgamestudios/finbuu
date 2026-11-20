@@ -15,7 +15,7 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 | **10 — Araç** | Galeri: binek/ticari van × sıfır/ikinci el (4 model) · kiralama 1/3/7/14/30 gün, süre bitince otomatik iade, uzatma (en fazla 60 gün) · üstte kalan süre barı · araç bina kapısında park eder (ücretsiz, günlük %0,4 hasar riski) ya da caddenin sonundaki otoparka çekilir (günlük ücret, risk yok) | ✅ Tamam |
 | **11a — Minimap & şehir haritası** | Minimap (M tuşu / köşedeki 🗺 düğmesi): tüm cadde, bina renkleri, duraklar, siz ve diğer oyuncular, görünür alan; işletme listesi, tıklayınca yürür ve açar · lobide Türkiye haritasından şehir seçimi: 5 oynanabilir şehir, Premium (Adana, Konya, Gaziantep, Kayseri) ve Pek yakında (7 şehir) kilitleri | ✅ Tamam |
 | **11b — Şehirler arası seyahat** | Caddenin sonunda OTOGAR · şehirler arası otobüs (₺/km bilet, yolda gerçek süre) veya şirket aracıyla (yakıt şirket kasasından) seyahat · her şehir kendi caddesi (kardeş oda); şirketler kendi şehirlerinde çalışmaya devam eder, oyuncu aynı hesap/istatistikle taşınır, dönünce kendi şirketine kavuşur | ✅ Tamam (İstanbul, Ankara, İzmir, Bursa, Antalya) |
-| **12 — Ev** | Kılavuzun solunda ev · kişisel harcamalar · ev içi: kişisel faturalar, hobi, kendini geliştirme | ⬜ |
+| **12 — Ev** | Sokağın başında (kılavuzun solunda) ev · dışarıdan kişisel harcamalar (market, restoran, sinema, giyim, hediye, doktor, tatil, yürüyüş) · içeri girince 3 katlı ev: mutfak, salon (ev kirası ve kişisel faturalar), çalışma odası (kitap/kurs/mentor/sertifika), hobi odası (7 hobi, seviyeler), yatak odası, teras · mutluluk ve sağlık gelire etki eder | ✅ Tamam |
 | **13 — Çok oyunculu iç sahne** | Aynı binaya giren oyuncular iç sahnede birbirini görür · takım arkadaşını yanına çağır / yanına git · açık odalar listesi (şifre ile giriş) · AFK ve offline devam (tarayıcı tarafında saklanır) | ⬜ |
 | **14 — Satış roleplay** | İşyeri içinde müşteriyle soru-cevap · olumlu/olumsuz yanıt · satışın tamamlanması, yarım kalması veya artması | ⬜ |
 | **15 — Başlangıç & yardım** | İlk girişte atlanabilir tutorial · chatbot · yardım penceresi · oyun içi ayrıntılı arama (işletme, üye, görev, özellik) | ⬜ |
@@ -65,6 +65,14 @@ Her sprint küçük, test edilebilir ve tek başına yayınlanabilir. Sıra, **z
 - **Süre/maliyet:** Mesafe büyük daire × 1,25 yol katsayısı; otobüs 75 km/sa + 0,5 sa mola, araç 95 km/sa. Gerçek süre = oyun saati × (gün süresi / 24) / oyun hızı (5–90 sn). Bilet ve hız değerleri **tahmini**.
 - **Yokken:** İş akdi biter (çevrimdışı gibi), kurulan şirketler çalışmaya devam eder. Solo dünyalar oyuncu bağlantıyı kesince topluca silinir.
 - **Sınırlar (bilinçli MVP):** Diğer şehirdeki şirketler ayrı veri; ilk sürümde şehirler arası yatırım/ortaklık, uzaktan toplantı ve demo day için seyahat yok (Sprint 16 ve sonrası). Uzak şehirde araç şirketin evinde kalır; arabayla gidince araç oyuncuyla taşınmaz, sadece yakıt ödenir.
+
+## Sprint 12 notları
+- **Yerleşim:** Sokağa ev eklemek için her şey 250 birim sağa kaydı. Sunucudaki yansıyan sabitler (doğuş konumu, duraklar, otogar, dünya sınırı) birlikte güncellendi.
+- **Kişisel yaşam:** Her oyuncunun mutluluğu ve sağlığı (0–100) her oyun günü biraz düşer (−1,2 / −0,4); harcamalar, hobiler ve dinlenme yükseltir. İyi durumda satış +%3/+%2, kötü durumda −%10/−%10. Her sertifika satışı +%2 artırır (en fazla 3), bilgi puanı satışı en fazla +%15 artırır (`knowledge × 0,0005`).
+- **Ev ve fatura:** Ailenin evi ücretsiz; kiralık stüdyo/2+1'de günlük kira (şehrin kira seviyesine göre ölçeklenir) + kişisel faturalar (elektrik, su, doğalgaz, internet; kapatmanın mutluluk/sağlık bedeli var). Taşınırken bir aylık depozito alınır; 3 gün ödenmezse ailenin evine dönülür.
+- **Sınırlar:** Her aktivite günde bir kez (tatil 30 günde, sertifika 360 günde bir); ücretsiz yürüyüş ve evde dinlenme her zaman yapılabilir. Fiyatlar **tahmini**.
+- **Rozetler:** Hobi Ustası (bir hobide 5. seviye = 25 seans), Kitap Kurdu (5 kurs/kitap).
+- **Teknik not:** `node --check` dosyaları betik gibi denetler; modül düzeyindeki yinelenen bildirimleri (ör. aynı isimli iki fonksiyon) yakalamaz. İstemci dosyaları `.mjs` kopyasıyla denetlenmeli.
 
 ## Kararlar
 - **Veri saklama:** Şimdilik tarayıcıda (localStorage/çerez) yönetilir. SQLite/PostgreSQL daha sonra bağlanacak; bunun için durum okuma/yazma tek bir katmandan geçmeli (depolama arayüzü), böylece geçiş tek yerde yapılır.

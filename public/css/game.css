@@ -365,3 +365,8 @@ header h1 small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis
 .travelCard { width: min(100%, 420px); text-align: center }
 .travelIcon { font-size: 3rem; animation: travelBounce 1s ease-in-out infinite } @keyframes travelBounce { 50% { transform: translateY(-6px) } }
 .travelCard .bar { height: 10px; margin: 12px 0 }
+
+/* ---- Sprint 12: home ---- */
+.lifeBar { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: .85rem } .lifeBar span { min-width: 96px }
+.lifeBar .bar { flex: 1; margin: 0; height: 10px } .lifeBar b { min-width: 28px; text-align: right }
+.lifeBar .bar > i.bad { background: var(--bad) } .lifeBar .bar > i.good { background: var(--good) }
