@@ -80,6 +80,7 @@
     <button data-tab="ads">📢 Reklamlar <b id="adsBadge" class="pill s-atRisk" hidden></b></button>
     <button data-tab="premium">⭐ Premium</button>
     <button data-tab="toolcfg">🧰 Araç Dengesi</button>
+    <button data-tab="content">📚 Bina İçerikleri</button>
     <button data-tab="audit">Denetim Kaydı</button>
   </div>
 
@@ -173,6 +174,15 @@
   </main>
 
   <main id="ideas"><div class="card"><table><thead><tr><th>Oda</th><th>Kim</th><th>Fikir</th><th>Tarih</th><th></th></tr></thead><tbody id="ideaBody"></tbody></table></div></main>
+  <main id="content">
+    <div class="card">
+      <h3>Bina İçerikleri (CRUD)</h3>
+      <p class="muted">Açık Kaynak Destek Merkezi, Hibe &amp; Destek ve GamFed Türkiye binalarının içeriğini düzenleyin. Kaydedince oyuncular anında güncel içeriği görür. Değişiklikler sunucuda saklanır (deploy'dan etkilenmez), "Varsayılana dön" ile koddaki ilk hâle dönülür.</p>
+      <div class="row" id="ctTabs"></div>
+      <div id="ctMsg" class="muted" style="min-height:22px;margin-top:6px"></div>
+      <div id="ctBody" style="margin-top:8px"></div>
+    </div>
+  </main>
   <main id="toolcfg">
     <div class="card">
       <h3>Açık Kaynak Araç Dengesi</h3>
@@ -301,6 +311,7 @@ $('tabs').onclick = e => {
   if (b.dataset.tab === 'ads') loadAds();
   if (b.dataset.tab === 'premium') loadPremium();
   if (b.dataset.tab === 'toolcfg') loadToolCfg();
+  if (b.dataset.tab === 'content') ctInit();
 };
 
 
@@ -324,6 +335,140 @@ function loadToolCfg() {
   });
 }
 $('tcSave').onclick = () => { const patch = {}; document.querySelectorAll('#tcBody input').forEach(i => { patch[i.dataset.k] = Number(i.value); }); socket.emit('adminSetToolsCfg', patch, r => { $('tcMsg').textContent = r?.ok ? '✓ Kaydedildi' : 'Hata'; loadToolCfg(); }); };
+
+
+// ---------- Building content CRUD (Sprint 22) ----------
+const CT = { name: 'open-source-tools', doc: null, overridden: false, view: 'list', edit: null, filter: '', cat: '', raw: false };
+const CT_TABS = [['open-source-tools', '🌱 Açık Kaynak Araçları'], ['grants', '🏛 Hibe & Destek'], ['gamfed', '🎮 GamFed Türkiye']];
+const ctEl = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); kids.flat().forEach(k => e.append(k)); return e; };
+const ctBtn = (label, fn, cls = '') => { const b = ctEl('button', { textContent: label, className: cls, type: 'button' }); b.onclick = fn; return b; };
+const ctField = (label, input, wide) => { const l = ctEl('label', { className: 'f' }); l.style.cssText = `display:flex;flex-direction:column;gap:3px;flex:${wide ? '1 1 100%' : '1 1 180px'}`; l.append(ctEl('small', { className: 'muted', textContent: label }), input); return l; };
+const ctInput = (v, o = {}) => { const i = ctEl('input', { value: v ?? '', ...o }); i.style.width = '100%'; return i; };
+const ctArea = (v, rows = 3) => { const t = ctEl('textarea', { value: v ?? '', rows }); t.style.width = '100%'; return t; };
+const ctSelect = (opts, v) => { const s = ctEl('select'); opts.forEach(([val, txt]) => s.append(new Option(txt, val))); s.value = v; s.style.width = '100%'; return s; };
+const ctSay = (t, ok = true) => { $('ctMsg').textContent = t; $('ctMsg').style.color = ok ? '#7fe3a1' : '#ff8a80'; };
+const lines = a => (a || []).join('\n'), unlines = s => s.split('\n').map(x => x.trim()).filter(Boolean);
+
+function ctInit() {
+  $('ctTabs').replaceChildren(...CT_TABS.map(([k, label]) => { const b = ctBtn(label, () => { CT.name = k; CT.view = 'list'; CT.edit = null; CT.raw = false; ctLoad(); }); if (k === CT.name) b.className = 'primary'; return b; }));
+  ctLoad();
+}
+function ctLoad() { socket.emit('adminContentGet', { name: CT.name }, r => { if (!r?.ok) return ctSay('Yüklenemedi', false); CT.doc = r.doc; CT.overridden = r.overridden; ctInit2(); ctRender(); }); }
+function ctInit2() { $('ctTabs').querySelectorAll('button').forEach((b, i) => { b.className = CT_TABS[i][0] === CT.name ? 'primary' : ''; }); }
+function ctSave(msg = 'Kaydedildi') {
+  socket.emit('adminContentSet', { name: CT.name, doc: CT.doc }, r => {
+    if (!r?.ok) return ctSay('Hata: ' + (r?.error || 'kaydedilemedi'), false);
+    CT.doc = r.doc; CT.overridden = true; CT.view = 'list'; CT.edit = null; ctSay('✓ ' + msg); ctRender();
+  });
+}
+function ctToolbar(extra = []) {
+  const bar = ctEl('div', { className: 'row' });
+  bar.append(...extra, ctBtn('{ } JSON', () => { CT.raw = !CT.raw; ctRender(); }), ctBtn('↺ Varsayılana dön', () => { if (confirm('Admin düzenlemeleri silinsin ve koddaki ilk içerik geri gelsin?')) socket.emit('adminContentReset', { name: CT.name }, r => { if (r?.ok) { CT.doc = r.doc; CT.overridden = false; CT.view = 'list'; ctSay('✓ Varsayılana dönüldü'); ctRender(); } }); }));
+  bar.append(ctEl('small', { className: 'muted', textContent: CT.overridden ? '● düzenlenmiş' : '○ varsayılan' }));
+  return bar;
+}
+function ctRawEditor() {
+  const t = ctArea(JSON.stringify(CT.doc, null, 1), 22); t.style.fontFamily = 'monospace'; t.style.fontSize = '12px';
+  return ctEl('div', {}, ctEl('p', { className: 'muted', textContent: 'Gelişmiş: tüm belgeyi JSON olarak düzenle. Kaydedince alan alan doğrulanır.' }), t,
+    ctBtn('Kaydet (JSON)', () => { try { CT.doc = JSON.parse(t.value); } catch (e) { return ctSay('JSON hatası: ' + e.message, false); } CT.raw = false; ctSave('JSON kaydedildi'); }, 'primary'), ctBtn('Vazgeç', () => { CT.raw = false; ctRender(); }));
+}
+function ctRender() {
+  const body = $('ctBody'); body.replaceChildren();
+  if (CT.raw) return body.append(ctToolbar(), ctRawEditor());
+  if (CT.name === 'open-source-tools') return CT.view === 'edit' ? body.append(ctToolForm()) : body.append(ctToolList());
+  if (CT.name === 'grants') return CT.view === 'edit' ? body.append(ctProgramForm()) : body.append(ctGrantList());
+  return body.append(ctGamfed());
+}
+// --- tools ---
+function ctToolList() {
+  const d = CT.doc, wrap = ctEl('div');
+  const q = ctInput(CT.filter, { placeholder: 'Ara (ad, id, açıklama)…' }); q.style.width = '220px'; q.oninput = () => { CT.filter = q.value; list.replaceChildren(...rows()); cnt.textContent = ''; };
+  const cs = ctSelect([['', 'Tüm kategoriler'], ...Object.entries(d.categories)], CT.cat); cs.style.width = '200px'; cs.onchange = () => { CT.cat = cs.value; list.replaceChildren(...rows()); };
+  wrap.append(ctToolbar([ctBtn('➕ Yeni araç', () => { CT.edit = { isNew: true, t: { id: '', name: '', category: Object.keys(d.categories)[0], description: '', license: 'MIT', licenseType: 'osi', links: {}, howToUse: [''], game: { tier: 1, unlockLevel: 1, setupCost: 500, monthlyHostingCost: 50, effect: { stat: Object.keys(d.effectStats)[0], value: 0.05 }, xpReward: 50 } } }; CT.view = 'edit'; ctRender(); }, 'primary'), q, cs]));
+  const cnt = ctEl('small', { className: 'muted' }); const tbl = ctEl('table'); const list = ctEl('tbody');
+  tbl.append(ctEl('thead', {}, ctEl('tr', {}, ['ID', 'Ad', 'Kategori', 'Tier/Sv', 'Kurulum', 'Sunucu/ay', 'Etki', ''].map(x => ctEl('th', { textContent: x })))), list);
+  const rows = () => d.tools.filter(t => (!CT.cat || t.category === CT.cat) && (!CT.filter || (t.id + ' ' + t.name + ' ' + t.description).toLowerCase().includes(CT.filter.toLowerCase()))).map(t => {
+    const tr = ctEl('tr'); const g = t.game;
+    tr.append(ctEl('td', { textContent: t.id }), ctEl('td', { textContent: t.name }), ctEl('td', { textContent: d.categories[t.category] || t.category }), ctEl('td', { textContent: `T${g.tier} / Sv${g.unlockLevel}` }), ctEl('td', { textContent: g.setupCost }), ctEl('td', { textContent: g.monthlyHostingCost }),
+      ctEl('td', { textContent: `${d.effectStats[g.effect.stat] ? d.effectStats[g.effect.stat].replace(/\s*\(.*\)/, '') : g.effect.stat} ${g.effect.value}` }),
+      ctEl('td', {}, ctBtn('✏', () => { CT.edit = { isNew: false, orig: t.id, t: JSON.parse(JSON.stringify(t)) }; CT.view = 'edit'; ctRender(); }), ctBtn('🗑', () => { if (confirm(`"${t.name}" silinsin? Kurulu olduğu şirketlerde etkisi kapanır.`)) { d.tools = d.tools.filter(x => x.id !== t.id); ctSave('Araç silindi'); } })));
+    return tr;
+  });
+  list.replaceChildren(...rows()); wrap.append(ctEl('p', { className: 'muted', textContent: `${d.tools.length} araç · ${Object.keys(d.categories).length} kategori` }), tbl, ctCategories());
+  return wrap;
+}
+function ctCategories() {
+  const d = CT.doc, det = ctEl('details'); det.append(ctEl('summary', { textContent: 'Kategoriler (ekle / yeniden adlandır / sil)' }));
+  const box = ctEl('div'); det.append(box);
+  const draw = () => {
+    box.replaceChildren(...Object.entries(d.categories).map(([k, v]) => { const n = ctInput(v); n.style.width = '220px'; n.onchange = () => { d.categories[k] = n.value; };
+      return ctEl('div', { className: 'row' }, ctEl('code', { textContent: k }), n, ctBtn('🗑', () => { if (d.tools.some(t => t.category === k)) return ctSay('Bu kategoride araç var; önce araçları taşı/sil.', false); delete d.categories[k]; draw(); })); }));
+    const id = ctInput('', { placeholder: 'yeni-kategori-id' }), nm = ctInput('', { placeholder: 'Görünen ad' });
+    box.append(ctEl('div', { className: 'row' }, id, nm, ctBtn('➕ Kategori ekle', () => { if (!id.value || !nm.value) return; d.categories[id.value.trim().toLowerCase()] = nm.value; draw(); })), ctBtn('Kategorileri kaydet', () => ctSave('Kategoriler kaydedildi'), 'primary'));
+  }; draw(); return det;
+}
+function ctToolForm() {
+  const E = CT.edit, t = E.t, d = CT.doc, f = ctEl('div', { className: 'row' });
+  const id = ctInput(t.id), nm = ctInput(t.name), cat = ctSelect(Object.entries(d.categories), t.category), desc = ctArea(t.description, 2), lic = ctInput(t.license), lt = ctSelect([['osi', 'OSI açık kaynak'], ['fair-code', 'Fair-code'], ['source-available', 'Kaynak açık (kısıtlı)']], t.licenseType);
+  const L = {}; ['repo', 'website', 'docs', 'community', 'support'].forEach(k => { L[k] = ctInput(t.links?.[k] || '', { placeholder: 'https://…' }); });
+  const how = ctArea(lines(t.howToUse), 4), g = t.game, tier = ctInput(g.tier, { type: 'number', min: 1, max: 4 }), lvl = ctInput(g.unlockLevel, { type: 'number', min: 1, max: 20 }), setup = ctInput(g.setupCost, { type: 'number', min: 0 }), host = ctInput(g.monthlyHostingCost, { type: 'number', min: 0 });
+  const stat = ctSelect(Object.entries(d.effectStats), g.effect.stat), val = ctInput(g.effect.value, { type: 'number', step: '0.01', min: 0, max: 1 }), xp = ctInput(g.xpReward, { type: 'number', min: 0 });
+  if (!E.isNew) id.readOnly = true;
+  f.append(ctField('ID (değişmez)', id), ctField('Ad', nm), ctField('Kategori', cat), ctField('Lisans', lic), ctField('Lisans türü', lt), ctField('Açıklama', desc, true));
+  Object.entries(L).forEach(([k, i]) => f.append(ctField('Bağlantı: ' + k, i, true)));
+  f.append(ctField('Kullanım adımları (her satır bir adım, en fazla 6)', how, true), ctField('Tier (1–4)', tier), ctField('Açılış seviyesi', lvl), ctField('Kurulum (katalog değeri, oyunda × çarpan)', setup), ctField('Aylık sunucu', host), ctField('Etki türü', stat), ctField('Etki değeri (0.05 = %5; online kanal için 1)', val), ctField('XP ödülü', xp));
+  f.append(ctEl('div', { className: 'row', style: 'flex:1 1 100%' }, ctBtn(E.isNew ? 'Ekle' : 'Kaydet', () => {
+    const nt = { id: id.value, name: nm.value, category: cat.value, description: desc.value, license: lic.value, licenseType: lt.value, links: Object.fromEntries(Object.entries(L).map(([k, i]) => [k, i.value])), howToUse: unlines(how.value),
+      game: { tier: +tier.value, unlockLevel: +lvl.value, setupCost: +setup.value, monthlyHostingCost: +host.value, effect: { stat: stat.value, value: +val.value }, xpReward: +xp.value } };
+    if (E.isNew) d.tools.push(nt); else d.tools = d.tools.map(x => (x.id === E.orig ? nt : x));
+    socket.emit('adminContentSet', { name: CT.name, doc: d }, r => { if (!r?.ok) { ctSay('Hata: ' + r?.error, false); if (E.isNew) d.tools.pop(); else ctLoad(); return; } CT.doc = r.doc; CT.overridden = true; CT.view = 'list'; ctSay('✓ Kaydedildi'); ctRender(); });
+  }, 'primary'), ctBtn('Vazgeç', () => { CT.view = 'list'; ctLoad(); })));
+  return ctEl('div', {}, ctEl('h3', { textContent: E.isNew ? 'Yeni araç' : 'Araç düzenle: ' + t.name }), f);
+}
+// --- grants ---
+const GT = [['grant', 'Hibe'], ['incentive', 'Teşvik'], ['equity', 'Özkaynak'], ['program', 'Program']];
+function ctGrantList() {
+  const d = CT.doc, wrap = ctEl('div'); wrap.append(ctToolbar([ctBtn('➕ Yeni program', () => { CT.edit = { isNew: true, p: { id: '', group: d.groups[0].id, type: 'grant', name: { tr: '', en: '' }, what: { tr: '', en: '' }, who: { tr: '', en: '' }, steps: { tr: [''], en: [] }, game: { tr: '', en: '' }, link: '' } }; CT.view = 'edit'; ctRender(); }, 'primary')]));
+  const note = [ctArea(d.note.tr, 2), ctArea(d.note.en, 2)]; wrap.append(ctEl('h4', { textContent: 'Uyarı notu' }), ctEl('div', { className: 'row' }, ctField('TR', note[0]), ctField('EN', note[1])), ctBtn('Notu kaydet', () => { d.note = { tr: note[0].value, en: note[1].value }; ctSave('Not kaydedildi'); }));
+  const gd = ctEl('details'); gd.append(ctEl('summary', { textContent: 'Gruplar (ekle / düzenle / sil)' })); const gbox = ctEl('div'); gd.append(gbox);
+  const drawG = () => { gbox.replaceChildren(...d.groups.map((g, i) => { const ic = ctInput(g.icon), ntr = ctInput(g.name.tr), nen = ctInput(g.name.en); ic.style.width = '60px';
+    const upd = () => { g.icon = ic.value; g.name = { tr: ntr.value, en: nen.value }; }; [ic, ntr, nen].forEach(x => { x.onchange = upd; });
+    return ctEl('div', { className: 'row' }, ctEl('code', { textContent: g.id }), ic, ntr, nen, ctBtn('🗑', () => { if (d.programs.some(p => p.group === g.id)) return ctSay('Bu grupta program var.', false); d.groups.splice(i, 1); drawG(); })); }));
+    const id = ctInput('', { placeholder: 'grup-id' }); gbox.append(ctEl('div', { className: 'row' }, id, ctBtn('➕ Grup ekle', () => { if (!id.value) return; d.groups.push({ id: id.value.trim().toLowerCase(), icon: '📁', name: { tr: 'Yeni grup', en: 'New group' } }); drawG(); })), ctBtn('Grupları kaydet', () => ctSave('Gruplar kaydedildi'), 'primary')); }; drawG();
+  const tbl = ctEl('table'); tbl.append(ctEl('thead', {}, ctEl('tr', {}, ['ID', 'Ad', 'Grup', 'Tür', 'Bağlantı', ''].map(x => ctEl('th', { textContent: x })))));
+  const tb = ctEl('tbody'); d.programs.forEach(p => tb.append(ctEl('tr', {}, ctEl('td', { textContent: p.id }), ctEl('td', { textContent: p.name.tr }), ctEl('td', { textContent: d.groups.find(g => g.id === p.group)?.name.tr || p.group }), ctEl('td', { textContent: (GT.find(x => x[0] === p.type) || [])[1] }), ctEl('td', { textContent: p.link ? '✓' : '—' }),
+    ctEl('td', {}, ctBtn('✏', () => { CT.edit = { isNew: false, orig: p.id, p: JSON.parse(JSON.stringify(p)) }; CT.view = 'edit'; ctRender(); }), ctBtn('🗑', () => { if (confirm(`"${p.name.tr}" silinsin?`)) { d.programs = d.programs.filter(x => x.id !== p.id); ctSave('Program silindi'); } }))))); tbl.append(tb);
+  wrap.append(gd, ctEl('h4', { textContent: `Programlar (${d.programs.length})` }), tbl); return wrap;
+}
+function ctProgramForm() {
+  const E = CT.edit, p = E.p, d = CT.doc;
+  const id = ctInput(p.id), grp = ctSelect(d.groups.map(g => [g.id, g.name.tr]), p.group), type = ctSelect(GT, p.type), link = ctInput(p.link, { placeholder: 'https://… (boş olabilir)' });
+  const pair = (obj, rows = 2) => [ctArea(obj.tr, rows), ctArea(obj.en, rows)], name = [ctInput(p.name.tr), ctInput(p.name.en)], what = pair(p.what, 3), who = [ctInput(p.who.tr), ctInput(p.who.en)], game = pair(p.game || { tr: '', en: '' }, 2), st = [ctArea(lines(p.steps.tr), 4), ctArea(lines(p.steps.en), 4)];
+  if (!E.isNew) id.readOnly = true;
+  const f = ctEl('div', { className: 'row' }); f.append(ctField('ID (değişmez)', id), ctField('Grup', grp), ctField('Tür', type), ctField('Ad (TR)', name[0]), ctField('Ad (EN)', name[1]), ctField('Açıklama (TR)', what[0], true), ctField('Açıklama (EN)', what[1], true), ctField('Kimler için (TR)', who[0]), ctField('Kimler için (EN)', who[1]),
+    ctField('Adımlar TR (her satır bir adım, en fazla 6)', st[0], true), ctField('Adımlar EN', st[1], true), ctField('Finbuu\'da (TR)', game[0], true), ctField('Finbuu\'da (EN)', game[1], true), ctField('Resmi site', link, true));
+  f.append(ctEl('div', { className: 'row', style: 'flex:1 1 100%' }, ctBtn(E.isNew ? 'Ekle' : 'Kaydet', () => {
+    const np = { id: id.value, group: grp.value, type: type.value, name: { tr: name[0].value, en: name[1].value }, what: { tr: what[0].value, en: what[1].value }, who: { tr: who[0].value, en: who[1].value }, steps: { tr: unlines(st[0].value), en: unlines(st[1].value) }, game: { tr: game[0].value, en: game[1].value }, link: link.value };
+    if (E.isNew) d.programs.push(np); else d.programs = d.programs.map(x => (x.id === E.orig ? np : x));
+    socket.emit('adminContentSet', { name: CT.name, doc: d }, r => { if (!r?.ok) { ctSay('Hata: ' + r?.error, false); if (E.isNew) d.programs.pop(); else ctLoad(); return; } CT.doc = r.doc; CT.overridden = true; CT.view = 'list'; ctSay('✓ Kaydedildi'); ctRender(); });
+  }, 'primary'), ctBtn('Vazgeç', () => { CT.view = 'list'; ctLoad(); })));
+  return ctEl('div', {}, ctEl('h3', { textContent: E.isNew ? 'Yeni program' : 'Program düzenle' }), f);
+}
+// --- gamfed ---
+function ctGamfed() {
+  const d = CT.doc, wrap = ctEl('div'); wrap.append(ctToolbar());
+  const tt = [ctInput(d.title.tr), ctInput(d.title.en)], it = [ctArea(d.intro.tr, 2), ctArea(d.intro.en, 2)];
+  wrap.append(ctEl('div', { className: 'row' }, ctField('Başlık (TR)', tt[0]), ctField('Başlık (EN)', tt[1]), ctField('Giriş (TR)', it[0], true), ctField('Giriş (EN)', it[1], true)));
+  const floors = ctEl('div'); const inputs = d.floors.map(fl => ({ icon: ctInput(fl.icon), tt: ctInput(fl.title.tr), te: ctInput(fl.title.en), dt: ctArea(fl.desc.tr, 3), de: ctArea(fl.desc.en, 3), gt: ctArea(fl.game.tr, 2), ge: ctArea(fl.game.en, 2) }));
+  d.floors.forEach((fl, i) => { const x = inputs[i], det = ctEl('details'); det.append(ctEl('summary', { textContent: `${fl.n}. kat — ${fl.icon} ${fl.title.tr}` })); x.icon.style.width = '70px';
+    det.append(ctEl('div', { className: 'row' }, ctField('Simge', x.icon), ctField('Başlık TR', x.tt), ctField('Başlık EN', x.te), ctField('Açıklama TR', x.dt, true), ctField('Açıklama EN', x.de, true), ctField('Finbuu\'da TR', x.gt, true), ctField('Finbuu\'da EN', x.ge, true))); floors.append(det); });
+  const src = ctEl('div'); const sources = d.sources.map(s => ({ ...s })); const drawS = () => { src.replaceChildren(...sources.map((s, i) => { const l = ctInput(s.label), u = ctInput(s.url, { placeholder: 'https://…' }); l.style.width = '200px'; u.style.width = '360px'; l.onchange = () => { s.label = l.value; }; u.onchange = () => { s.url = u.value; };
+    return ctEl('div', { className: 'row' }, l, u, ctBtn('🗑', () => { sources.splice(i, 1); drawS(); })); })); src.append(ctBtn('➕ Kaynak ekle', () => { sources.push({ label: 'Yeni kaynak', url: 'https://' }); drawS(); })); }; drawS();
+  wrap.append(ctEl('h4', { textContent: 'Katlar (10 sabit; içerik düzenlenebilir)' }), floors, ctEl('h4', { textContent: 'Kaynakça' }), src,
+    ctBtn('Hepsini kaydet', () => { d.title = { tr: tt[0].value, en: tt[1].value }; d.intro = { tr: it[0].value, en: it[1].value };
+      d.floors = d.floors.map((fl, i) => { const x = inputs[i]; return { n: fl.n, icon: x.icon.value, title: { tr: x.tt.value, en: x.te.value }, desc: { tr: x.dt.value, en: x.de.value }, game: { tr: x.gt.value, en: x.ge.value } }; }); d.sources = sources; ctSave('GamFed içeriği kaydedildi'); }, 'primary'));
+  return wrap;
+}
 
 // ---------- Premium flags ----------
 const PREM_TXT = {

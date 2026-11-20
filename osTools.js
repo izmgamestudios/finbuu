@@ -6,7 +6,9 @@ let catalog = { tools: [] };
 try { catalog = require(path.join(__dirname, 'public', 'data', 'open-source-tools.json')); }
 catch (e) { console.warn('open-source tools catalog missing, tools disabled:', e.message); } // never take the whole server down for content data
 
-const BY_ID = new Map(catalog.tools.map(t => [t.id, t]));
+let BY_ID = new Map(catalog.tools.map(t => [t.id, t]));
+// admin edits (Sprint 22): swap the catalog at runtime; installed tools whose id disappeared simply stop counting
+function setCatalog(doc) { if (doc?.tools) { catalog = doc; BY_ID = new Map(doc.tools.map(t => [t.id, t])); } }
 const CFG = { setupScale: 0.4, diminish: 0.8, cap: 0.35, capOpCost: 0.2, onlineBoost: 0.15 }; // admin-tunable (data/tools-config.json)
 // CFG.setupScale: catalog setupCost x0.4 (tier 1 = 200 coins; 500 was half of the 1000 start coins). CFG.diminish: each extra tool on a stat counts 80 % of the previous.
 const MAX_TOOLS = 12, XP_DIV = 5;      // catalog xpReward / 5 -> 10 / 24 / 50 / 100 XP on first install
@@ -70,4 +72,4 @@ function reactivate(c, id) {
 const categories = c => new Set(book(c).map(x => BY_ID.get(x.id)?.category).filter(Boolean));
 const RANGES = { setupScale: [0.1, 2], diminish: [0.3, 1], cap: [0.1, 0.8], capOpCost: [0.05, 0.5], onlineBoost: [0, 0.5] };
 function setConfig(patch) { for (const [k, [lo, hi]] of Object.entries(RANGES)) { const v = Number(patch?.[k]); if (patch && patch[k] !== undefined && Number.isFinite(v)) CFG[k] = Math.max(lo, Math.min(hi, v)); } return { ...CFG }; }
-module.exports = { CFG, RANGES, setConfig, WIRED, MAX_TOOLS, XP_DIV, get, setupCost, book, active, hostingMonthly, effects, effectOf, checkInstall, place, remove, chargeMonth, reactivate, categories, GRACE_NOTE };
+module.exports = { setCatalog, CFG, RANGES, setConfig, WIRED, MAX_TOOLS, XP_DIV, get, setupCost, book, active, hostingMonthly, effects, effectOf, checkInstall, place, remove, chargeMonth, reactivate, categories, GRACE_NOTE };

@@ -1291,6 +1291,7 @@ socket.on('teamCall', c => {
 // ---- Sprint 20: support buildings (Open Source hub, Grants hall, GamFed tower) ----
 const L10 = o => (o && (o[i18next.language?.startsWith('tr') ? 'tr' : 'en'] ?? o.tr ?? o.en)) ?? '';
 const dataCache = {};
+socket.on('contentUpdated', () => { for (const k of Object.keys(dataCache)) delete dataCache[k]; });  // admin edited building content
 function loadData(name, cb) {
   if (dataCache[name]) return cb(dataCache[name]);
   fetch(`/data/${name}.json`).then(r => r.json()).then(d => { dataCache[name] = d; cb(d); }).catch(() => toast(t('ui.dataError')));

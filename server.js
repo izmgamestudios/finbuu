@@ -18,6 +18,8 @@ const CRM = require('./crm');
 const PLAN = require('./planner');
 const ERP = require('./erp');
 const TOOLS = require('./osTools');
+const CONTENT = require('./content');
+TOOLS.setCatalog(CONTENT.read('open-source-tools'));
 const { createAuth } = require('./auth');
 const ECON = require('./economy').build(25); // 25 coins = blue-collar daily employer cost (2026 minimum wage)
 
@@ -36,6 +38,8 @@ app.use((req, res, next) => {
 const server = http.createServer(app);
 // perMessageDeflate: snapshots are repetitive JSON, compression cuts bandwidth ~5-10x for 30-50 player rooms
 const io = new Server(server, { maxHttpBufferSize: 1e6, perMessageDeflate: { threshold: 1024 } });
+// building content (Open Source catalog, Grants, GamFed): admin override first, committed default otherwise
+app.get('/data/:name.json', (req, res, next) => { const doc = CONTENT.NAMES.includes(req.params.name) ? CONTENT.read(req.params.name) : null; if (!doc) return next(); res.set('Cache-Control', 'no-cache'); res.json(doc); });
 app.use(express.static(path.join(__dirname, 'public')));
 // Vendor libs served from node_modules (pinned via package-lock, no CDN dependency)
 app.use('/vendor/i18next', express.static(path.join(__dirname, 'node_modules/i18next/dist/umd')));
@@ -1884,6 +1888,19 @@ admin.on('connection', socket => {
     if (typeof patch !== 'object' || !patch) return typeof cb === 'function' && cb({ ok: false });
     const cfg = TOOLS.setConfig(patch); saveToolsCfg(); audit('toolsConfig', JSON.stringify(cfg));
     if (typeof cb === 'function') cb({ ok: true, cfg });
+  });
+  // ---- Sprint 22: building content CRUD (documents are validated field by field in content.js) ----
+  socket.on('adminContentGet', ({ name } = {}, cb) => { if (typeof cb !== 'function') return; const doc = CONTENT.read(String(name)); cb(doc ? { ok: true, doc, overridden: CONTENT.isOverridden(name), def: name === 'open-source-tools' ? { effectStats: CONTENT.readDefault(name).effectStats } : undefined } : { ok: false }); });
+  socket.on('adminContentSet', ({ name, doc } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r); if (typeof name !== 'string' || typeof doc !== 'object' || !doc) return reply({ ok: false, error: 'geçersiz istek' });
+    const r = CONTENT.write(name, doc); if (!r.ok) return reply(r);
+    if (name === 'open-source-tools') TOOLS.setCatalog(r.doc);
+    audit('content', `${name} güncellendi`); io.emit('contentUpdated', { name }); reply({ ok: true, doc: r.doc });
+  });
+  socket.on('adminContentReset', ({ name } = {}, cb) => {
+    if (!CONTENT.reset(String(name))) return typeof cb === 'function' && cb({ ok: false });
+    if (name === 'open-source-tools') TOOLS.setCatalog(CONTENT.readDefault(name));
+    audit('content', `${name} varsayılana döndü`); io.emit('contentUpdated', { name }); if (typeof cb === 'function') cb({ ok: true, doc: CONTENT.read(name) });
   });
   socket.on('adminListAds', ({ roomId } = {}, cb) => { const st = room(roomId); if (st && typeof cb === 'function') cb({ slots: adList(st) }); });
   socket.on('adminAdDecision', ({ roomId, slot, approve, reason } = {}) => {
