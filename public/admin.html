@@ -82,6 +82,7 @@
     <button data-tab="toolcfg">🧰 Araç Dengesi</button>
     <button data-tab="balcfg">⚖ Denge</button>
     <button data-tab="evtcfg">📰 Olaylar</button>
+    <button data-tab="mktcfg">🤝 Pazar</button>
     <button data-tab="content">📚 Bina İçerikleri</button>
     <button data-tab="audit">Denetim Kaydı</button>
   </div>
@@ -199,6 +200,14 @@
       <p class="muted">Fiyat esnekliği, seviye ödülü ve haftalık yarış ödülleri. Değişiklik anında geçerlidir ve sunucuda saklanır.</p>
       <table><thead><tr><th>Ayar</th><th>Açıklama</th><th>Değer</th></tr></thead><tbody id="bcBody"></tbody></table>
       <div class="row" style="margin-top:10px"><button id="bcSave" class="primary">Kaydet</button><span id="bcMsg" class="muted"></span></div>
+    </div>
+  </main>
+  <main id="mktcfg">
+    <div class="card">
+      <h3>Toptan Pazar (Sprint 26b)</h3>
+      <p class="muted">Oyuncu şirketleri arasında fazla stok satışı. Komisyon yakılır; fiyat, satıcının perakende fiyatına oranla sınırlanır.</p>
+      <table><thead><tr><th>Ayar</th><th>Açıklama</th><th>Değer</th></tr></thead><tbody id="mkBody"></tbody></table>
+      <div class="row" style="margin-top:10px"><button id="mkSave" class="primary">Kaydet</button><span id="mkMsg" class="muted"></span></div>
     </div>
   </main>
   <main id="evtcfg">
@@ -333,6 +342,7 @@ $('tabs').onclick = e => {
   if (b.dataset.tab === 'toolcfg') loadToolCfg();
   if (b.dataset.tab === 'balcfg') loadBalCfg();
   if (b.dataset.tab === 'evtcfg') loadEvtCfg();
+  if (b.dataset.tab === 'mktcfg') loadMktCfg();
   if (b.dataset.tab === 'content') ctInit();
 };
 
@@ -386,6 +396,20 @@ function loadBalCfg() {
   });
 }
 $('bcSave').onclick = () => { const patch = {}; document.querySelectorAll('#bcBody input').forEach(i => { patch[i.dataset.k] = Number(i.value); }); socket.emit('adminSetBalanceCfg', patch, r => { $('bcMsg').textContent = r?.ok ? '✓ Kaydedildi' : 'Hata'; loadBalCfg(); }); };
+
+// ---------- Wholesale market (Sprint 26b) ----------
+const MK_TXT = { on: ['Pazar açık (1/0)', 'Kapalıysa teklif verilemez ve alınamaz'], fee: ['Komisyon (0–0,5)', 'Satış tutarından kesilir ve yok edilir (0,1 = %10)'], maxListings: ['Şirket başına açık teklif', 'Aynı anda en fazla bu kadar teklif'], maxBuysPerDay: ['Günlük satın alma sınırı', 'Bir şirketin oyun günü başına alım sayısı'], minPct: ['En düşük fiyat oranı', 'Satıcının perakende fiyatının bu oranından aşağı olamaz'], maxPct: ['En yüksek fiyat oranı', 'Satıcının perakende fiyatının bu oranından yukarı olamaz'], ttl: ['Teklif süresi (gün)', 'Süresi dolan teklifin stoğu satıcıya döner'] };
+function loadMktCfg() {
+  socket.emit('adminGetMarketCfg', {}, res => {
+    if (!res) return;
+    $('mkBody').replaceChildren(...Object.keys(MK_TXT).map(k => {
+      const tr = document.createElement('tr'), [n, d] = MK_TXT[k], inp = document.createElement('input'); inp.type = 'number'; inp.step = '0.05'; inp.dataset.k = k; inp.value = res.cfg[k]; inp.min = res.ranges[k][0]; inp.max = res.ranges[k][1]; inp.style.width = '90px';
+      const td = document.createElement('td'); td.append(inp, Object.assign(document.createElement('small'), { className: 'muted', textContent: ` (${res.ranges[k][0]}–${res.ranges[k][1]})` }));
+      tr.append(Object.assign(document.createElement('td'), { textContent: n }), Object.assign(document.createElement('td'), { textContent: d }), td); return tr;
+    }));
+  });
+}
+$('mkSave').onclick = () => { const patch = {}; document.querySelectorAll('#mkBody input').forEach(i => { patch[i.dataset.k] = Number(i.value); }); socket.emit('adminSetMarketCfg', patch, r => { $('mkMsg').textContent = r?.ok ? '✓ Kaydedildi' : 'Hata'; loadMktCfg(); }); };
 
 // ---------- Market events (Sprint 26c) ----------
 const EV_NAME = { inflation: 'Enflasyon', recession: 'Durgunluk', energyHike: 'Enerji zammı', supplyCrisis: 'Tedarik krizi', fuelSpike: 'Akaryakıt zammı', fair: 'Fuar', techBoom: 'Teknoloji patlaması', holiday: 'Bayram/tatil', healthWave: 'Sağlık dalgası', stimulus: 'Destek paketi' };

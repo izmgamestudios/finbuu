@@ -240,6 +240,7 @@ socket.on('goalEnd', e => { toast(e.ok ? t('goal.ok', { progress: fmt0(e.progres
 socket.on('streak', e => { toast(t('daily.streakToast', e)); profSig = ''; });
 socket.on('chest', e => { toast(t('daily.chestToast', e)); profSig = ''; });
 socket.on('seasonMilestone', e => { toast(t('daily.seasonToast', e)); profSig = ''; });
+socket.on('marketSold', e => { toast(t('market.sold', { qty: e.qty, coins: e.coins, buyer: e.buyer || (e.buyerKey ? t(e.buyerKey) : '') })); profSig = ''; });
 socket.on('levelUp', e => { toast(t('week.levelUp', e)); profSig = ''; });
 socket.on('weekEnd', e => { toast(t('week.ended', e) + (e.coins ? t('week.endedWin', e) : '')); profSig = ''; });
 socket.on('questDone', q => { toast(`✅ ${t('quest.' + q.id, { goal: '' })} · +${money(q.coins)} · +${q.xp} XP`); profSig = ''; });
@@ -1640,7 +1641,40 @@ function openErp(c, data) {
     if (!data.orders.length) body.append(el('small', t('erp.noPending'), 'muted'));
     data.orders.forEach(o => { const p = data.products.find(x => x.id === o.pid); body.append(el('div', `📦 ${p?.name || (p?.nameKey ? t(p.nameKey) : '')} ×${o.qty} · ${t('erp.due', { d: o.due })}`)); });
     body.append(el('small', t('erp.tip'), 'muted'));
+    if (!sv) body.append(btn(t('market.open'), () => openMarket(c)));
   });
+}
+// ---- Sprint 26b: wholesale market ----
+function openMarket(c, data) {
+  if (!data) return socket.emit('marketGet', {}, g => { if (!g || !g.ok) return toast(t(g?.key || 'market.off')); openMarket(c, g); });
+  const again = r => { if (!r) return; if (r.key) toast(t(r.key, r.params)); if (r.ok) { if (r.bought) toast(t('market.bought', { qty: r.bought.qty, total: fmt(r.bought.total) })); openMarket(c, r); } };
+  const nm = x => x.name || (x.nameKey ? t(x.nameKey) : '—'), who = o => o.seller || (o.sellerKey ? t(o.sellerKey) : '—');
+  { const erp = { products: data.mine.find(m => m.cid === c.id)?.products || [] };
+    openModal(body => {
+      body.append(el('h3', `${t('market.title')} · ${companyName(c)}`), el('p', t('market.intro'), 'muted'), el('small', t('market.fee', { p: Math.round(data.cfg.fee * 100) }), 'muted'));
+      body.append(el('h4', t('market.offers')));
+      if (!data.offers.length) body.append(el('small', t('market.none'), 'muted'));
+      const pick = el('select'); erp.products.forEach(p => { const o = el('option', nm(p)); o.value = p.id; pick.append(o); });
+      data.offers.forEach(o => {
+        const row = el('div', null, 'prodRow'), info = el('div'), act = el('div', null, 'row'); act.style.alignItems = 'center';
+        info.append(el('b', `${nm(o)} ×${o.qty}`), el('small', ` ${who(o)} · ${fmt(o.price)}/${t('erp.unit')} · ${t('market.left', { n: Math.max(0, o.until - data.day) })}`, 'muted'));
+        if (o.mine) act.append(el('small', t('market.mine'), 'muted'), btn(t('market.cancel'), () => socket.emit('marketCancel', { id: o.id }, again)));
+        else { const q = el('input'); q.type = 'number'; q.min = 1; q.max = o.qty; q.value = o.qty; q.style.width = '72px'; act.append(q, btn(t('market.buy'), () => socket.emit('marketBuy', { id: o.id, cid: c.id, pid: pick.value, qty: Number(q.value) }, again), { primary: true })); }
+        row.append(info, act); body.append(row);
+      });
+      if (data.offers.some(o => !o.mine)) { const l = el('label', t('market.buyInto') + ' '); l.append(pick); body.append(l); }
+      // my listing form
+      body.append(el('h4', t('market.sell')));
+      const sp = el('select'); erp.products.forEach(p => { const o = el('option', `${nm(p)} (${p.stock})`); o.value = p.id; sp.append(o); });
+      const q = el('input'); q.type = 'number'; q.min = 1; q.max = 200; q.value = 10; q.style.width = '72px';
+      const pr = el('input'); pr.type = 'number'; pr.min = 1; pr.value = 10; pr.style.width = '72px';
+      const f = el('div', null, 'row'); f.style.cssText = 'align-items:center;flex-wrap:wrap;gap:6px';
+      f.append(sp, el('small', t('market.qty')), q, el('small', t('market.price')), pr, btn(t('market.list'), () => socket.emit('marketList', { cid: c.id, pid: sp.value, qty: Number(q.value), price: Number(pr.value) }, r => { if (r?.ok) toast(t('market.listed')); again(r); }), { primary: true }));
+      const rng = el('small', '', 'muted'), upd = () => { const p = erp.products.find(x => x.id === sp.value); if (p) { rng.textContent = t('market.range', { min: p.min, max: p.max }); pr.value = Math.round((p.min + p.max) / 2); } }; sp.onchange = upd; upd();
+      body.append(f, rng);
+      if (data.log.length) { body.append(el('h4', t('market.log'))); data.log.forEach(l => body.append(el('small', `D${l.day} · ` + t('market.logRow', { buyer: l.buyer || (l.buyerKey ? t(l.buyerKey) : ''), seller: l.seller || (l.sellerKey ? t(l.sellerKey) : ''), qty: l.qty, total: fmt(l.total) }), 'muted'))); }
+    });
+  }
 }
 // ---- Sprint 17b: Mini SaaS planner (tasks + Gantt + calendar) ----
 const PLAN_COLOR = { planned: '#94a3b8', active: '#2563eb', overdue: '#dc2626', done: '#16a34a' };
@@ -1826,7 +1860,7 @@ function openHelp() {
 $('helpBtn').onclick = openHelp;
 addEventListener('keydown', e => { if ((e.key === 'F1' || (e.key === '?' && !typing(e))) && !modalOpen) { e.preventDefault(); openHelp(); } });
 
-const BADGE_ICON = { streak7: '🔥', seasonStar: '🏅', teamGoal: '🎯', hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
+const BADGE_ICON = { trader: '🤝', streak7: '🔥', seasonStar: '🏅', teamGoal: '🎯', hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
   social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗', closer: '🤝', stockMaster: '📦', stackPro: '🧰' };
 let extraSig = '';
 function renderExtras(p) {

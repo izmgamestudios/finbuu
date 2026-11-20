@@ -124,7 +124,7 @@ const SEED = {
     { id: 'chat', metric: 'chat', goal: 1, xp: 5, coins: 10, shared: true }
   ],
   badges: ['firstCompany', 'sales10', 'sales100', 'sales1000', 'floor3', 'floor6', 'firstHire', 'marketer', 'secure', 'social',
-    'commuter', 'teamPlayer', 'teamGoal', 'streak7', 'seasonStar', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
+    'commuter', 'teamPlayer', 'teamGoal', 'streak7', 'seasonStar', 'trader', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
   demoDay: { canvasMax: 300, pitchMax: 900, demoCooldown: 30, angelCooldown: 15, offerDays: 3, grantAmount: 2000, grantMinDays: 10, grantMinBlocks: 7, demoMin: 60, angelMin: 45 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3, sector: 'sector.food' },
@@ -221,6 +221,10 @@ function saveToolsCfg() { try { fs.mkdirSync(path.dirname(TOOLS_CFG_FILE), { rec
 const BAL = require('./balance');
 const EVT = require('./events');
 const GOALS = require('./goals');
+const MKT = require('./market');
+const MKT_FILE = path.join(__dirname, 'data', 'market-config.json');
+try { MKT.setConfig(JSON.parse(fs.readFileSync(MKT_FILE, 'utf8'))); } catch { /* defaults */ }
+function saveMarketCfg() { try { fs.mkdirSync(path.dirname(MKT_FILE), { recursive: true, mode: 0o700 }); fs.writeFileSync(MKT_FILE, JSON.stringify(MKT.CFG), { mode: 0o600 }); } catch (e) { console.warn('market config save failed:', e.message); } }
 const EVT_FILE = path.join(__dirname, 'data', 'events-config.json');
 try { EVT.setConfig(JSON.parse(fs.readFileSync(EVT_FILE, 'utf8'))); } catch { /* defaults */ }
 function saveEventsCfg() { try { fs.mkdirSync(path.dirname(EVT_FILE), { recursive: true, mode: 0o700 }); fs.writeFileSync(EVT_FILE, JSON.stringify(EVT.state()), { mode: 0o600 }); } catch (e) { console.warn('events config save failed:', e.message); } }
@@ -1086,6 +1090,53 @@ io.on('connection', socket => {
     sync(); reply(erpReply(c));
   });
 
+  // ---- Sprint 26b: wholesale market (player companies sell surplus ERP stock to each other) ----
+  const mktCo = cid => { const c = street?.companies[cid]; return c && !c.isNpc && c.status === 'active' && c.founders.includes(me?.id) && !ERP.isService(c) ? c : null; };
+  const mktView = () => {
+    const b = MKT.book(street), mine = new Set(Object.values(street.companies).filter(c => c.founders.includes(me?.id)).map(c => c.id));
+    return { ok: true, day: street.day || 0, cfg: { fee: MKT.CFG.fee, maxListings: MKT.CFG.maxListings, maxBuysPerDay: MKT.CFG.maxBuysPerDay, ttl: MKT.CFG.ttl },
+      offers: b.offers.map(o => { const c = street.companies[o.cid], ps = c ? ensureProducts(c) : [], p = ps.find(x => x.id === o.pid); return { id: o.id, cid: o.cid, seller: c?.name || null, sellerKey: c?.nameKey || null, name: p?.name || null, nameKey: p?.nameKey || null, qty: o.qty, price: o.price, until: o.until, mine: mine.has(o.cid) }; }),
+      log: b.log.slice(0, 12),
+      mine: Object.values(street.companies).filter(c => mktCo(c.id)).map(c => ({ cid: c.id, products: ensureProducts(c).map(p => ({ id: p.id, name: p.name || null, nameKey: p.nameKey || null, stock: ERP.stockOf(c, p.id), retail: unitPrice(c, p.id), ...(() => { const bd = MKT.bounds(unitPrice(c, p.id)); return { min: bd.min, max: bd.max }; })() })) })) };
+  };
+  socket.on('marketGet', (_, cb) => { if (typeof cb === 'function') cb(MKT.CFG.on ? mktView() : { ok: false, key: 'market.off' }); });
+  socket.on('marketList', ({ cid, pid, qty, price } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = mktCo(cid); if (!c || limited() || !MKT.CFG.on) return reply({ ok: false, key: 'market.off' });
+    const prod = ensureProducts(c).find(x => x.id === pid), q = Math.floor(Number(qty)), pr = Math.floor(Number(price)); if (!prod) return reply({ ok: false, key: 'toast.erpBad' });
+    if (!(q >= 1 && q <= MKT.MAX_QTY)) return reply({ ok: false, key: 'market.badQty' });
+    const bd = MKT.bounds(unitPrice(c, prod.id)); if (!(pr >= bd.min && pr <= bd.max)) return reply({ ok: false, key: 'market.badPrice', params: bd });
+    const b = MKT.book(street); if (b.offers.filter(o => o.cid === c.id).length >= MKT.CFG.maxListings) return reply({ ok: false, key: 'market.tooMany' });
+    if (ERP.stockOf(c, prod.id) < q) return reply({ ok: false, key: 'market.noStock' });
+    ERP.book(c).stock[prod.id] = ERP.stockOf(c, prod.id) - q;
+    b.offers.push({ id: ++b.seq, cid: c.id, pid: prod.id, qty: q, price: pr, until: (street.day || 0) + MKT.CFG.ttl });
+    sync(); reply(mktView());
+  });
+  socket.on('marketCancel', ({ id } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), b = MKT.book(street), o = b.offers.find(x => x.id === id), c = o && mktCo(o.cid); if (!c) return reply({ ok: false });
+    b.offers = b.offers.filter(x => x !== o); ERP.book(c).stock[o.pid] = ERP.stockOf(c, o.pid) + o.qty; sync(); reply(mktView());
+  });
+  socket.on('marketBuy', ({ id, cid, pid, qty } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), buyer = mktCo(cid), b = MKT.book(street), o = b.offers.find(x => x.id === id);
+    if (!buyer || !o || limited() || !MKT.CFG.on) return reply({ ok: false, key: 'market.gone' });
+    const seller = street.companies[o.cid], prod = ensureProducts(buyer).find(x => x.id === pid), q = Math.floor(Number(qty)) || o.qty;
+    if (!seller || !prod) return reply({ ok: false, key: 'market.gone' });
+    if (seller.id === buyer.id || seller.founders.some(f => buyer.founders.includes(f))) return reply({ ok: false, key: 'market.self' });
+    if (!(q >= 1 && q <= o.qty)) return reply({ ok: false, key: 'market.badQty' });
+    const day = street.day || 0; buyer.market = buyer.market?.day === day ? buyer.market : { day, buys: 0 };
+    if (buyer.market.buys >= MKT.CFG.maxBuysPerDay) return reply({ ok: false, key: 'market.dayLimit' });
+    const total = q * o.price; if (buyer.cash < total) return reply({ ok: false, key: 'toast.noCash' });
+    const fee = MKT.fee(total), net = total - fee;
+    buyer.cash -= total; R.track(buyer, 'expenses', total); buyer.market.buys++;
+    seller.cash += net; R.track(seller, 'revenue', net);
+    ERP.book(buyer).stock[prod.id] = ERP.stockOf(buyer, prod.id) + q;
+    o.qty -= q; if (o.qty <= 0) b.offers = b.offers.filter(x => x !== o);
+    b.log.unshift({ day, buyer: buyer.name || null, buyerKey: buyer.nameKey || null, seller: seller.name || null, sellerKey: seller.nameKey || null, qty: q, total }); b.log.length = Math.min(b.log.length, 30);
+    seller.founders.forEach(f => { const sp = street.players[f]; if (sp) { progress(street, sp, 'trades'); if ((sp.counters.trades || 0) >= 5) award(street, sp, 'trader'); io.to(f).emit('marketSold', { qty: q, coins: net, buyer: buyer.name || null, buyerKey: buyer.nameKey || null }); } });
+    progress(street, me, 'trades'); if ((me.counters.trades || 0) >= 5) award(street, me, 'trader');
+    audit('market', `${street.id}: ${buyer.id}<-${seller.id} ${q}x${o.price}`);
+    sync(); reply({ ...mktView(), bought: { qty: q, total } });
+  });
+
   // ---- Sprint 21a: open-source tools installed on a company (founders only) ----
   const toolCo = cid => { const c = street?.companies[cid]; return c && !c.isNpc && c.status === 'active' && c.founders.includes(me?.id) ? c : null; };
   const toolsReply = (c, extra = {}) => ({ ok: true, day: street.day || 0, scale: TOOLS.CFG.setupScale, max: TOOLS.MAX_TOOLS, wired: [...TOOLS.WIRED], cash: Math.round(c.cash), monthly: TOOLS.hostingMonthly(c), effects: TOOLS.effects(c),
@@ -1763,6 +1814,11 @@ const publicGoal = st => {
   const g = st.goal, cs = GOALS.contrib(st, g);
   return { n: g.n, type: g.type, target: g.target, perPlayer: g.perPlayer, progress: Object.values(cs).reduce((a, b) => a + b, 0), left: Math.max(0, g.endDay - (st.day || 0)), minShare: GOALS.MIN_SHARE, contrib: cs };
 };
+// Sprint 26b: expired wholesale offers return their reserved stock to the seller
+function marketTick(st) {
+  if (!st.market?.offers?.length) return;
+  MKT.expire(st, o => { const c = st.companies[o.cid]; if (c) { const b = ERP.book(c); b.stock[o.pid] = ERP.stockOf(c, o.pid) + o.qty; } });
+}
 function economyTick(only) {
   for (const st of only ? [only] : Object.values(rooms)) {
     for (const c of Object.values(st.companies)) {
@@ -1833,6 +1889,7 @@ function economyTick(only) {
     for (const p of Object.values(st.players)) checkLevel(p);
     weekSettle(st);
     goalSettle(st);
+    marketTick(st);
     st.tickAt = Date.now();
     for (const c of Object.values(st.companies)) {
       if (c.crisis && !crisisActive(st, c)) { addLog(st, 'log.crisisOver', cParams(c)); c.crisis = null; c.founders.forEach(pid => award(st, st.players[pid], 'survivor')); }
@@ -2143,6 +2200,12 @@ admin.on('connection', socket => {
     }
     audit('eventStart', `${roomId || 'all'}:${id}`);
     if (typeof cb === 'function') cb({ ok: true, rooms: n });
+  });
+  socket.on('adminGetMarketCfg', (_, cb) => { if (typeof cb === 'function') cb({ cfg: { ...MKT.CFG }, ranges: MKT.RANGES }); });
+  socket.on('adminSetMarketCfg', (patch, cb) => {
+    if (typeof patch !== 'object' || !patch) return typeof cb === 'function' && cb({ ok: false });
+    const cfg = MKT.setConfig(patch); saveMarketCfg(); audit('marketConfig', JSON.stringify(cfg));
+    if (typeof cb === 'function') cb({ ok: true, cfg });
   });
   socket.on('adminGetBalanceCfg', (_, cb) => { if (typeof cb === 'function') cb({ cfg: { ...BAL.CFG }, ranges: BAL.RANGES }); });
   socket.on('adminSetBalanceCfg', (patch, cb) => {

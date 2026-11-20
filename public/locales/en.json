@@ -1019,7 +1019,8 @@
     "stackPro": "Stack Pro",
     "teamGoal": "Team Win",
     "streak7": "7-Day Streak",
-    "seasonStar": "Season Star"
+    "seasonStar": "Season Star",
+    "trader": "Trader"
   },
   "badgeDesc": {
     "firstCompany": "Found your first company",
@@ -1050,7 +1051,8 @@
     "stackPro": "Install open-source tools from 5 different categories",
     "teamGoal": "Contribute to a completed monthly room goal",
     "streak7": "Play 7 days in a row",
-    "seasonStar": "Reach 500 points in one season"
+    "seasonStar": "Reach 500 points in one season",
+    "trader": "Complete 5 wholesale trades"
   },
   "bus": {
     "arrived": "You arrived at the stop.",
@@ -1752,5 +1754,38 @@
     "streakToast": "🔥 Day {{n}} streak! +{{coins}} coins",
     "chestToast": "🎁 Daily chest opened! +{{coins}} coins · +{{sp}} SP",
     "seasonToast": "🏅 Season reward ({{sp}} SP): +{{coins}} coins"
+  },
+  "market": {
+    "title": "🤝 Wholesale market",
+    "intro": "Sell your surplus stock to other player companies and get the stock you need instantly. No lead time.",
+    "fee": "A market fee is deducted from the seller ({{p}}%).",
+    "offers": "Open offers",
+    "none": "No offers right now.",
+    "sell": "Make an offer",
+    "product": "Product",
+    "qty": "Qty",
+    "price": "Unit price",
+    "list": "Publish offer",
+    "range": "Unit price must be {{min}}–{{max}}",
+    "buy": "Buy",
+    "cancel": "Withdraw",
+    "mine": "Your offer",
+    "buyInto": "Product to add stock to",
+    "left": "{{n}} days",
+    "log": "Recent trades",
+    "logRow": "{{buyer}} ← {{seller}}: {{qty}} units · {{total}}",
+    "open": "🤝 Wholesale market",
+    "sold": "🤝 Wholesale sale: {{qty}} units · +{{coins}} coins ({{buyer}})",
+    "bought": "🤝 Bought {{qty}} units ({{total}})",
+    "listed": "Offer published",
+    "off": "The market is closed right now.",
+    "badQty": "Invalid quantity.",
+    "badPrice": "Price is outside the allowed range ({{min}}–{{max}}).",
+    "tooMany": "You have too many open offers.",
+    "noStock": "Not enough stock.",
+    "gone": "That offer is gone.",
+    "self": "You cannot buy from your own company.",
+    "dayLimit": "You reached today's purchase limit.",
+    "serviceNote": "Service companies have capacity instead of stock, so they cannot use the market."
   }
 }

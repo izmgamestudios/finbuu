@@ -1019,7 +1019,8 @@
     "stackPro": "Araç Ustası",
     "teamGoal": "Ortak Başarı",
     "streak7": "7 Gün Serisi",
-    "seasonStar": "Sezon Yıldızı"
+    "seasonStar": "Sezon Yıldızı",
+    "trader": "Tüccar"
   },
   "badgeDesc": {
     "firstCompany": "İlk şirketini kur",
@@ -1050,7 +1051,8 @@
     "stackPro": "5 farklı kategoriden açık kaynak araç kur",
     "teamGoal": "Odanın aylık ortak hedefine katkı yap ve tamamla",
     "streak7": "7 gün üst üste oyuna gir",
-    "seasonStar": "Bir sezonda 500 puana ulaş"
+    "seasonStar": "Bir sezonda 500 puana ulaş",
+    "trader": "5 toptan pazar işlemi yap"
   },
   "bus": {
     "arrived": "Durağa vardın.",
@@ -1752,5 +1754,38 @@
     "streakToast": "🔥 {{n}}. gün serisi! +{{coins}} coin",
     "chestToast": "🎁 Günlük sandık açıldı! +{{coins}} coin · +{{sp}} SP",
     "seasonToast": "🏅 Sezon ödülü ({{sp}} SP): +{{coins}} coin"
+  },
+  "market": {
+    "title": "🤝 Toptan pazar",
+    "intro": "Fazla stokunu diğer oyuncu şirketlerine sat; ihtiyacın olan stoğu anında al. Teslim sipariş beklemez.",
+    "fee": "Pazar komisyonu satıcıdan kesilir (%{{p}}).",
+    "offers": "Açık teklifler",
+    "none": "Şu an teklif yok.",
+    "sell": "Teklif ver",
+    "product": "Ürün",
+    "qty": "Adet",
+    "price": "Birim fiyat",
+    "list": "Teklifi yayınla",
+    "range": "Birim fiyat {{min}}–{{max}} arası olmalı",
+    "buy": "Satın al",
+    "cancel": "Geri çek",
+    "mine": "Senin teklifin",
+    "buyInto": "Stoğa eklenecek ürün",
+    "left": "{{n}} gün",
+    "log": "Son işlemler",
+    "logRow": "{{buyer}} ← {{seller}}: {{qty}} adet · {{total}}",
+    "open": "🤝 Toptan pazar",
+    "sold": "🤝 Toptan satış: {{qty}} adet · +{{coins}} coin ({{buyer}})",
+    "bought": "🤝 {{qty}} adet satın alındı ({{total}})",
+    "listed": "Teklif yayınlandı",
+    "off": "Pazar şu an kapalı.",
+    "badQty": "Geçersiz adet.",
+    "badPrice": "Fiyat izin verilen aralıkta değil ({{min}}–{{max}}).",
+    "tooMany": "Çok fazla açık teklifin var.",
+    "noStock": "Yeterli stokun yok.",
+    "gone": "Teklif artık yok.",
+    "self": "Kendi şirketinden satın alamazsın.",
+    "dayLimit": "Bugünlük satın alma sınırına ulaştın.",
+    "serviceNote": "Hizmet şirketlerinde stok yerine kapasite olduğu için pazar kullanılamaz."
   }
 }
