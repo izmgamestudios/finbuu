@@ -149,7 +149,8 @@
       "light": "☀️ Light",
       "dark": "🌙 Dark"
     },
-    "dwDay": "Day {{d}}"
+    "dwDay": "Day {{d}}",
+    "dataError": "Could not load data."
   },
   "tutorial": {
     "welcome": "Guide Building: Welcome! Your starting capital is ready.",
@@ -1421,5 +1422,75 @@
     "low": "Running low",
     "ok": "Healthy",
     "tip": "Tip: items in stock earn 5% more. Stay in stock for 30 days to earn the 📦 badge."
+  },
+  "oss": {
+    "name": "OPEN SOURCE",
+    "sign": "Open-source software support hub",
+    "title": "Open Source Support Center",
+    "intro": "Tools whose license costs 0: the real cost is setup effort and hosting. Explore 65 tools and pick the right ones for your company.",
+    "search": "Search tools…",
+    "all": "All",
+    "allTypes": "All licenses",
+    "count": "{{n}} tools",
+    "tier": "Tier {{n}}",
+    "unlock": "Unlocks: level {{n}}",
+    "setup": "Setup effort",
+    "hosting": "Monthly hosting",
+    "effect": "Game effect",
+    "how": "How to use in 3 steps",
+    "links": "Links",
+    "l_repo": "Code",
+    "l_website": "Website",
+    "l_docs": "Docs",
+    "l_community": "Community",
+    "l_support": "Support",
+    "type": {
+      "osi": "OSI open source",
+      "fair-code": "Fair-code",
+      "source-available": "Source-available (restricted license)"
+    },
+    "typeHint": {
+      "osi": "Free to use and modify.",
+      "fair-code": "Source is open but commercial use may be limited.",
+      "source-available": "Source is visible; the license is restricted."
+    },
+    "license": "License",
+    "soon": "Installing tools on a company is coming soon. For now this is for information and comparison.",
+    "none": "No results.",
+    "lang": "Catalog content is in Turkish.",
+    "effectVal": "+{{p}}%",
+    "effectNeg": "−{{p}}%",
+    "effectOpen": "unlocks",
+    "unlockLvl": "Unlock level"
+  },
+  "grants": {
+    "name": "GRANTS & FUNDING",
+    "sign": "Public and private funding programs",
+    "title": "Grants & Funding Programs",
+    "intro": "Get to know public, EU and private funding sources for your venture. See who each program is for, how it works and the steps to apply.",
+    "who": "Who it is for",
+    "steps": "Steps",
+    "inFinbuu": "In Finbuu",
+    "open": "Official site",
+    "demo": "Go to Demo Day",
+    "type": {
+      "grant": "Grant",
+      "incentive": "Incentive",
+      "equity": "Equity",
+      "program": "Program"
+    }
+  },
+  "gamfed": {
+    "name": "GAMFED TÜRKİYE",
+    "sign": "Gamification model · 10 steps",
+    "title": "GamFed Türkiye",
+    "pick": "Floor {{n}}",
+    "inFinbuu": "Example in Finbuu",
+    "prev": "Floor below",
+    "next": "Floor above",
+    "visited": "{{n}}/10 floors visited",
+    "done": "Congrats, you visited all 10 floors! 🎓",
+    "sources": "Sources",
+    "step": "Step {{n}}"
   }
 }

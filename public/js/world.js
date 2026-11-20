@@ -16,11 +16,13 @@ const GROUND_H = 86, FLOOR_H = 48, ROOF_H = 12;
 export const MAX_FLOORS = 6;
 
 export const lotX = i => LOTS_X + i * (LOT_W + LOT_GAP);
-export const worldWidth = lots => lotX(lots) + 1700; // car park and bus terminal at the end of the street
+export const worldWidth = lots => lotX(lots) + 3000; // support buildings, car park and bus terminal at the end of the street
 // Building height follows the tenants' finances: big cash = tall tower, losses = it shrinks.
 // 1 floor < 250c, then one floor per doubling (500, 1k, 2k, 4k, 8k+).
 export const floorsFor = cash => Math.max(1, Math.min(MAX_FLOORS, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
 const heightOf = floors => GROUND_H + floors * FLOOR_H + ROOF_H;
+export const GAMFED_FLOORS = 10, GAMFED_FLOOR_H = 36;
+const GAMFED_H = GROUND_H + GAMFED_FLOORS * GAMFED_FLOOR_H + ROOF_H; // 458: ten floors still fit under the sky line
 
 export function layout(state) {
   const lots = state?.lots || [];
@@ -34,10 +36,14 @@ export function layout(state) {
     const floors = lot.companyIds.length ? floorsFor(cash) : 1;
     list.push({ kind: 'lot', id: 'lot' + lot.id, seed: lot.id + 1, lot, cash, floors, x: lotX(lot.id), w: LOT_W, h: heightOf(floors) });
   });
-  list.push({ kind: 'demoday', id: 'demoday', seed: 904, x: lotX(lots.length || 12) + 10, w: 360, h: heightOf(3) });
-  list.push({ kind: 'locked', id: 'locked', seed: 903, x: lotX(lots.length || 12) + 410, w: 380, h: 320 });
-  list.push({ kind: 'parking', id: 'parking', seed: 905, x: lotX(lots.length || 12) + 830, w: 380, h: 70 });
-  list.push({ kind: 'terminal', id: 'terminal', seed: 906, x: lotX(lots.length || 12) + 1250, w: 380, h: 120 });
+  const L = lotX(lots.length || 12);
+  list.push({ kind: 'oss', id: 'oss', seed: 907, x: L + 10, w: 380, h: heightOf(3) });
+  list.push({ kind: 'demoday', id: 'demoday', seed: 904, x: L + 430, w: 360, h: heightOf(3) });
+  list.push({ kind: 'grants', id: 'grants', seed: 908, x: L + 830, w: 380, h: heightOf(4) });
+  list.push({ kind: 'locked', id: 'locked', seed: 903, x: L + 1250, w: 380, h: 320 });
+  list.push({ kind: 'gamfed', id: 'gamfed', seed: 909, x: L + 1670, w: 400, h: GAMFED_H });
+  list.push({ kind: 'parking', id: 'parking', seed: 905, x: L + 2110, w: 380, h: 70 });
+  list.push({ kind: 'terminal', id: 'terminal', seed: 906, x: L + 2530, w: 380, h: 120 });
   return list;
 }
 
@@ -409,6 +415,73 @@ function drawDemoDay(ctx, b, env) {
   ctx.restore();
   ctx.strokeStyle = '#f2b84b'; ctx.lineWidth = 3; ctx.strokeRect(ix, iy, iw, ih);
 }
+
+// ---- Support buildings (Sprint 20): open-source hub, grants & funding hall, GamFed tower ----
+function drawOss(ctx, b, env) {
+  const top = GROUND - b.h;
+  ctx.fillStyle = '#17483a'; ctx.fillRect(b.x, top + ROOF_H, b.w, b.h - ROOF_H);
+  ctx.fillStyle = '#0e2e25'; ctx.fillRect(b.x - 8, top, b.w + 16, ROOF_H);
+  ctx.fillStyle = '#2ec4b6'; rr(ctx, b.x + 30, top + ROOF_H + 18, b.w - 60, 44, 10); ctx.fill();
+  ctx.font = '800 20px "Baloo 2", system-ui, sans-serif'; ctx.fillStyle = '#0e2e25'; ctx.textAlign = 'center';
+  ctx.fillText('🌱 ' + env.t('oss.name'), b.x + b.w / 2, top + ROOF_H + 48);
+  ctx.font = '700 11px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#c9f2e8'; ctx.fillText(env.t('oss.sign'), b.x + b.w / 2, top + ROOF_H + 82); ctx.textAlign = 'left';
+  // terminal windows with code lines
+  for (let i = 0; i < 4; i++) {
+    const wx = b.x + 26 + i * 86, wy = top + ROOF_H + 94;
+    ctx.fillStyle = '#0b1f1a'; rr(ctx, wx, wy, 70, 40, 5); ctx.fill();
+    for (let k = 0; k < 4; k++) { ctx.fillStyle = hash(907, i, k, Math.floor(env.time / 1800)) < 0.5 ? '#2ec4b6' : '#9be7da'; ctx.fillRect(wx + 6, wy + 6 + k * 8, 10 + hash(907, i, k) * 44, 3); }
+  }
+  const gy = GROUND - GROUND_H, ix = b.x + 12, iy = gy + 8, iw = b.w - 24, ih = GROUND - iy;
+  ctx.save(); ctx.beginPath(); ctx.rect(ix, iy, iw, ih); ctx.clip();
+  ctx.fillStyle = '#10372d'; ctx.fillRect(ix, iy, iw, ih);
+  for (let k = 0; k < 4; k++) { ctx.fillStyle = '#071813'; ctx.fillRect(ix + 14 + k * 86, GROUND - 46, 60, 26); ctx.fillStyle = '#2ec4b6'; ctx.fillRect(ix + 18 + k * 86, GROUND - 42, 52, 18);
+    drawPerson(ctx, ix + 44 + k * 86, GROUND - 12, npcLook(920 + k), { scale: 0.7, dir: 1 }); }
+  ctx.restore();
+  ctx.strokeStyle = '#2ec4b6'; ctx.lineWidth = 3; ctx.strokeRect(ix, iy, iw, ih);
+}
+function drawGrants(ctx, b, env) {
+  const top = GROUND - b.h;
+  ctx.fillStyle = '#efe3c8'; ctx.fillRect(b.x, top + ROOF_H + 26, b.w, b.h - ROOF_H - 26);
+  ctx.fillStyle = '#c9b78a'; ctx.beginPath(); ctx.moveTo(b.x - 12, top + ROOF_H + 28); ctx.lineTo(b.x + b.w / 2, top); ctx.lineTo(b.x + b.w + 12, top + ROOF_H + 28); ctx.closePath(); ctx.fill(); // pediment
+  ctx.fillStyle = '#1d2b53'; rr(ctx, b.x + 40, top + ROOF_H + 34, b.w - 80, 34, 8); ctx.fill();
+  ctx.font = '800 17px "Baloo 2", system-ui, sans-serif'; ctx.fillStyle = '#ffb703'; ctx.textAlign = 'center';
+  ctx.fillText('🏛 ' + env.t('grants.name'), b.x + b.w / 2, top + ROOF_H + 58);
+  ctx.font = '700 11px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#5b4a2a'; ctx.fillText(env.t('grants.sign'), b.x + b.w / 2, top + ROOF_H + 86); ctx.textAlign = 'left';
+  // columns + windows
+  for (let i = 0; i < 6; i++) { ctx.fillStyle = '#fff8e6'; ctx.fillRect(b.x + 18 + i * 62, top + ROOF_H + 98, 16, GROUND - GROUND_H - top - ROOF_H - 98); ctx.fillStyle = '#d6c595'; ctx.fillRect(b.x + 14 + i * 62, top + ROOF_H + 98, 24, 5); }
+  for (let f = 0; f < 2; f++) for (let i = 0; i < 5; i++) windowAt(ctx, b.x + 44 + i * 62 - 10, top + ROOF_H + 110 + f * 46, 34, 28, !LOW && hash(908, i, f, Math.floor(env.time / 9000)) < 0.4 ? npcLook(930 + i) : null);
+  const gy = GROUND - GROUND_H, ix = b.x + 12, iy = gy + 8, iw = b.w - 24, ih = GROUND - iy;
+  ctx.save(); ctx.beginPath(); ctx.rect(ix, iy, iw, ih); ctx.clip();
+  ctx.fillStyle = '#f8f1dd'; ctx.fillRect(ix, iy, iw, ih);
+  ctx.fillStyle = '#1d2b53'; ctx.fillRect(ix + 20, GROUND - 28, iw - 40, 8);                       // counter
+  for (let k = 0; k < 3; k++) drawPerson(ctx, ix + 60 + k * 100, GROUND - 24, npcLook(935 + k), { scale: 0.75, dir: 1 });
+  ctx.fillStyle = '#ffb703'; ctx.font = '800 22px system-ui'; ctx.fillText('₺', ix + 12, iy + 28); ctx.fillText('€', ix + iw - 34, iy + 28);
+  ctx.restore();
+  ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 3; ctx.strokeRect(ix, iy, iw, ih);
+}
+function drawGamFed(ctx, b, env) {
+  const top = GROUND - b.h, fh = GAMFED_FLOOR_H;
+  ctx.fillStyle = '#5b2a86'; ctx.fillRect(b.x, top + ROOF_H, b.w, b.h - ROOF_H);
+  ctx.fillStyle = '#3a1a59'; ctx.fillRect(b.x - 8, top, b.w + 16, ROOF_H);
+  // ten floors, numbered from the top: floor 10 is at the roof
+  for (let n = 0; n < GAMFED_FLOORS; n++) {
+    const fy = GROUND - GROUND_H - (n + 1) * fh + 4, num = n + 1;
+    ctx.fillStyle = n % 2 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.08)'; ctx.fillRect(b.x, fy - 4, b.w, fh);
+    for (let i = 0; i < 5; i++) windowAt(ctx, b.x + 70 + i * 62, fy + 3, 40, fh - 14, !LOW && hash(909, n, i, Math.floor(env.time / 9000)) < 0.3 ? npcLook(940 + n + i) : null);
+    ctx.fillStyle = '#ffb703'; ctx.beginPath(); ctx.arc(b.x + 30, fy + fh / 2 - 4, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.font = '800 14px "Baloo 2", system-ui, sans-serif'; ctx.fillStyle = '#3a1a59'; ctx.textAlign = 'center'; ctx.fillText(String(num), b.x + 30, fy + fh / 2 + 1); ctx.textAlign = 'left';
+  }
+  ctx.fillStyle = '#ffb703'; rr(ctx, b.x + 40, top + ROOF_H + 4, b.w - 80, 22, 8); ctx.fill();
+  ctx.font = '800 14px "Baloo 2", system-ui, sans-serif'; ctx.fillStyle = '#3a1a59'; ctx.textAlign = 'center'; ctx.fillText('🎮 ' + env.t('gamfed.name'), b.x + b.w / 2, top + ROOF_H + 20); ctx.textAlign = 'left';
+  const gy = GROUND - GROUND_H, ix = b.x + 12, iy = gy + 8, iw = b.w - 24, ih = GROUND - iy;
+  ctx.save(); ctx.beginPath(); ctx.rect(ix, iy, iw, ih); ctx.clip();
+  ctx.fillStyle = '#2d1347'; ctx.fillRect(ix, iy, iw, ih);
+  ctx.font = '700 11px Nunito, system-ui'; ctx.fillStyle = '#e9d5ff'; ctx.textAlign = 'center'; ctx.fillText(env.t('gamfed.sign'), b.x + b.w / 2, iy + 22); ctx.textAlign = 'left';
+  ctx.font = '26px system-ui'; ['🏆', '🎲', '🎯', '⭐'].forEach((e, i) => ctx.fillText(e, ix + 36 + i * 86, GROUND - 22));
+  drawPerson(ctx, ix + iw - 40, GROUND - 6, npcLook(950), { scale: 0.75, dir: -1 });
+  ctx.restore();
+  ctx.strokeStyle = '#ffb703'; ctx.lineWidth = 3; ctx.strokeRect(ix, iy, iw, ih);
+}
 // A company car as a parked vehicle (colour from the company id; vans are bigger)
 const carOf = (c, x, y) => { const van = c.vehicle.model?.startsWith('van'); let h = 0; for (const ch of c.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return { kind: 'car', body: van ? 'van' : 'car', x, y, dir: 1, w: van ? 68 : 58, h: van ? 26 : 22, color: CAR_COLORS[h % CAR_COLORS.length] }; };
@@ -686,6 +759,9 @@ export function draw(ctx, env) {
     else if (b.kind === 'plaza') drawPlaza(ctx, b, env);
     else if (b.kind === 'lot') drawLot(ctx, b, env);
     else if (b.kind === 'demoday') drawDemoDay(ctx, b, env);
+    else if (b.kind === 'oss') drawOss(ctx, b, env);
+    else if (b.kind === 'grants') drawGrants(ctx, b, env);
+    else if (b.kind === 'gamfed') drawGamFed(ctx, b, env);
     else if (b.kind === 'parking') drawParking(ctx, b, env);
     else if (b.kind === 'terminal') drawTerminal(ctx, b, env);
     else drawLocked(ctx, b, env);

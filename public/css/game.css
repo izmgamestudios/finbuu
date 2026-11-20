@@ -516,3 +516,21 @@ nav button.active { color: var(--accent) !important; background: rgba(255, 183, 
   #side .card.active { animation: cardIn .22s ease-out }
 }
 @media (prefers-reduced-motion: reduce) { #side .card, #side .card.active, .hpill.glowUp, .hpill.glowDown { animation: none !important } #side { transition: none !important } }
+
+/* ===== Sprint 20: support buildings ===== */
+#modalBody.wideBody { width: min(820px, 96vw) }
+.ossList { display: flex; flex-direction: column; gap: 8px; max-height: 52vh; overflow: auto; margin: 6px 0 }
+.ossTool { border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); overflow: hidden } .ossTool.open { border-color: var(--accent) }
+.ossHead { width: 100%; text-align: left; background: none; border: 0; border-radius: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 10px 12px; min-height: 0 }
+.ossHead b { font-family: var(--font-head); font-size: 1.02rem } .ossDesc { flex-basis: 100%; color: var(--muted); font-weight: 500 }
+.ossDetail { padding: 4px 12px 12px; border-top: 1px dashed var(--line) } .ossDetail ol { margin: 4px 0; padding-left: 20px }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .7rem; font-weight: 800; background: var(--line) }
+.tag.lic.osi { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good) } .tag.lic.fair-code, .tag.lic.source-available { background: color-mix(in srgb, var(--warn) 25%, transparent); color: var(--warn) }
+.extLink { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--line); color: var(--text); font-weight: 700; font-size: .8rem; text-decoration: none } .extLink:hover { background: var(--accent); color: var(--accent-ink) }
+.gfWrap { display: grid; grid-template-columns: 230px 1fr; gap: 12px; margin: 8px 0 }
+.gfTower { display: flex; flex-direction: column; gap: 3px; max-height: 52vh; overflow: auto }
+.gfFloor { display: flex; align-items: center; gap: 8px; text-align: left; padding: 6px 8px; min-height: 36px; font-size: .82rem; border-radius: 8px }
+.gfFloor i { font-style: normal; font-family: var(--font-head); width: 24px; height: 24px; flex: 0 0 24px; display: grid; place-items: center; border-radius: 50%; background: var(--line); font-size: .85rem }
+.gfFloor.seen i { background: var(--good); color: #fff } .gfFloor.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent-deep) } .gfFloor.on i { background: var(--accent-ink); color: var(--accent) }
+.gfPanel { background: var(--panel-2); border-radius: 12px; padding: 12px 14px } .gfPanel h3 { margin: 2px 0 6px }
+@media (max-width: 640px) { .gfWrap { grid-template-columns: 1fr } .gfTower { max-height: 26vh } }

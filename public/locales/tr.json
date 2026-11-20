@@ -149,7 +149,8 @@
       "light": "☀️ Açık",
       "dark": "🌙 Koyu"
     },
-    "dwDay": "Gün {{d}}"
+    "dwDay": "Gün {{d}}",
+    "dataError": "Veri yüklenemedi."
   },
   "tutorial": {
     "welcome": "Kılavuz Binası: Hoş geldin! Başlangıç sermayen hazır; Türkçede tutarlar gerçek 2026 ₺ değerleriyle gösterilir.",
@@ -1421,5 +1422,75 @@
     "low": "Azalıyor",
     "ok": "Yeterli",
     "tip": "İpucu: stoktaki ürünler %5 fazla kazandırır. 30 gün hiç stoksuz kalmazsan 📦 rozeti kazanırsın."
+  },
+  "oss": {
+    "name": "AÇIK KAYNAK",
+    "sign": "Açık kaynak yazılım destek merkezi",
+    "title": "Açık Kaynak Destek Merkezi",
+    "intro": "Lisansı 0 ₺ olan araçlar: gerçek maliyet kurulum emeği ve sunucu giderindir. 65 aracı incele, kendi şirketin için doğrusunu seç.",
+    "search": "Araç ara…",
+    "all": "Tümü",
+    "allTypes": "Tüm lisanslar",
+    "count": "{{n}} araç",
+    "tier": "Seviye {{n}}",
+    "unlock": "Açılış: seviye {{n}}",
+    "setup": "Kurulum emeği",
+    "hosting": "Aylık sunucu",
+    "effect": "Oyun etkisi",
+    "how": "3 adımda kullanım",
+    "links": "Bağlantılar",
+    "l_repo": "Kod",
+    "l_website": "Web sitesi",
+    "l_docs": "Doküman",
+    "l_community": "Topluluk",
+    "l_support": "Destek",
+    "type": {
+      "osi": "OSI açık kaynak",
+      "fair-code": "Fair-code",
+      "source-available": "Kaynak açık (kısıtlı lisans)"
+    },
+    "typeHint": {
+      "osi": "Özgürce kullanılabilir/değiştirilebilir.",
+      "fair-code": "Kaynağı açık ama ticari kullanımda sınırlar olabilir.",
+      "source-available": "Kaynağı görülebilir; lisans kısıtlıdır."
+    },
+    "license": "Lisans",
+    "soon": "Şirkete kurma özelliği yakında. Şimdilik bilgi ve karşılaştırma amaçlı.",
+    "none": "Sonuç yok.",
+    "lang": "Katalog içeriği Türkçedir.",
+    "effectVal": "+%{{p}}",
+    "effectNeg": "−%{{p}}",
+    "effectOpen": "açar",
+    "unlockLvl": "Açılış seviyesi"
+  },
+  "grants": {
+    "name": "HİBE & DESTEK",
+    "sign": "Kamu ve özel yatırım programları",
+    "title": "Hibe ve Destek Programları",
+    "intro": "Girişimin için kamu, AB ve özel yatırım kaynaklarını tanı. Her programın kime, nasıl ve hangi adımlarla uygulandığını gör.",
+    "who": "Kimler için",
+    "steps": "Adımlar",
+    "inFinbuu": "Finbuu'da",
+    "open": "Resmi site",
+    "demo": "Demo Day'e git",
+    "type": {
+      "grant": "Hibe",
+      "incentive": "Teşvik",
+      "equity": "Özkaynak",
+      "program": "Program"
+    }
+  },
+  "gamfed": {
+    "name": "GAMFED TÜRKİYE",
+    "sign": "Oyunlaştırma modeli · 10 adım",
+    "title": "GamFed Türkiye",
+    "pick": "Kat {{n}}",
+    "inFinbuu": "Finbuu'da örnek",
+    "prev": "Alt kat",
+    "next": "Üst kat",
+    "visited": "{{n}}/10 kat gezildi",
+    "done": "Tebrikler, 10 katı da gezdin! 🎓",
+    "sources": "Kaynaklar",
+    "step": "Adım {{n}}"
   }
 }

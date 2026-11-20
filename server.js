@@ -108,7 +108,7 @@ const SEED = {
   itUpgrade: { cost: 150, maxLevel: 3, cyberShield: 0.25 },
   npcStaff: { incomeFactor: 4 },
   npcTalk: { ids: 64, serviceCost: 30, meetXp: 2, serviceXp: 5, serviceKnowledge: 2, dealMult: 2 },
-  busStops: [697, 1430, 2406, 3382],   // world x of bus stops (gaps between buildings, mirrored by the client)
+  busStops: [697, 1430, 2406, 3382, 5298],   // world x of bus stops (gaps between buildings, mirrored by the client)
   teams: { max: 8, colors: ['#e63946', '#1d70f5', '#2a9d4b', '#f4a300', '#8e44ad', '#00a8a8', '#ff6fa1', '#4b5563'] },
   quests: [
     { id: 'sell10', metric: 'sales', goal: 10, xp: 10, coins: 30 }, { id: 'sell30', metric: 'sales', goal: 30, xp: 20, coins: 60 },
@@ -159,7 +159,7 @@ const SHARED_MODES = ['multiplayer', 'presentation'];
 // ---------- HELPERS ----------
 const rooms = {};
 const LOTS_PER_STREET = 12;
-const WORLD_MAX_X = 5650; // client street width (incl. car park and bus terminal at the end)
+const WORLD_MAX_X = 6650; // client street width (incl. car park and bus terminal at the end)
 const SPAWN_X = 370;     // in front of the guide building
 const clean = (s, max = 40) => String(s ?? '').replace(/[<>]/g, '').trim().slice(0, max);
 const cParams = c => (c.name ? { company: c.name } : { companyKey: c.nameKey });
@@ -303,7 +303,7 @@ function costPerTick(st, c) {
 // City-based real estate: daily rent and purchase price of a lot (₺/m² converted to coins)
 const cityOf = st => (ECON.cities[st.city] ? st.city : 'istanbul');
 // ---------- Intercity travel (Sprint 11b): rooms of the same world are the streets of different cities ----------
-const terminalX = st => 720 + 244 * st.lots.length + 1250 + 190;           // centre of the bus terminal (mirrors the client layout)
+const terminalX = st => 720 + 244 * st.lots.length + 2530 + 190;           // centre of the bus terminal (mirrors the client layout)
 const cityMeta = key => ECON.cityMap.find(c => c.key === key);
 const findCityRoom = (worldId, city) => Object.values(rooms).find(r => r.worldId === worldId && r.city === city);
 function distanceKm(a, b) { // great-circle distance x road factor

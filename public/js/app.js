@@ -1288,6 +1288,94 @@ socket.on('teamCall', c => {
   openModal(body => { body.append(el('h3', '📣 ' + msg), btn('🏃 ' + t('team.goTo'), () => goToPlayer(c.from, c), { primary: true, isDefault: true })); });
 });
 // ---------- Quests, teams, badges (profile card) ----------
+// ---- Sprint 20: support buildings (Open Source hub, Grants hall, GamFed tower) ----
+const L10 = o => (o && (o[i18next.language?.startsWith('tr') ? 'tr' : 'en'] ?? o.tr ?? o.en)) ?? '';
+const dataCache = {};
+function loadData(name, cb) {
+  if (dataCache[name]) return cb(dataCache[name]);
+  fetch(`/data/${name}.json`).then(r => r.json()).then(d => { dataCache[name] = d; cb(d); }).catch(() => toast(t('ui.dataError')));
+}
+const safeUrl = u => (typeof u === 'string' && /^https:\/\//.test(u) ? u : null);
+const extLink = (label, url) => { const a = el('a', label, 'extLink'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a; };
+const badgeEl = (text, cls) => el('span', text, 'tag ' + (cls || ''));
+
+function openOss() {
+  loadData('open-source-tools', cat => openModal(body => {
+    body.classList.add('wideBody'); body.append(el('h3', '🌱 ' + t('oss.title')), el('p', t('oss.intro'), 'muted'));
+    const q = el('input'); q.placeholder = t('oss.search'); q.maxLength = 40;
+    const catSel = el('select'), typeSel = el('select');
+    catSel.append(new Option(t('oss.all'), '')); Object.entries(cat.categories).forEach(([k, v]) => catSel.append(new Option(v, k)));
+    typeSel.append(new Option(t('oss.allTypes'), '')); ['osi', 'fair-code', 'source-available'].forEach(k => typeSel.append(new Option(t('oss.type.' + k), k)));
+    const bar = el('div', null, 'row'); bar.append(q, catSel, typeSel); body.append(bar);
+    const count = el('small', '', 'muted'), list = el('div', null, 'ossList');
+    const effectText = e => { const label = cat.effectStats[e.stat] || e.stat; if (e.stat === 'onlineSalesChannel') return `${label.replace(/\s*\(.*\)/, '')}: ${t('oss.effectOpen')}`; const p = Math.round(e.value * 100); return `${label.replace(/\s*\([^)]*\)/, '')}: ${t(e.stat === 'operatingCostReduction' ? 'oss.effectNeg' : 'oss.effectVal', { p })}`; };
+    const row = tool => {
+      const box = el('div', null, 'ossTool'), head = el('button', null, 'ossHead'); head.type = 'button';
+      head.append(el('b', tool.name), badgeEl(t('oss.type.' + tool.licenseType), 'lic ' + tool.licenseType), el('small', `${cat.categories[tool.category] || ''} · ${t('oss.tier', { n: tool.game.tier })}`, 'muted'));
+      head.append(el('small', tool.description, 'ossDesc'));
+      const detail = el('div', null, 'ossDetail'); detail.hidden = true;
+      head.onclick = () => { detail.hidden = !detail.hidden; box.classList.toggle('open', !detail.hidden); };
+      const g = tool.game;
+      detail.append(el('p', `${t('oss.license')}: ${tool.license} — ${t('oss.typeHint.' + tool.licenseType)}`, 'muted'));
+      const st = el('div', null, 'mini'); st.append(kpi(t('oss.setup'), `${g.setupCost.toLocaleString('tr-TR')} 🪙`), kpi(t('oss.hosting'), `${g.monthlyHostingCost.toLocaleString('tr-TR')} 🪙`), kpi(t('oss.unlockLvl'), String(g.unlockLevel)));
+      detail.append(st, el('p', `⚡ ${t('oss.effect')}: ${effectText(g.effect)}`));
+      detail.append(el('h4', t('oss.how'))); const ol = el('ol'); tool.howToUse.forEach(x => ol.append(el('li', x))); detail.append(ol);
+      const links = el('div', null, 'row'); links.append(el('small', t('oss.links') + ':', 'muted'));
+      ['repo', 'website', 'docs', 'community', 'support'].forEach(k => { const u = safeUrl(tool.links?.[k]); if (u) links.append(extLink(t('oss.l_' + k), u)); });
+      detail.append(links, el('small', t('oss.soon'), 'muted'));
+      box.append(head, detail); return box;
+    };
+    const render = () => {
+      const term = q.value.trim().toLocaleLowerCase('tr'), c = catSel.value, ty = typeSel.value;
+      const res = cat.tools.filter(x => (!c || x.category === c) && (!ty || x.licenseType === ty) && (!term || (x.name + ' ' + x.description).toLocaleLowerCase('tr').includes(term)));
+      count.textContent = t('oss.count', { n: res.length }) + ' · ' + t('oss.lang');
+      list.replaceChildren(...(res.length ? res.map(row) : [el('p', t('oss.none'), 'muted')]));
+    };
+    q.oninput = render; catSel.onchange = render; typeSel.onchange = render; render();
+    body.append(count, list);
+  }));
+}
+function openGrants() {
+  loadData('grants', g => openModal(body => {
+    body.classList.add('wideBody'); body.append(el('h3', '🏛 ' + t('grants.title')), el('p', t('grants.intro'), 'muted'), el('small', '⚠ ' + L10(g.note), 'muted'));
+    let grp = g.groups[0].id; const tabs = el('div', null, 'row'), list = el('div', null, 'ossList');
+    const render = () => {
+      tabs.replaceChildren(...g.groups.map(x => { const b = btn(`${x.icon} ${L10(x.name)}`, () => { grp = x.id; render(); }); if (x.id === grp) b.classList.add('primary'); return b; }));
+      list.replaceChildren(...g.programs.filter(p => p.group === grp).map(p => {
+        const box = el('div', null, 'ossTool'), head = el('button', null, 'ossHead'); head.type = 'button';
+        head.append(el('b', typeof p.name === 'string' ? p.name : L10(p.name)), badgeEl(t('grants.type.' + p.type), 'lic osi'), el('small', L10(p.what), 'ossDesc'));
+        const d = el('div', null, 'ossDetail'); d.hidden = true; head.onclick = () => { d.hidden = !d.hidden; box.classList.toggle('open', !d.hidden); };
+        d.append(el('p', `👥 ${t('grants.who')}: ${L10(p.who)}`)); d.append(el('h4', t('grants.steps'))); const ol = el('ol'); (p.steps[i18next.language?.startsWith('tr') ? 'tr' : 'en'] || p.steps.tr).forEach(x => ol.append(el('li', x))); d.append(ol);
+        d.append(el('p', `🎮 ${t('grants.inFinbuu')}: ${L10(p.game)}`, 'muted'));
+        const row_ = el('div', null, 'row'); const u = safeUrl(p.link); if (u) row_.append(extLink('🔗 ' + t('grants.open'), u)); d.append(row_);
+        box.append(head, d); return box;
+      }));
+    };
+    render(); body.append(tabs, list);
+    const demo = buildings.find(b => b.kind === 'demoday');
+    if (demo) body.append(btn('🎤 ' + t('grants.demo'), () => { closeModal(); walkTo(demo.x + demo.w / 2, () => openBuilding(demo), demo.id); }, { primary: true }));
+  }));
+}
+function openGamFed(startFloor = 1) {
+  loadData('gamfed', g => openModal(body => {
+    body.classList.add('wideBody'); body.append(el('h3', '🎮 ' + g.title[i18next.language?.startsWith('tr') ? 'tr' : 'en']), el('p', L10(g.intro), 'muted'));
+    const seen = new Set(loadJSON('gamfedSeen', [])); let cur = startFloor;
+    const wrap = el('div', null, 'gfWrap'), tower = el('div', null, 'gfTower'), panel = el('div', null, 'gfPanel'), prog = el('small', '', 'muted');
+    const show = n => {
+      cur = n; seen.add(n); saveJSON('gamfedSeen', [...seen]);
+      const f = g.floors[n - 1];
+      tower.replaceChildren(...[...g.floors].reverse().map(x => { const b = el('button', null, 'gfFloor' + (x.n === cur ? ' on' : '') + (seen.has(x.n) ? ' seen' : '')); b.type = 'button'; b.append(el('i', String(x.n)), el('span', `${x.icon} ${L10(x.title)}`)); b.onclick = () => show(x.n); return b; }));
+      panel.replaceChildren(el('small', t('gamfed.step', { n: f.n }), 'muted'), el('h3', `${f.icon} ${L10(f.title)}`), el('p', L10(f.desc)), el('h4', '🎮 ' + t('gamfed.inFinbuu')), el('p', L10(f.game)));
+      const nav = el('div', null, 'row'); const dn = btn('▼ ' + t('gamfed.prev'), () => show(cur - 1)), up = btn('▲ ' + t('gamfed.next'), () => show(cur + 1), { primary: true });
+      dn.disabled = cur <= 1; up.disabled = cur >= g.floors.length; nav.append(dn, up); panel.append(nav);
+      prog.textContent = t('gamfed.visited', { n: seen.size });
+      if (seen.size === g.floors.length && !loadJSON('gamfedDone', false)) { saveJSON('gamfedDone', true); toast(t('gamfed.done')); }
+    };
+    wrap.append(tower, panel); body.append(wrap, prog);
+    const src = el('div', null, 'row'); src.append(el('small', t('gamfed.sources') + ':', 'muted')); g.sources.forEach(x => { const u = safeUrl(x.url); if (u) src.append(extLink(x.label, u)); }); body.append(src);
+    show(startFloor);
+  }));
+}
 // ---- Sprint 17c: Mini SaaS ERP (stock / capacity + supply orders) ----
 function openErp(c, data) {
   if (!data) return socket.emit('erpGet', { cid: c.id }, g => { if (g) openErp(c, g); });
@@ -1597,7 +1685,7 @@ let modalClosable = true;
 function openModal(fill, { closable = true, onClose = null } = {}) {
   if (modalOpen && modalOnClose) { const cb = modalOnClose; modalOnClose = null; cb(); }
   modalClosable = closable; modalOpen = true; modalOnClose = onClose;
-  const body = $('modalBody'); body.replaceChildren(); delete body.dataset.npc; delete body.dataset.modes; fill(body);
+  const body = $('modalBody'); body.replaceChildren(); body.classList.remove('wideBody'); delete body.dataset.npc; delete body.dataset.modes; fill(body);
   if (closable) { const b = el('button', t('ui.close')); b.onclick = closeModal; body.append(b); }
   $('modal').style.display = 'flex';
   const def = body.querySelector('[data-default]');
@@ -1827,6 +1915,9 @@ function openBuilding(b) {
   const forThis = ranked.find(s => buildingOf(s.target)?.id === b.id);
   if (b.kind === 'guide') return openModal(body => { body.append(el('h3', t('ui.guide'))); seed.tutorial.forEach(k => body.append(el('p', t(k)))); });
   if (b.kind === 'demoday') return openDemoDay();
+  if (b.kind === 'oss') return openOss();
+  if (b.kind === 'grants') return openGrants();
+  if (b.kind === 'gamfed') return openGamFed();
   if (b.kind === 'locked') return toast(t('ui.premiumAlert', { feature: t('locked.skyscraper') }));
   if (b.kind === 'home') return isPres() ? null : openHome();
   if (b.kind === 'parking') return openParking();
@@ -2115,7 +2206,7 @@ setInterval(() => { adBannerIdx++; updateAdBanner(); }, 8000);
 // ---------- Minimap: the whole street at a glance (M key / map button), click to walk there ----------
 let minimapOpen = false, mmSig = '';
 function toggleMinimap(force) { minimapOpen = force ?? !minimapOpen; $('minimap').hidden = !minimapOpen; mmSig = ''; if (minimapOpen) renderMinimapList(); }
-const mmColor = b => { if (b.kind === 'guide') return '#f2b84b'; if (b.kind === 'plaza') return '#3987e5'; if (b.kind === 'demoday') return '#9b59b6'; if (b.kind === 'home') return '#e67e22'; if (b.kind === 'parking') return '#5b6475'; if (b.kind === 'terminal') return '#e67e22'; if (b.kind === 'locked') return '#b8c0cc';
+const mmColor = b => { if (b.kind === 'guide') return '#f2b84b'; if (b.kind === 'plaza') return '#3987e5'; if (b.kind === 'demoday') return '#9b59b6'; if (b.kind === 'oss') return '#2ec4b6'; if (b.kind === 'grants') return '#c9a227'; if (b.kind === 'gamfed') return '#5b2a86'; if (b.kind === 'home') return '#e67e22'; if (b.kind === 'parking') return '#5b6475'; if (b.kind === 'terminal') return '#e67e22'; if (b.kind === 'locked') return '#b8c0cc';
   const ts = b.lot.companyIds.map(id => state.companies[id]).filter(Boolean); return !ts.length ? '#a9adb8' : ts.some(c => isMember(c)) ? '#f2b84b' : ts.some(c => c.isNpc) ? '#9b7be0' : '#3fa36b'; };
 function drawMinimap() {
   const cv = $('mmCv'); if (!minimapOpen || !state || scene.name !== 'street') return;
@@ -2143,7 +2234,7 @@ function placeItems() {
   const go = b => () => { walkTo(b.x + b.w / 2, () => openBuilding(b), b.id); if (touch) toggleMinimap(false); };
   for (const b of buildings) {
     if (b.kind === 'locked') continue;
-    const name = b.kind === 'guide' ? t('ui.guideSign') : b.kind === 'plaza' ? t('ui.plazaTitle') : b.kind === 'demoday' ? '🎤 Demo Day' : b.kind === 'home' ? '🏠 ' + t('home.title') : b.kind === 'parking' ? '🅿 ' + t('veh.parkingSign') : b.kind === 'terminal' ? '🚌 ' + t('travel.sign')
+    const name = b.kind === 'guide' ? t('ui.guideSign') : b.kind === 'plaza' ? t('ui.plazaTitle') : b.kind === 'demoday' ? '🎤 Demo Day' : b.kind === 'oss' ? '🌱 ' + t('oss.name') : b.kind === 'grants' ? '🏛 ' + t('grants.name') : b.kind === 'gamfed' ? '🎮 ' + t('gamfed.name') : b.kind === 'home' ? '🏠 ' + t('home.title') : b.kind === 'parking' ? '🅿 ' + t('veh.parkingSign') : b.kind === 'terminal' ? '🚌 ' + t('travel.sign')
       : b.lot.companyIds.length ? b.lot.companyIds.map(id => state.companies[id]).filter(Boolean).map(c => (isMember(c) ? '⭐ ' : '') + companyName(c)).join(', ') : null;
     if (name) items.push({ name, fn: go(b), color: mmColor(b) });
   }
