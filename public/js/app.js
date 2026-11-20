@@ -434,6 +434,8 @@ cv.addEventListener('pointerdown', e => {
   if (scene.name !== 'street') return;
   const p = toWorld(e.clientX, e.clientY), b = buildingAt(p.x, p.y);
   if (isPres()) { if (b) openBuilding(b); return; }
+  const tx = !driving && !ride && !taxiHail ? traffic.taxiAt(p.x, p.y) : null;
+  if (tx) { hailTaxi(tx); return; }
   const n = npcs.at(p.x, p.y);
   manualInput();
   if (n) walkTo(n.x - 18 * Math.sign(n.x - player.x || 1), () => openNpc(n), null);
@@ -691,7 +693,7 @@ function updateRide(now) {
   const p = clamp((now - ride.t0) / ride.dur, 0, 1);
   player.x = ride.fromX + (ride.toX - ride.fromX) * ease(p); player.dir = ride.dir; player.moving = false;
   ride.x = player.x;
-  if (p >= 1) { player.x = ride.toX; lastSent = { x: player.x, at: now }; ride = null; toast('🚏 ' + t('bus.arrived')); }
+  if (p >= 1) { const taxi = ride.kind === 'taxi'; player.x = ride.toX; lastSent = { x: player.x, at: now }; ride = null; toast(taxi ? '🚕 ' + t('taxi.arrived') : '🚏 ' + t('bus.arrived')); }
   return true;
 }
 const roleOf = c => seed?.templates.find(tp => tp.key === c.nameKey)?.role || (c.nameKey === 'npc.busCard' ? 'busCard' : null);
@@ -723,13 +725,94 @@ function updateCarHud() {
   box.append(el('b', '🚗 ' + t('veh.driving')), bar('⛽', t('veh.fuel'), fp, fp < 15), bar('🔧', t('veh.cond'), cp, cp < 25), el('small', t('veh.range', { km: Math.max(0, Math.round(driving.fuel)) }) + ' · ' + t('veh.hudHint'), 'muted'));
 }
 $('carBtn').onclick = () => { if (driving) exitCar(); else { const c = nearOwnCar(); if (c) boardCar(c); } };
+// ---------- Taxi (Sprint 24b): click a taxi, it pulls up, haggle over the fare, ride anywhere ----------
+let taxiHail = null;                       // { car, t0 } while a taxi is on its way / waiting
+function hailTaxi(car) {
+  if (driving || ride || isPres()) return;
+  manualInput(); traffic.hail(car, player.x); taxiHail = { car, t0: performance.now() }; toast('🚕 ' + t('taxi.coming'));
+}
+function updateTaxiHail(now) {
+  if (!taxiHail) return;
+  const { car } = taxiHail;
+  if (driving || ride || now - taxiHail.t0 > 20000 || !traffic.cars.includes(car)) { traffic.release(car); taxiHail = null; return; }
+  if (!modalOpen && Math.abs(car.x - player.x) < 90) { taxiHail.t0 = now; openTaxiPick(); }
+}
+const taxiMoney = c => money(c);
+function taxiEstimate(x) { const T = seed.taxi, km = Math.abs(x - player.x) / T.pxPerKm; return Math.max(T.minFare, Math.round((T.base + km * T.perKm) * (isNightNow() ? T.night : 1))); }
+const isNightNow = () => { const m = gameMinutes(); return m < 360 || m >= 1320; };
+function cancelTaxi() { if (taxiHail) { traffic.release(taxiHail.car); taxiHail = null; } socket.emit('taxiCancel'); }
+function openTaxiPick() {
+  openModal(body => {
+    body.append(el('h3', '🚕 ' + t('taxi.title')), el('p', t('taxi.hello'), 'muted'));
+    if (isNightNow()) body.append(el('small', '🌙 ' + t('taxi.nightNote', { x: seed.taxi.night }), 'muted'));
+    const list = el('div', null, 'prodList');
+    placeItems().filter(i => i.x != null && Math.abs(i.x - player.x) >= 150).sort((a, b) => Math.abs(a.x - player.x) - Math.abs(b.x - player.x)).slice(0, 14).forEach(i => {
+      const row = el('div', null, 'prodRow'), info = el('div'); info.append(el('b', i.name), el('small', ` ${(Math.abs(i.x - player.x) / seed.taxi.pxPerKm).toFixed(1)} km · ~${taxiMoney(taxiEstimate(i.x))}`, 'muted'));
+      row.append(info, btn('➡', () => taxiQuote(i)));
+      list.append(row);
+    });
+    if (!list.children.length) body.append(el('p', t('taxi.nowhere'), 'muted')); else body.append(list);
+    body.append(btn(t('taxi.never'), () => { cancelTaxi(); closeModal(); }));
+  }, { onClose: () => { if (!modalOpen && taxiHail && !ride) cancelTaxi(); } });
+}
+function taxiQuote(place) {
+  socket.emit('taxiQuote', { to: Math.round(place.x) }, r => {
+    if (!r?.ok) { toast(t(r?.key || 'toast.taxiBusy')); return; }
+    taxiDeal(place, r, null);
+  });
+}
+const pick = k => { const n = 3; return t(`taxi.${k}.${1 + Math.floor(Math.random() * n)}`); };
+function taxiDeal(place, q, say) {
+  openModal(body => {
+    body.append(el('h3', '🚕 ' + place.name), el('p', t('taxi.quote', { km: q.km, fare: taxiMoney(q.fare) }) + (q.night ? ' 🌙' : '')));
+    if (say) body.append(el('p', '“' + say + '”', 'pitchLine'));
+    const offers = el('div', null, 'prodList');
+    seed.taxi.offers.forEach(pct => {
+      const price = Math.max(1, Math.round(q.fare * pct / 100));
+      offers.append(btn(pct === 100 ? `✅ ${t('taxi.payFull', { price: taxiMoney(price) })}` : `🤝 ${t('taxi.haggle', { pct: 100 - pct, price: taxiMoney(price) })}`, () => taxiOffer(place, q, pct)));
+    });
+    body.append(offers, btn(t('taxi.never'), () => { cancelTaxi(); closeModal(); }));
+  }, { onClose: () => { if (!modalOpen && taxiHail && !ride) cancelTaxi(); } });
+}
+function taxiOffer(place, q, pct) {
+  socket.emit('taxiOffer', { pct }, r => {
+    if (!r?.ok) return toast(t('toast.taxiBusy'));
+    if (r.refused) { closeModal(); cancelTaxi(); return toast('🚕 ' + t('taxi.refused')); }
+    if (r.accepted) return taxiConfirm(place, r.price, pick('accept'));
+    taxiCounter(place, q, r.counter, r.tries);
+  });
+}
+function taxiCounter(place, q, counter, tries) {
+  openModal(body => {
+    body.append(el('h3', '🚕 ' + place.name), el('p', '“' + pick('counterSay') + '”', 'pitchLine'), el('p', t('taxi.counterLine', { price: taxiMoney(counter), n: tries, max: seed.taxi.maxTries })));
+    body.append(btn('✅ ' + t('taxi.acceptCounter', { price: taxiMoney(counter) }), () => socket.emit('taxiAccept', {}, r => { if (r?.ok) taxiConfirm(place, r.price, null); }), { primary: true }),
+      btn('🤝 ' + t('taxi.tryAgain'), () => taxiDeal(place, q, pick('counterSay'))), btn(t('taxi.never'), () => { cancelTaxi(); closeModal(); }));
+  }, { onClose: () => { if (!modalOpen && taxiHail && !ride) cancelTaxi(); } });
+}
+function taxiConfirm(place, price, say) {
+  openModal(body => {
+    body.append(el('h3', '🚕 ' + place.name));
+    if (say) body.append(el('p', '“' + say + '”', 'pitchLine'));
+    body.append(el('p', t('taxi.deal', { price: taxiMoney(price) })), el('small', t('taxi.dealNote'), 'muted'));
+    body.append(btn('🚕 ' + t('taxi.go', { price: taxiMoney(price) }), () => taxiGo(place), { primary: true, isDefault: true }), btn(t('taxi.never'), () => { cancelTaxi(); closeModal(); }));
+  }, { onClose: () => { if (!modalOpen && taxiHail && !ride) cancelTaxi(); } });
+}
+function taxiGo(place) {
+  socket.emit('taxiGo', {}, r => {
+    if (!r?.ok) { toast(t(r?.key || 'toast.taxiExpired')); closeModal(); cancelTaxi(); return; }
+    const car = taxiHail?.car; if (car) { traffic.remove(car); taxiHail = null; }
+    closeModal(); const fromX = player.x, toX = r.x;
+    ride = { kind: 'taxi', fromX, toX, t0: performance.now(), dur: clamp(Math.abs(toX - fromX) / 0.55, 1500, 6500), dir: Math.sign(toX - fromX) || 1, text: place.name };
+    toast('🚕 ' + t('taxi.paid', { price: taxiMoney(r.price) }));
+  });
+}
 // ---------- Game loop ----------
 let lastT = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
   const t0 = performance.now();
   if (scene.name === 'interior') { updateInner(dt); renderInterior(now); }
-  else { updatePlayer(dt, now); updateStreet(dt); renderStreet(now); }
+  else { updatePlayer(dt, now); updateTaxiHail(now); updateStreet(dt); renderStreet(now); }
   if (minimapOpen) { drawMinimap(); if (now - (frame.mmAt || 0) > 800) { frame.mmAt = now; renderMinimapList(); } }
   perf.frameMs = perf.frameMs * 0.9 + (performance.now() - t0) * 0.1;
   if (dt > 0) perf.fps = perf.fps * 0.92 + (1 / dt) * 0.08;
@@ -2374,9 +2457,9 @@ function placeItems() {
     if (b.kind === 'locked') continue;
     const name = b.kind === 'guide' ? t('ui.guideSign') : b.kind === 'plaza' ? t('ui.plazaTitle') : b.kind === 'demoday' ? '🎤 Demo Day' : b.kind === 'oss' ? '🌱 ' + t('oss.name') : b.kind === 'grants' ? '🏛 ' + t('grants.name') : b.kind === 'gamfed' ? '🎮 ' + t('gamfed.name') : b.kind === 'home' ? '🏠 ' + t('home.title') : b.kind === 'parking' ? '🅿 ' + t('veh.parkingSign') : b.kind === 'terminal' ? '🚌 ' + t('travel.sign')
       : b.lot.companyIds.length ? b.lot.companyIds.map(id => state.companies[id]).filter(Boolean).map(c => (isMember(c) ? '⭐ ' : '') + companyName(c)).join(', ') : null;
-    if (name) items.push({ name, fn: go(b), color: mmColor(b) });
+    if (name) items.push({ name, fn: go(b), color: mmColor(b), x: b.x + b.w / 2 });
   }
-  (seed.busStops || []).forEach((x, i) => items.push({ name: '🚏 ' + t('map.stop', { n: i + 1 }), fn: () => { walkTo(x, null, null); if (touch) toggleMinimap(false); }, color: css('--accent') }));
+  (seed.busStops || []).forEach((x, i) => items.push({ name: '🚏 ' + t('map.stop', { n: i + 1 }), fn: () => { walkTo(x, null, null); if (touch) toggleMinimap(false); }, color: css('--accent'), x }));
   return items;
 }
 $('mapBtn').onclick = () => toggleMinimap(); $('mmClose').onclick = () => toggleMinimap(false);

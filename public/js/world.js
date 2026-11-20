@@ -665,7 +665,7 @@ function drawVehicle(ctx, v) {
       ctx.fillStyle = '#cfe8f7'; ctx.fillRect(w / 2 - 22, -h - 8, 14, 9); }
     else { ctx.fillStyle = v.color; rr(ctx, -w / 4, -h - 9, w / 2, 11, 5); ctx.fill();
       ctx.fillStyle = '#cfe8f7'; ctx.fillRect(-w / 4 + 3, -h - 7, w / 4 - 4, 7); ctx.fillRect(2, -h - 7, w / 4 - 5, 7); }
-    if (kind === 'taxi') { ctx.fillStyle = '#2b2f3a'; ctx.fillRect(-7, -h - 13, 14, 4); }
+    if (kind === 'taxi') { ctx.fillStyle = '#2b2f3a'; ctx.fillRect(-7, -h - 13, 14, 4); ctx.fillStyle = v.hailed ? '#ffb703' : '#fff3b0'; ctx.fillRect(-5, -h - 12, 10, 2); }
   }
   ctx.fillStyle = '#ffe9a8'; ctx.fillRect(w / 2 - 3, -h + 8, 3, 4);
   ctx.fillStyle = '#2b2f3a'; circle(ctx, -w / 2 + 12, -3, 5); circle(ctx, w / 2 - 12, -3, 5);
@@ -686,6 +686,11 @@ export function createTraffic() {
       v.target = targetX; v.looks = looks; v.stay = 2;
       cars.push(v);
     },
+    // taxis can be hailed (Sprint 24b): hit-test, call one over, release it, take it out of traffic
+    taxiAt(x, y) { return cars.find(c => c.kind === 'taxi' && !c.riding && Math.abs(c.x - x) < c.w / 2 + 6 && y > c.y - c.h - 18 && y < c.y + 8) || null; },
+    hail(c, x) { c.target = x - 46 * (c.dir || 1); c.stay = 90; c.hailed = true; },
+    release(c) { if (c) { c.stay = 0.3; c.hailed = false; } },
+    remove(c) { const i = cars.indexOf(c); if (i >= 0) cars.splice(i, 1); },
     update(dt, camX, viewW, worldW, stops, density) {
       // city bus: loops the street, stopping at every stop
       if (bus.wait > 0) bus.wait -= dt;
@@ -722,8 +727,9 @@ export function createTraffic() {
       }
     },
     draw(ctx, camX, viewW, riding) {
-      for (const c of [...cars, bus]) if (c.x > camX - 200 && c.x < camX + viewW + 200 && !(riding && c === bus)) drawVehicle(ctx, c);
-      if (riding) drawVehicle(ctx, { ...bus, x: riding.x, dir: riding.dir, text: '🚌 ' + (riding.text || '') });
+      for (const c of [...cars, bus]) if (c.x > camX - 200 && c.x < camX + viewW + 200 && !(riding && riding.kind !== 'taxi' && c === bus)) drawVehicle(ctx, c);
+      if (riding?.kind === 'taxi') drawVehicle(ctx, { kind: 'taxi', x: riding.x, y: LANE_A, dir: riding.dir, w: 58, h: 22, color: '#f2c230' });
+      else if (riding) drawVehicle(ctx, { ...bus, x: riding.x, dir: riding.dir, text: '🚌 ' + (riding.text || '') });
     }
   };
 }

@@ -358,7 +358,10 @@
     "driveFuel": "Benzin bitti! Araç yolda kaldı.",
     "driveBroken": "Araç bozuldu! Servis gerekiyor.",
     "driveSold": "Araç artık senin değil, indin.",
-    "driveOk": "🚗 Sürüyorsun (W/↑ ile in)"
+    "driveOk": "🚗 Sürüyorsun (W/↑ ile in)",
+    "taxiTooClose": "Gidilecek yer çok yakın, yürü.",
+    "taxiBusy": "Taksi şu an müsait değil.",
+    "taxiExpired": "Teklifin süresi doldu."
   },
   "log": {
     "joined": "{{player}} caddeye girdi.",
@@ -1641,5 +1644,35 @@
     "chipValue": "{{dom}} {{month}}",
     "chipSub": "Yıl {{year}} · {{weekday}} · {{time}}",
     "day": "Gün {{n}}"
+  },
+  "taxi": {
+    "coming": "Taksi yaklaşıyor…",
+    "title": "Taksi",
+    "hello": "Nereye gidiyoruz? Fiyatta pazarlık yapabilirsin.",
+    "nightNote": "Gece tarifesi: fiyat ×{{x}}",
+    "nowhere": "Yakında gidilecek yer yok.",
+    "never": "Vazgeç",
+    "quote": "Mesafe {{km}} km · taksimetre {{fare}}",
+    "payFull": "Taksimetre fiyatı: {{price}}",
+    "haggle": "%{{pct}} indirim iste ({{price}})",
+    "refused": "Şoför kızdı ve gaz verip gitti.",
+    "acceptCounter": "Kabul et ({{price}})",
+    "tryAgain": "Başka bir teklif ver",
+    "deal": "Anlaştık: {{price}}",
+    "dealNote": "Ücret yolculuk başlayınca cüzdanından düşer. Teklif 1 dakika geçerli.",
+    "go": "Bin ve git ({{price}})",
+    "paid": "{{price}} ödedin",
+    "arrived": "Vardık!",
+    "accept": {
+      "1": "Tamam, atla bakalım!",
+      "2": "Olur, bu seferlik kıyak geçeyim.",
+      "3": "Anlaştık, buyur."
+    },
+    "counterSay": {
+      "1": "Bu fiyata olmaz abi, biraz yukarı çık.",
+      "2": "Benzin pahalı, şu kadar olsa?",
+      "3": "Vallahi zor, ortada buluşalım."
+    },
+    "counterLine": "Şoförün teklifi: {{price}} (pazarlık {{n}}/{{max}})"
   }
 }

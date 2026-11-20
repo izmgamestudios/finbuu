@@ -222,7 +222,7 @@ const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.c
 const publicAdConfig = () => ({ kinds: ADS.KINDS, maxBoost: ADS.MAX_BOOST, maxSlots: ADS.MAX_SLOTS_PER_COMPANY, limits: ADS.LIMITS });
 const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops,
   teamColors: SEED.teams.colors, quests: SEED.quests, badges: SEED.badges, salary: SEED.salary, custom: SEED.custom, departments: SEED.departments, marketing: SEED.marketing, itUpgrade: SEED.itUpgrade, npcTalk: { serviceCost: SEED.npcTalk.serviceCost, ids: SEED.npcTalk.ids }, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
-  lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES, ads: publicAdConfig(), premium: PREMIUM });
+  lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES, ads: publicAdConfig(), premium: PREMIUM, taxi: { ...TAXI, pxPerKm: PX_PER_KM } });
 const maxTenants = lot => (lot.type === 'coworking' ? WS.coworking.maxTenants : SEED.lotSizes[lot.size].maxTenants);
 const newStats = () => ({ xp: 0, knowledge: 0, success: 0, level: 1, performance: 1 });
 const levelOf = xp => Math.floor(Math.sqrt(xp / 10)) + 1;
@@ -454,6 +454,7 @@ const vehicleValue = (st, c) => {
 };
 
 // ---------- Driving (Sprint 24): the company car can be driven along the street; fuel (km of range) and condition (wear / age) are real ----------
+const TAXI = { base: 1, perKm: 0.45, minFare: 2, night: 1.5, maxTries: 3, offers: [100, 85, 70, 55], accept: { 100: 1, 85: 0.8, 70: 0.45, 55: 0.15 }, cooldownMs: 15000, dealMs: 60000 };
 const PX_PER_KM = 400, WEAR_PER_KM = 0.25, AGE_PER_DAY = { new: 0.05, used: 0.08 }, MIN_COND_TO_DRIVE = 5, MAX_STEP_PX = 260, BOARD_RANGE_PX = 170;
 const TANK_KM = { sedan: 450, van: 380 };
 function ensureVeh(st, c) {
@@ -474,6 +475,11 @@ function carX(st, c) {
   const lot = st.lots[c.lotId], k = Math.max(0, lot.companyIds.filter(id => { const o = st.companies[id]; return o?.vehicle && o.vehicle.park !== 'lot' && o.vehicle.park !== 'street'; }).indexOf(c.id));
   return 720 + 244 * c.lotId + 200 - 52 - Math.min(1, k) * 78;
 }
+
+// ---------- Taxi (Sprint 24b): hail a taxi, haggle over the fare, ride anywhere along the street ----------
+const gameMinutesOf = st => { const p = Math.max(0, Math.min(1, (Date.now() - (st.tickAt || Date.now())) / (SEED.tickSeconds * 1000 / (st.speed || 1)))); return p * 1440; };
+const isNightMin = m => m < 360 || m >= 1320;               // 22:00-06:00 costs more
+const taxiFare = (st, fromX, toX) => Math.max(TAXI.minFare, Math.round((TAXI.base + (Math.abs(toX - fromX) / PX_PER_KM) * TAXI.perKm) * (isNightMin(gameMinutesOf(st)) ? TAXI.night : 1)));
 const driverOf = (st, cid) => Object.values(st.players).find(p => p.drive?.cid === cid) || null;
 const roleCompany = (st, role) => Object.values(st.companies).find(x => SEED.templates.find(t => t.key === x.nameKey)?.role === role || SEED.npcCompanies.find(n => n.key === x.nameKey)?.role === role);
 // Every sale has a delivery distance (sector) -> fuel with a company vehicle, courier / taxi without one
@@ -749,6 +755,39 @@ io.on('connection', socket => {
     const cx = carX(street, c); if (Math.abs((me.x ?? 0) - cx) > BOARD_RANGE_PX) return reply({ ok: false, key: 'toast.carFar' });
     me.drive = { cid }; me.x = Math.round(cx); sync(); reply({ ok: true, x: me.x });
   });
+
+  // ---- Taxi: quote -> offer (haggle) -> go ----
+  const taxiTarget = to => { const x = Math.round(Number(to)); return Number.isFinite(x) && x >= 0 && x <= WORLD_MAX_X ? x : null; };
+  socket.on('taxiQuote', ({ to } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), x = taxiTarget(to);
+    if (!street || !me || street.mode === 'presentation' || me.drive || x == null || Math.abs(x - me.x) < 150) return reply({ ok: false, key: 'toast.taxiTooClose' });
+    if (me.taxiCool && Date.now() < me.taxiCool) return reply({ ok: false, key: 'toast.taxiBusy' });
+    me.taxi = { to: x, fare: taxiFare(street, me.x, x), tries: 0, counter: null, at: Date.now() }; me.taxiDeal = null;
+    reply({ ok: true, fare: me.taxi.fare, night: isNightMin(gameMinutesOf(street)), km: Math.round(Math.abs(x - me.x) / PX_PER_KM * 10) / 10 });
+  });
+  socket.on('taxiOffer', ({ pct } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), tx = me?.taxi;
+    if (!street || !me || !tx || limited() || !TAXI.offers.includes(Number(pct))) return reply({ ok: false });
+    pct = Number(pct); const price = Math.max(1, Math.round(tx.fare * pct / 100));
+    if (Math.random() < TAXI.accept[pct] * (tx.mood ??= 0.85 + Math.random() * 0.3)) { me.taxiDeal = { to: tx.to, price, exp: Date.now() + TAXI.dealMs }; return reply({ ok: true, accepted: true, price }); }
+    tx.tries++;
+    if (tx.tries >= TAXI.maxTries) { me.taxi = null; me.taxiCool = Date.now() + TAXI.cooldownMs; return reply({ ok: true, refused: true }); }
+    tx.counter = Math.max(1, Math.round(tx.fare * (pct + (100 - pct) * 0.55) / 100)); reply({ ok: true, accepted: false, counter: tx.counter, tries: tx.tries });
+  });
+  socket.on('taxiAccept', (_, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), tx = me?.taxi;
+    if (!tx?.counter || limited()) return reply({ ok: false });
+    me.taxiDeal = { to: tx.to, price: tx.counter, exp: Date.now() + TAXI.dealMs }; reply({ ok: true, price: tx.counter });
+  });
+  socket.on('taxiGo', (_, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), d = me?.taxiDeal;
+    if (!street || !me || !d || Date.now() > d.exp || me.drive || limited()) return reply({ ok: false, key: 'toast.taxiExpired' });
+    if (me.coins < d.price) return reply({ ok: false, key: 'toast.noCoins' });
+    me.coins -= d.price; me.x = d.to; me.taxiDeal = null; me.taxi = null;
+    if (!posDirty.has(street.id)) posDirty.set(street.id, new Map()); posDirty.get(street.id).set(me.id, { x: me.x, dir: me.dir });
+    progress(street, me, 'taxiRides'); reply({ ok: true, x: me.x, price: d.price }); sync();
+  });
+  socket.on('taxiCancel', () => { if (me) { me.taxi = null; me.taxiDeal = null; } });
 
   // Character position: lightweight, volatile broadcast (no full state sync)
   socket.on('move', ({ x, dir } = {}) => {

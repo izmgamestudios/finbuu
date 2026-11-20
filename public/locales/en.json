@@ -358,7 +358,10 @@
     "driveFuel": "Out of fuel! The car stopped.",
     "driveBroken": "The car broke down! It needs service.",
     "driveSold": "The car is no longer yours, you got out.",
-    "driveOk": "🚗 Driving (W/↑ to get out)"
+    "driveOk": "🚗 Driving (W/↑ to get out)",
+    "taxiTooClose": "Too close, just walk.",
+    "taxiBusy": "No taxi available right now.",
+    "taxiExpired": "The offer expired."
   },
   "log": {
     "joined": "{{player}} entered the street.",
@@ -1641,5 +1644,35 @@
     "chipValue": "{{month}} {{dom}}",
     "chipSub": "Year {{year}} · {{weekday}} · {{time}}",
     "day": "Day {{n}}"
+  },
+  "taxi": {
+    "coming": "The taxi is pulling up…",
+    "title": "Taxi",
+    "hello": "Where to? You can haggle over the fare.",
+    "nightNote": "Night rate: price ×{{x}}",
+    "nowhere": "Nothing worth a ride nearby.",
+    "never": "Never mind",
+    "quote": "Distance {{km}} km · meter {{fare}}",
+    "payFull": "Meter price: {{price}}",
+    "haggle": "Ask {{pct}}% off ({{price}})",
+    "refused": "The driver got angry and drove off.",
+    "acceptCounter": "Accept ({{price}})",
+    "tryAgain": "Make another offer",
+    "deal": "Deal: {{price}}",
+    "dealNote": "The fare is taken from your wallet when the ride starts. The offer is valid for 1 minute.",
+    "go": "Get in and go ({{price}})",
+    "paid": "You paid {{price}}",
+    "arrived": "We're here!",
+    "accept": {
+      "1": "Alright, hop in!",
+      "2": "Fine, just this once.",
+      "3": "Deal, get in."
+    },
+    "counterSay": {
+      "1": "Not at that price, go a bit higher.",
+      "2": "Fuel is expensive, how about this?",
+      "3": "Tough one, let's meet in the middle."
+    },
+    "counterLine": "Driver's offer: {{price}} (haggle {{n}}/{{max}})"
   }
 }
