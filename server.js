@@ -124,7 +124,7 @@ const SEED = {
     { id: 'chat', metric: 'chat', goal: 1, xp: 5, coins: 10, shared: true }
   ],
   badges: ['firstCompany', 'sales10', 'sales100', 'sales1000', 'floor3', 'floor6', 'firstHire', 'marketer', 'secure', 'social',
-    'commuter', 'teamPlayer', 'teamGoal', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
+    'commuter', 'teamPlayer', 'teamGoal', 'streak7', 'seasonStar', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
   demoDay: { canvasMax: 300, pitchMax: 900, demoCooldown: 30, angelCooldown: 15, offerDays: 3, grantAmount: 2000, grantMinDays: 10, grantMinBlocks: 7, demoMin: 60, angelMin: 45 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3, sector: 'sector.food' },
@@ -189,7 +189,7 @@ const publicPresentation = st => st.presentation && {
     options: st.presentation.poll.options.map(o => ({ text: o.text, votes: o.votes })), total: Object.keys(st.presentation.poll.voters).length }
 };
 const publicPlayer = p => ({ id: p.id, name: p.name, coins: p.coins, role: p.role, stats: p.stats, x: p.x, dir: p.dir, avatar: p.avatar,
-  team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {}, life: publicLife(p), loc: p.loc?.cid || null, afk: !!p.afk, drive: p.drive?.cid || null });
+  team: p.team || null, busCard: p.busCard || 0, badges: Object.keys(p.badges || {}), quests: p.quests?.list || [], counters: p.counters || {}, streak: p.streak?.n || 0, bestStreak: p.streak?.best || 0, season: p.season?.key === todayKey().slice(0, 7) ? p.season.sp : 0, chest: !!p.quests?.chest && p.quests.day === todayKey(), life: publicLife(p), loc: p.loc?.cid || null, afk: !!p.afk, drive: p.drive?.cid || null });
 const snapshot = st => ({ id: st.id, mode: st.mode, day: st.day || 0, calendar: st.day ? R.calendar(st.day) : null,
   players: Object.fromEntries(Object.entries(st.players).map(([id, p]) => [id, publicPlayer(p)])),
   companies: Object.fromEntries(Object.entries(st.companies).map(([id, c]) => [id, { ...publicCompany(c, R.calendar((st.day || 0) + 1).monthKey), bills: utilityBills(st, c), vehicleValue: vehicleValue(st, c) }])),
@@ -627,9 +627,31 @@ const syncRoom = st => {
 // Quests refresh every real calendar day (Europe/Istanbul); 3 per player, picked deterministically.
 const todayKey = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
 const hashStr = s => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h; };
+// Sprint 27: real-day streak (kept on the player record, so it survives as long as the room/token does), daily chest, monthly season points
+const SEASON_MS = [[100, 1], [250, 2], [500, 4]];
+const dayBefore = key => new Date(Date.parse(key + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10);
+function rollStreak(p, day) {
+  const prev = p.streak?.last;
+  if (prev === day) return;
+  const n = prev && prev === dayBefore(day) ? (p.streak.n || 0) + 1 : 1;
+  p.streak = { last: day, n, best: Math.max(n, p.streak?.best || 0) };
+  const coins = Math.round(Math.min(n, 7) * BAL.CFG.streakCoin);
+  if (coins && p.id) { p.coins += coins; io.to(p.id).emit('streak', { n, coins }); }
+  if (n >= 7) award(null, p, 'streak7');
+}
+function addSeason(p, sp) {
+  const key = todayKey().slice(0, 7);
+  if (p.season?.key !== key) p.season = { key, sp: 0, got: [] };
+  const before = p.season.sp; p.season.sp += sp;
+  for (const [need, k] of SEASON_MS) if (before < need && p.season.sp >= need && !p.season.got.includes(need)) {
+    p.season.got.push(need); const coins = Math.round(BAL.CFG.seasonReward * k); p.coins += coins; io.to(p.id).emit('seasonMilestone', { sp: need, coins });
+    if (need >= 500) award(null, p, 'seasonStar');
+  }
+}
 function ensureQuests(st, p) {
   const day = todayKey();
   if (p.quests?.day === day) return p.quests;
+  rollStreak(p, day);
   const pool = SEED.quests.filter(q => !q.shared || st.mode !== 'solo');
   const picked = [], h = hashStr(day + p.id);
   for (let i = 0; picked.length < 3 && i < pool.length * 2; i++) { const q = pool[(h + i * 7) % pool.length]; if (!picked.includes(q)) picked.push(q); }
@@ -641,7 +663,7 @@ function award(st, p, id) {
   p.badges ||= {};
   if (p.badges[id]) return;
   p.badges[id] = Date.now();
-  addLog(st, 'log.badge', { player: p.name, badgeKey: 'badge.' + id });
+  if (st) addLog(st, 'log.badge', { player: p.name, badgeKey: 'badge.' + id });
   io.to(p.id).emit('badge', { id });
 }
 // Sprint 25: level-up reward = levelCoins x new level (personal coins); checked after progress events and every tick
@@ -673,6 +695,9 @@ function progress(st, p, metric, amount = 1) {
       p.counters.quests = (p.counters.quests || 0) + 1;
       if (p.counters.quests >= 10) award(st, p, 'questHero');
       io.to(p.id).emit('questDone', { id: q.id, coins: q.coins, xp: q.xp });
+      addSeason(p, 10);
+      const qs = ensureQuests(st, p);
+      if (!qs.chest && qs.list.every(x => x.done)) { qs.chest = true; p.coins += Math.round(BAL.CFG.chestCoins); addSeason(p, 25); io.to(p.id).emit('chest', { coins: Math.round(BAL.CFG.chestCoins), sp: 25 }); }
     }
   }
 }
@@ -1249,7 +1274,7 @@ io.on('connection', socket => {
     for (const r of Object.values(rooms)) if (r.worldId === st.worldId) delete r.dormantAt;
     st.players[socket.id] = me; ensureFlat(st, me); if (!st.ownerId || !st.players[st.ownerId]) st.ownerId = socket.id;
     socket.join(st.id); addLog(st, 'log.rejoined', { player: me.name });
-    socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null, city: st.city, token: me.resumeToken, resumed: true });
+    ensureQuests(st, me); socket.emit('joined', { roomId: st.id, mode: st.mode, pin: SHARED_MODES.includes(st.mode) ? st.pin : null, city: st.city, token: me.resumeToken, resumed: true });
     socket.emit('chatHistory', st.chat || []);
     const sum = awaySummary(st, me); me.away = null; if (sum) socket.emit('awaySummary', sum);
     sync();

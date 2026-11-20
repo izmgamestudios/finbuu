@@ -1017,7 +1017,9 @@
     "grantee": "Hibe Aldı",
     "stockMaster": "Stok Ustası",
     "stackPro": "Araç Ustası",
-    "teamGoal": "Ortak Başarı"
+    "teamGoal": "Ortak Başarı",
+    "streak7": "7 Gün Serisi",
+    "seasonStar": "Sezon Yıldızı"
   },
   "badgeDesc": {
     "firstCompany": "İlk şirketini kur",
@@ -1046,7 +1048,9 @@
     "grantee": "Hibe al",
     "stockMaster": "30 gün boyunca hiç stoksuz kalma",
     "stackPro": "5 farklı kategoriden açık kaynak araç kur",
-    "teamGoal": "Odanın aylık ortak hedefine katkı yap ve tamamla"
+    "teamGoal": "Odanın aylık ortak hedefine katkı yap ve tamamla",
+    "streak7": "7 gün üst üste oyuna gir",
+    "seasonStar": "Bir sezonda 500 puana ulaş"
   },
   "bus": {
     "arrived": "Durağa vardın.",
@@ -1736,5 +1740,17 @@
     "okCoins": " · +{{coins}} coin",
     "okNoShare": " · ödül için katkın yetersizdi",
     "miss": "🎯 Ortak hedef kaçtı: {{progress}}/{{target}}"
+  },
+  "daily": {
+    "streak": "🔥 Seri: {{n}} gün",
+    "best": "en iyi {{n}}",
+    "chest": "🎁 Günlük sandık",
+    "chestOpen": "Açıldı ✓",
+    "chestHint": "3 görevi bitir",
+    "season": "🏅 Sezon puanı",
+    "seasonHint": "100 / 250 / 500 puanda ödül",
+    "streakToast": "🔥 {{n}}. gün serisi! +{{coins}} coin",
+    "chestToast": "🎁 Günlük sandık açıldı! +{{coins}} coin · +{{sp}} SP",
+    "seasonToast": "🏅 Sezon ödülü ({{sp}} SP): +{{coins}} coin"
   }
 }

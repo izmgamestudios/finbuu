@@ -237,6 +237,9 @@ socket.on('joined', info => {
 socket.on('badge', ({ id }) => { toast(`🏅 ${t('badge.unlocked')}: ${t('badge.' + id)}`); profSig = ''; });
 socket.on('marketEvent', e => { toast(t('event.started', { name: t('event.' + e.id) })); hudSig = ''; });
 socket.on('goalEnd', e => { toast(e.ok ? t('goal.ok', { progress: fmt0(e.progress), target: fmt0(e.target) }) + (e.coins ? t('goal.okCoins', e) : t('goal.okNoShare')) : t('goal.miss', { progress: fmt0(e.progress), target: fmt0(e.target) })); profSig = ''; });
+socket.on('streak', e => { toast(t('daily.streakToast', e)); profSig = ''; });
+socket.on('chest', e => { toast(t('daily.chestToast', e)); profSig = ''; });
+socket.on('seasonMilestone', e => { toast(t('daily.seasonToast', e)); profSig = ''; });
 socket.on('levelUp', e => { toast(t('week.levelUp', e)); profSig = ''; });
 socket.on('weekEnd', e => { toast(t('week.ended', e) + (e.coins ? t('week.endedWin', e) : '')); profSig = ''; });
 socket.on('questDone', q => { toast(`✅ ${t('quest.' + q.id, { goal: '' })} · +${money(q.coins)} · +${q.xp} XP`); profSig = ''; });
@@ -1823,17 +1826,21 @@ function openHelp() {
 $('helpBtn').onclick = openHelp;
 addEventListener('keydown', e => { if ((e.key === 'F1' || (e.key === '?' && !typing(e))) && !modalOpen) { e.preventDefault(); openHelp(); } });
 
-const BADGE_ICON = { teamGoal: '🎯', hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
+const BADGE_ICON = { streak7: '🔥', seasonStar: '🏅', teamGoal: '🎯', hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
   social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗', closer: '🤝', stockMaster: '📦', stackPro: '🧰' };
 let extraSig = '';
 function renderExtras(p) {
   const teams = state?.teams || {};
-  const sig = p ? JSON.stringify([p.quests, p.badges, p.team, teams, joined?.mode, i18next.language, Object.values(state.players).map(x => [x.id, x.team, x.loc, x.name, x.afk])]) : '';
+  const sig = p ? JSON.stringify([p.quests, p.streak, p.season, p.chest, p.badges, p.team, teams, joined?.mode, i18next.language, Object.values(state.players).map(x => [x.id, x.team, x.loc, x.name, x.afk])]) : '';
   if (sig === extraSig) return;
   extraSig = sig;
   const qBox = $('quests'), tBox = $('teams'), bBox = $('badges');
   qBox.replaceChildren(); tBox.replaceChildren(); bBox.replaceChildren();
   if (!p) return;
+  // daily streak / chest / season points (Sprint 27)
+  { const head = el('div', null, 'quest'), sp = p.season || 0, nextMs = [100, 250, 500].find(x => sp < x) || 500, bar = el('div', null, 'bar'), fill = el('i'); fill.style.width = `${Math.min(100, sp / nextMs * 100)}%`; bar.append(fill);
+    const r1 = el('div', null, 'row1'); r1.append(el('span', t('daily.streak', { n: p.streak || 0 }) + (p.bestStreak > (p.streak || 0) ? ` (${t('daily.best', { n: p.bestStreak })})` : '')), el('b', `${t('daily.chest')}: ${p.chest ? t('daily.chestOpen') : t('daily.chestHint')}`));
+    head.append(r1, el('div', `${t('daily.season')}: ${sp} / ${nextMs}`), bar, el('small', t('daily.seasonHint'), 'muted')); qBox.append(head); }
   // daily quests
   (p.quests || []).forEach(q => {
     const d = el('div', null, 'quest' + (q.done ? ' done' : ''));

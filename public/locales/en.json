@@ -1017,7 +1017,9 @@
     "grantee": "Grantee",
     "stockMaster": "Stock Master",
     "stackPro": "Stack Pro",
-    "teamGoal": "Team Win"
+    "teamGoal": "Team Win",
+    "streak7": "7-Day Streak",
+    "seasonStar": "Season Star"
   },
   "badgeDesc": {
     "firstCompany": "Found your first company",
@@ -1046,7 +1048,9 @@
     "grantee": "Receive a grant",
     "stockMaster": "Never run out of stock for 30 days",
     "stackPro": "Install open-source tools from 5 different categories",
-    "teamGoal": "Contribute to a completed monthly room goal"
+    "teamGoal": "Contribute to a completed monthly room goal",
+    "streak7": "Play 7 days in a row",
+    "seasonStar": "Reach 500 points in one season"
   },
   "bus": {
     "arrived": "You arrived at the stop.",
@@ -1736,5 +1740,17 @@
     "okCoins": " · +{{coins}} coins",
     "okNoShare": " · your contribution was too low for the reward",
     "miss": "🎯 Shared goal missed: {{progress}}/{{target}}"
+  },
+  "daily": {
+    "streak": "🔥 Streak: {{n}} days",
+    "best": "best {{n}}",
+    "chest": "🎁 Daily chest",
+    "chestOpen": "Opened ✓",
+    "chestHint": "Finish all 3 quests",
+    "season": "🏅 Season points",
+    "seasonHint": "Rewards at 100 / 250 / 500",
+    "streakToast": "🔥 Day {{n}} streak! +{{coins}} coins",
+    "chestToast": "🎁 Daily chest opened! +{{coins}} coins · +{{sp}} SP",
+    "seasonToast": "🏅 Season reward ({{sp}} SP): +{{coins}} coins"
   }
 }
