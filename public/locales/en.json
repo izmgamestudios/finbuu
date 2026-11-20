@@ -1546,5 +1546,35 @@
       "xpGain": "XP gain"
     },
     "capNote": "Each extra tool on the same effect adds 80% of the previous (diminishing returns)."
+  },
+  "date": {
+    "months": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "weekdays": [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday"
+    ],
+    "full": "Day {{dom}} · {{month}} · Year {{year}} · {{weekday}} · {{time}}",
+    "chipTitle": "Date",
+    "chipValue": "{{month}} {{dom}}",
+    "chipSub": "Year {{year}} · {{weekday}} · {{time}}",
+    "day": "Day {{n}}"
   }
 }

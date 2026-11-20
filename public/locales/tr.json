@@ -1546,5 +1546,35 @@
       "xpGain": "XP kazanımı"
     },
     "capNote": "Aynı etkiye eklenen her araç %80 değer katar (azalan getiri)."
+  },
+  "date": {
+    "months": [
+      "Ocak",
+      "Şubat",
+      "Mart",
+      "Nisan",
+      "Mayıs",
+      "Haziran",
+      "Temmuz",
+      "Ağustos",
+      "Eylül",
+      "Ekim",
+      "Kasım",
+      "Aralık"
+    ],
+    "weekdays": [
+      "Pazartesi",
+      "Salı",
+      "Çarşamba",
+      "Perşembe",
+      "Cuma",
+      "Cumartesi",
+      "Pazar"
+    ],
+    "full": "{{dom}}. gün · {{month}} · Yıl {{year}} · {{weekday}} · {{time}}",
+    "chipTitle": "Tarih",
+    "chipValue": "{{dom}} {{month}}",
+    "chipSub": "Yıl {{year}} · {{weekday}} · {{time}}",
+    "day": "Gün {{n}}"
   }
 }

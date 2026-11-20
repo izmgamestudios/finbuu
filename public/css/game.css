@@ -547,3 +547,4 @@ nav button.active { color: var(--accent) !important; background: rgba(255, 183, 
 .ossList { max-height: none; overflow: visible }
 .gfTower { max-height: none }
 @media (max-width: 640px) { .gfTower { max-height: none } }
+.chip .sub { display: block; font-size: .66rem; margin-top: 2px; line-height: 1.15 } .dateChip { min-width: 118px }

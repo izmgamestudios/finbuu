@@ -193,7 +193,7 @@ socket.on('state', s => {
   perf.syncTimes.push(now); if (perf.syncTimes.length > 10) perf.syncTimes.shift();
   if (perf.stateCount++ % 5 === 0) perf.stateKB = JSON.stringify(s).length / 1024;
   clockOffset = (s.serverNow || Date.now()) - Date.now();
-  if (lastDay != null && s.day > lastDay) morningRush(s);
+  if (lastDay != null && s.day > lastDay) setTimeout(() => { if (state) morningRush(state); }, (390 / 1440) * (seed?.tickSeconds || 60) * 1000 / (s.speed || 1));   // shuttles arrive at 06:30 game time
   lastDay = s.day;
   state = s;
   buildings = layout(state);
@@ -602,11 +602,21 @@ function updateSpeedBtn() {
 $('speedBtn').onclick = () => { if (!state) return; const i = SPEEDS.indexOf(state.speed || 1); socket.emit('setSpeed', { speed: SPEEDS[(i + 1) % SPEEDS.length] }); };
 
 // ---------- Game clock (analog), day / night, morning shuttles ----------
-// One game day = tickSeconds of real time; the clock runs 06:00 -> 06:00 so a new day starts in the morning.
-function gameMinutes() {
-  if (!state?.tickAt || !seed) return 9 * 60;
-  const p = clamp((Date.now() + clockOffset - state.tickAt) / (seed.tickSeconds * 1000 / (state.speed || 1)), 0, 1);
-  return (360 + p * 1440) % 1440;
+// One game day = tickSeconds of real time; the clock runs 00:00 -> 24:00 (Sprint 23d). A room starts on Year 1 · January 1st · Monday at 00:00.
+const dayProgress = () => (!state?.tickAt || !seed ? 0 : clamp((Date.now() + clockOffset - state.tickAt) / (seed.tickSeconds * 1000 / (state.speed || 1)), 0, 0.9999));
+function gameMinutes() { return !state?.tickAt || !seed ? 9 * 60 : dayProgress() * 1440; }
+// Calendar of the day in progress: st.day counts finished days, so the current one is st.day + 1. 12 months x 30 days, 7-day weeks.
+function gameDate() {
+  const d = (state?.day || 0) + 1, min = gameMinutes(), h = Math.floor(min / 60), m = Math.floor(min % 60);
+  const months = t('date.months', { returnObjects: true }), wds = t('date.weekdays', { returnObjects: true });
+  return { year: Math.floor((d - 1) / 360) + 1, monthIdx: Math.floor(((d - 1) % 360) / 30), dom: ((d - 1) % 30) + 1, weekday: wds[(d - 1) % 7] || '', month: months[Math.floor(((d - 1) % 360) / 30)] || '', time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`, n: d };
+}
+function updateDateUi() {
+  if (!state) { $('day').textContent = ''; return; }
+  const g = gameDate(), city = seed?.economy?.cityMap ? cityName(state.city) : '';
+  $('day').textContent = [city, t('date.full', g)].filter(Boolean).join(' · ');
+  const v = document.querySelector('.dateChip .v'), k = document.querySelector('.dateChip .sub');
+  if (v) v.textContent = t('date.chipValue', g); if (k) k.textContent = t('date.chipSub', g);
 }
 function nightFactor(min) { const h = min / 60; return h >= 20 || h < 5 ? 1 : h >= 18 ? (h - 18) / 2 : h < 7 ? 1 - (h - 5) / 2 : 0; }
 const clockCv = $('clock'), cctx = clockCv.getContext('2d');
@@ -624,7 +634,7 @@ function drawClock() {
   $('clockTxt').textContent = state ? txt : '';
   $('clockBox').title = t('clock.title', { time: txt });
 }
-setInterval(drawClock, 500);
+setInterval(() => { drawClock(); updateDateUi(); }, 500);
 // New game day = morning rush: shuttles / company cars drop staff in front of visible companies
 function morningRush(s) {
   const viewW = view.w / view.s;
@@ -888,7 +898,7 @@ function updateHdrStats(p, s, prevXp, nextXp) {
   if (lastXp != null && s.xp > lastXp) glow(lv, true); lastXp = s.xp;
   const xp = el('i', null, 'hxp'), fill = el('u'); fill.style.width = pct + '%'; xp.append(fill); lv.append(xp);
   const card = $('dwProfile'), head = el('div', null, 'dwHead');
-  head.append(el('b', p.name || '—'), el('small', [state?.city && seed?.economy?.cityMap ? cityName(state.city) : '', state?.calendar ? t('ui.dwDay', { d: state.day || state.calendar.day }) : '', $('clockTxt').textContent].filter(Boolean).join(' · '), 'muted'));
+  head.append(el('b', p.name || '—'), el('small', [state?.city && seed?.economy?.cityMap ? cityName(state.city) : '', state ? t('date.full', gameDate()) : ''].filter(Boolean).join(' · '), 'muted'));
   const bar = el('div', null, 'bar'), f2 = el('i'); f2.style.width = pct + '%'; bar.append(f2);
   const row = el('div', null, 'dwStats');
   row.append(el('span', `⭐ ${t('ui.level')} ${s.level} · ${Math.round(s.xp)} XP`), el('span', '🪙 ' + fmt(p.coins)));
@@ -906,7 +916,9 @@ function renderHud() {
   if (sig === hudSig) return;
   hudSig = sig;
   updateHdrStats(p, s, prevXp, nextXp);
+  const dateChip = chip('🗓', t('date.chipTitle'), '—', null); dateChip.classList.add('dateChip'); dateChip.append(el('small', '', 'sub muted'));
   hud.replaceChildren(
+    dateChip,
     chip('💰', t('hud.coins'), fmt(p.coins), p.coins / 2000),
     chip('🏦', t('hud.cash'), owned.length ? fmt(fo.cash) : '—', owned.length ? (floors >= MAX_FLOORS ? 1 : (fo.cash - prev) / (next - prev)) : 0, fo.cash < 0 ? 'var(--bad)' : null),
     chip('🛒', t('hud.customers'), f.units ? `${f.units} · ${t('hud.today')} ${f.todayUnits}` : '—', f.todayUnits / f.bestUnits),
@@ -916,6 +928,7 @@ function renderHud() {
     chip('⭐', `${t('ui.level')} ${s.level}`, `${Math.round(s.xp)} XP`, (s.xp - prevXp) / Math.max(1, nextXp - prevXp)),
     chip('🏆', t('board.short'), rank ? `#${rank}` : '—', null, null, () => toggleBoard())
   );
+  updateDateUi();
 }
 
 // ---------- Leaderboard layer (Space / Ctrl) ----------
@@ -1232,7 +1245,7 @@ function timelineItems(log, time) {
 }
 function render() {
   if (!i18next.isInitialized) return;
-  $('day').textContent = state ? [seed?.economy?.cityMap ? cityName(state.city) : '', state.calendar ? t('ui.day', state.calendar) : ''].filter(Boolean).join(' · ') : '';
+  updateDateUi();
   renderProfile(me());
   renderHud();
   renderAdvisor();
