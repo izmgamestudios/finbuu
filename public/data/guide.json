@@ -988,6 +988,42 @@
    "related": []
   },
   {
+   "id": "fullscreen",
+   "cat": "ui-panels",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Tam ekran pencere",
+    "en": "Full-screen windows"
+   },
+   "body": {
+    "tr": "Açılan her pencerenin sağ üstündeki ⛶ düğmesi (veya F tuşu) onu tam ekran yapar; tercih bu cihazda hatırlanır. Rehber, GamFed panosu ve uzun listeler için idealdir.",
+    "en": "The ⛶ button at the top right of every window (or the F key) makes it full screen; the choice is remembered on this device. Great for the Guide, the GamFed board and long lists."
+   },
+   "tags": [
+    "tam ekran",
+    "pencere",
+    "fullscreen"
+   ],
+   "steps": {
+    "tr": [
+     "Bir pencere aç (örn. Rehber)",
+     "Sağ üstteki ⛶ düğmesine bas veya F tuşu",
+     "Geri dönmek için aynı düğme"
+    ],
+    "en": [
+     "Open any window (e.g. the Guide)",
+     "Press ⛶ at the top right or the F key",
+     "Press it again to go back"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": []
+  },
+  {
    "id": "mobile-sheet",
    "cat": "ui-panels",
    "type": "menu",

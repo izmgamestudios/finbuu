@@ -17,8 +17,12 @@ export const MAX_FLOORS = 6;
 export const APT_GROUND_H = 62, APT_FLOOR_H = 40, APT_MAX_DRAWN = 9;   // apartment: one floor per player (Sprint 23b)
 export const aptHeight = n => APT_GROUND_H + Math.min(APT_MAX_DRAWN, Math.max(1, n)) * APT_FLOOR_H + ROOF_H;
 
-export const lotX = i => LOTS_X + i * (LOT_W + LOT_GAP);
-export const worldWidth = lots => lotX(lots) + 3000; // support buildings, car park and bus terminal at the end of the street
+// Sprint 34: the street plan comes from the server seed (admin-editable); without one the original layout is used
+let STREET = null, lotsXLive = LOTS_X;
+export function setStreet(s) { STREET = s && s.start && s.end ? s : null; lotsXLive = STREET?.lotsX ?? LOTS_X; }
+export const lotX = i => lotsXLive + i * (LOT_W + LOT_GAP);
+export const worldWidth = lots => lotX(lots) + (STREET?.endSpan ?? 3000); // support buildings, car park and bus terminal at the end of the street
+const endItem = id => STREET?.end.find(e => e.id === id) || null;
 // Building height follows the tenants' finances: big cash = tall tower, losses = it shrinks.
 // 1 floor < 250c, then one floor per doubling (500, 1k, 2k, 4k, 8k+).
 export const floorsFor = cash => Math.max(1, Math.min(MAX_FLOORS, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
@@ -28,25 +32,29 @@ const GAMFED_H = GROUND_H + GAMFED_FLOORS * GAMFED_FLOOR_H + ROOF_H; // 458: ten
 
 export function layout(state) {
   const lots = state?.lots || [];
-  const list = [
-    { kind: 'home', id: 'home', seed: 900, x: HOME.x, w: HOME.w, h: aptHeight(state?.flats?.length || 1) },
-    { kind: 'guide', id: 'guide', seed: 901, x: GUIDE.x, w: GUIDE.w, h: heightOf(2) },
-    { kind: 'plaza', id: 'plaza', seed: 902, x: PLAZA.x, w: PLAZA.w, h: heightOf(4) }
-  ];
+  const heightFor = (it, fallbackFloors) => (it.hmode === 'apt' ? aptHeight(state?.flats?.length || 1) : it.hmode === 'h' ? it.h : heightOf(it.floors || fallbackFloors));
+  const seedOf = it => ({ home: 900, guide: 901, plaza: 902, oss: 907, demoday: 904, grants: 908, locked: 903, gamfed: 909, parking: 905, terminal: 906 })[it.id] ?? (1000 + [...it.id].reduce((a, c) => a + c.charCodeAt(0), 0) % 800);
+  const make = (it, x) => ({ kind: it.kind, id: it.id, seed: seedOf(it), x, w: it.w, h: heightFor(it, 3), label: it.label || null, icon: it.icon || null, color: it.color || null, custom: it.kind === 'custom' ? it : null });
+  const list = [];
+  if (STREET) STREET.start.forEach(it => list.push(make(it, it.x)));
+  else list.push({ kind: 'home', id: 'home', seed: 900, x: HOME.x, w: HOME.w, h: aptHeight(state?.flats?.length || 1) }, { kind: 'guide', id: 'guide', seed: 901, x: GUIDE.x, w: GUIDE.w, h: heightOf(2) }, { kind: 'plaza', id: 'plaza', seed: 902, x: PLAZA.x, w: PLAZA.w, h: heightOf(4) });
   lots.forEach(lot => {
     const cash = lot.companyIds.reduce((sum, id) => sum + (state.companies[id]?.cash || 0), 0);
     const floors = lot.companyIds.length ? floorsFor(cash) : 1;
     list.push({ kind: 'lot', id: 'lot' + lot.id, seed: lot.id + 1, lot, cash, floors, x: lotX(lot.id), w: LOT_W, h: heightOf(floors) });
   });
   const L = lotX(lots.length || 12);
-  list.push({ kind: 'oss', id: 'oss', seed: 907, x: L + 10, w: 380, h: heightOf(3) });
-  list.push({ kind: 'demoday', id: 'demoday', seed: 904, x: L + 430, w: 360, h: heightOf(3) });
-  list.push({ kind: 'grants', id: 'grants', seed: 908, x: L + 830, w: 380, h: heightOf(4) });
-  list.push({ kind: 'locked', id: 'locked', seed: 903, x: L + 1250, w: 380, h: 320 });
-  list.push({ kind: 'gamfed', id: 'gamfed', seed: 909, x: L + 1670, w: 400, h: GAMFED_H });
-  list.push({ kind: 'parking', id: 'parking', seed: 905, x: L + 2110, w: 380, h: 70 });
-  list.push({ kind: 'terminal', id: 'terminal', seed: 906, x: L + 2530, w: 380, h: 120 });
-  return list;
+  if (STREET) STREET.end.forEach(it => list.push(make(it, L + it.dx)));
+  else {
+    list.push({ kind: 'oss', id: 'oss', seed: 907, x: L + 10, w: 380, h: heightOf(3) });
+    list.push({ kind: 'demoday', id: 'demoday', seed: 904, x: L + 430, w: 360, h: heightOf(3) });
+    list.push({ kind: 'grants', id: 'grants', seed: 908, x: L + 830, w: 380, h: heightOf(4) });
+    list.push({ kind: 'locked', id: 'locked', seed: 903, x: L + 1250, w: 380, h: 320 });
+    list.push({ kind: 'gamfed', id: 'gamfed', seed: 909, x: L + 1670, w: 400, h: GAMFED_H });
+    list.push({ kind: 'parking', id: 'parking', seed: 905, x: L + 2110, w: 380, h: 70 });
+    list.push({ kind: 'terminal', id: 'terminal', seed: 906, x: L + 2530, w: 380, h: 120 });
+  }
+  return list.sort((a, b) => a.x - b.x);
 }
 
 // Deterministic 0..1 hash so windows / balconies stay stable between frames.
@@ -385,6 +393,16 @@ function drawHome(ctx, b, env) {   // the apartment block: one floor (flat) per 
   pill(ctx, x + w / 2, GROUND - APT_GROUND_H + 12, '🏢 ' + env.t('home.aptSign'), '#e67e22', '#fff', 11);
   if (env.myId && flats.some(f => f.id === env.myId)) pill(ctx, x + 28, GROUND - APT_GROUND_H + 30, '🏠', '#ffb703', '#1d2b53', 10);
 }
+// Sprint 34: admin-created info building — body colour, floors of windows, sign with icon + name, door and a few NPCs
+function drawCustom(ctx, b, env) {
+  const c = b.custom || {}, nm = (env.lang?.startsWith('tr') ? c.label?.tr : c.label?.en) || c.label?.tr || '', sub = (env.lang?.startsWith('tr') ? c.sign?.tr : c.sign?.en) || c.sign?.tr || '', col = b.color || '#4f8ff7';
+  shell(ctx, b, col, 'rgba(0,0,0,.35)');
+  const floors = Math.max(1, Math.round((b.h - GROUND_H - ROOF_H) / FLOOR_H));
+  drawUpperFloors(ctx, b, floors, env.time);
+  signBoard(ctx, b, `${c.icon || '🏢'} ${nm}`, 'rgba(20,25,45,.85)');
+  if (sub && b.w >= 160) { ctx.font = '700 10px Nunito, system-ui, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.textAlign = 'center'; ctx.fillText(fitText(ctx, sub, b.w - 24), b.x + b.w / 2, GROUND - GROUND_H + 40); ctx.textAlign = 'left'; }
+  interior(ctx, b, { empty: false, staff: [npcLook(b.seed), npcLook(b.seed + 7)], goods: ['#ffffff', '#ffd166', '#a0e7e5'], wall: '#fff6e8' });
+}
 function drawGuide(ctx, b, env) {
   shell(ctx, b, '#f6d77a', '#c99a3c');
   drawUpperFloors(ctx, b, 2, env.time);
@@ -517,8 +535,8 @@ function drawGamFed(ctx, b, env) {
 export function carX(state, c) {
   const v = c.vehicle; if (!v) return null;
   if (v.park === 'street' && v.x != null) return v.x;
-  if (v.park === 'lot') { const i = Math.max(0, Object.values(state.companies).filter(o => o.vehicle?.park === 'lot').indexOf(c)); return lotX(state.lots.length || 12) + 2110 + 40 + Math.min(5, i) * 60; }
-  if (c.lotId == null) return PLAZA.x + PLAZA.w - 52;
+  if (v.park === 'lot') { const i = Math.max(0, Object.values(state.companies).filter(o => o.vehicle?.park === 'lot').indexOf(c)); return lotX(state.lots.length || 12) + (endItem('parking')?.dx ?? 2110) + 40 + Math.min(5, i) * 60; }
+  if (c.lotId == null) { const pl = STREET?.start.find(e => e.id === 'plaza') || PLAZA; return pl.x + pl.w - 52; }
   const lot = state.lots[c.lotId], k = Math.max(0, lot.companyIds.filter(id => { const o = state.companies[id]; return o?.vehicle && o.vehicle.park !== 'lot' && o.vehicle.park !== 'street'; }).indexOf(c.id));
   return lotX(c.lotId) + LOT_W - 52 - Math.min(1, k) * 78;
 }
@@ -816,7 +834,9 @@ export function draw(ctx, env) {
     else if (b.kind === 'gamfed') drawGamFed(ctx, b, env);
     else if (b.kind === 'parking') drawParking(ctx, b, env);
     else if (b.kind === 'terminal') drawTerminal(ctx, b, env);
+    else if (b.kind === 'custom') drawCustom(ctx, b, env);
     else drawLocked(ctx, b, env);
+    if (b.label && b.kind !== 'custom') { const nm = (env.lang?.startsWith('tr') ? b.label.tr : b.label.en) || b.label.tr; if (nm) pill(ctx, b.x + b.w / 2, GROUND - b.h - 14, `${b.icon ? b.icon + ' ' : ''}${nm}`, 'rgba(30,35,55,.78)', '#fff', 11); }
     if (env.near?.id === b.id) { ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3; rr(ctx, b.x - 3, GROUND - b.h - 3, b.w + 6, b.h + 3, 6); ctx.stroke(); }
     if (env.targetId === b.id) {
       const by = GROUND - b.h - 22 + Math.sin(env.time / 180) * 4;

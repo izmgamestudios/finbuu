@@ -83,6 +83,7 @@
     <button data-tab="balcfg">⚖ Denge</button>
     <button data-tab="evtcfg">📰 Olaylar</button>
     <button data-tab="mktcfg">🤝 Pazar</button>
+    <button data-tab="streetcfg">🏙 Sokak</button>
     <button data-tab="content">📚 Bina İçerikleri</button>
     <button data-tab="audit">Denetim Kaydı</button>
   </div>
@@ -200,6 +201,16 @@
       <p class="muted">Fiyat esnekliği, seviye ödülü ve haftalık yarış ödülleri. Değişiklik anında geçerlidir ve sunucuda saklanır.</p>
       <table><thead><tr><th>Ayar</th><th>Açıklama</th><th>Değer</th></tr></thead><tbody id="bcBody"></tbody></table>
       <div class="row" style="margin-top:10px"><button id="bcSave" class="primary">Kaydet</button><span id="bcMsg" class="muted"></span></div>
+    </div>
+  </main>
+  <main id="streetcfg">
+    <div class="card">
+      <h3>Sokak: Bina Yerleri, Yeni Bina ve Özellikler</h3>
+      <p class="muted">Binaların sırasını/bölgesini, genişlik ve yüksekliğini, etiketini değiştirin, bina kapatın veya <b>yeni bilgi binası</b> ekleyin (kendi açılır penceresiyle). <b>Kaydet</b> deyince tüm oyuncular sokağı anında yeni düzenle görür. Sol bölge dükkânlardan önce, sağ bölge dükkânlardan sonra dizilir; yerler genişlik ve boşluğa göre otomatik hesaplanır.</p>
+      <div id="stMsg" class="muted" style="min-height:22px"></div>
+      <div id="stPreview" style="display:flex;gap:2px;align-items:flex-end;overflow:auto;padding:6px 0;margin:6px 0;min-height:70px"></div>
+      <div id="stBody"></div>
+      <div class="row" style="margin-top:10px"><button id="stSave" class="primary">Kaydet ve yayınla</button><button id="stNew">➕ Yeni bina</button><button id="stReset">↺ Varsayılan sokak</button></div>
     </div>
   </main>
   <main id="mktcfg">
@@ -343,6 +354,7 @@ $('tabs').onclick = e => {
   if (b.dataset.tab === 'balcfg') loadBalCfg();
   if (b.dataset.tab === 'evtcfg') loadEvtCfg();
   if (b.dataset.tab === 'mktcfg') loadMktCfg();
+  if (b.dataset.tab === 'streetcfg') loadStreet();
   if (b.dataset.tab === 'content') ctInit();
 };
 
@@ -400,6 +412,75 @@ function loadBalCfg() {
   });
 }
 $('bcSave').onclick = () => { const patch = {}; document.querySelectorAll('#bcBody input').forEach(i => { patch[i.dataset.k] = Number(i.value); }); socket.emit('adminSetBalanceCfg', patch, r => { $('bcMsg').textContent = r?.ok ? '✓ Kaydedildi' : 'Hata'; loadBalCfg(); }); };
+
+
+// ---------- Street plan (Sprint 34) ----------
+const ST = { cfg: null, builtin: null, required: [], maxCustom: 12, edit: null };
+const ST_NAME = { home: '🏠 Apartman (ev)', guide: '📘 Kılavuz', plaza: '🌐 Digital Plaza', oss: '🌱 Açık Kaynak Merkezi', demoday: '🎤 Demo Day', grants: '🏛 Hibe & Destek', locked: '🔒 Premium gökdelen', gamfed: '🎮 GamFed Türkiye', parking: '🅿 Otopark', terminal: '🚌 Terminal' };
+const stName = id => ST_NAME[id] || (ST.cfg.custom[id] ? `${ST.cfg.custom[id].icon} ${ST.cfg.custom[id].name.tr}` : id);
+const stSay = (t, ok = true) => { $('stMsg').textContent = t; $('stMsg').style.color = ok ? '#7fe3a1' : '#ff8a80'; };
+function loadStreet() { socket.emit('adminGetStreet', {}, r => { if (!r?.ok) return stSay('Yüklenemedi', false); Object.assign(ST, { cfg: r.cfg, builtin: r.builtin, required: r.required, maxCustom: r.maxCustom, edit: null }); stRender(); }); }
+const stSpec = id => ({ ...(ST.builtin[id] || { hmode: 'floors', floors: 3, w: 300, gap: 40 }), ...ST.cfg.props[id] });
+function stPreview() {
+  const box = $('stPreview'); box.replaceChildren();
+  const add = (label, w, h, bg, dim) => { const d = ctEl('div', { textContent: label }); d.style.cssText = `flex:none;width:${Math.max(24, w / 14)}px;height:${h}px;background:${bg};color:#fff;font-size:10px;overflow:hidden;border-radius:4px 4px 0 0;padding:2px;opacity:${dim ? .35 : 1};writing-mode:${w < 260 ? 'vertical-rl' : 'horizontal-tb'}`; box.append(d); };
+  const run = zone => zone.forEach(id => { const s = stSpec(id); add(stName(id).replace(/^\S+\s/, '').slice(0, 14), s.w, 30 + (s.floors || (s.h || 200) / 48) * 6, (ST.cfg.custom[id]?.color) || '#4b5d8a', !s.enabled); });
+  run(ST.cfg.start); add('dükkânlar ×12', 12 * 244, 60, '#8a7a55'); run(ST.cfg.end);
+}
+function stRender() {
+  const body = $('stBody'); body.replaceChildren(); stPreview();
+  if (ST.edit) return body.append(stCustomForm());
+  for (const zone of ['start', 'end']) {
+    body.append(ctEl('h4', { textContent: zone === 'start' ? '◀ Sol bölge (dükkânlardan önce)' : 'Sağ bölge (dükkânlardan sonra) ▶' }));
+    const tbl = ctEl('table'), tb = ctEl('tbody');
+    tbl.append(ctEl('thead', {}, ctEl('tr', {}, ['Sıra', 'Bina', 'Açık', 'Etiket TR / EN', 'Genişlik', 'Boşluk', 'Yükseklik', 'İşlem'].map(x => ctEl('th', { textContent: x })))), tb);
+    const arr = ST.cfg[zone];
+    arr.forEach((id, i) => {
+      const s = stSpec(id), p = (ST.cfg.props[id] ||= {}), custom = !!ST.cfg.custom[id], req = ST.required.includes(id), tr = ctEl('tr');
+      const num = (key, lo, hi, step = 10) => { const inp = ctInput(s[key] ?? '', { type: 'number', min: lo, max: hi, step }); inp.style.width = '76px'; inp.oninput = () => { p[key] = Number(inp.value); stPreview(); }; return inp; };
+      const en = ctEl('input', { type: 'checkbox', checked: s.enabled !== false, disabled: req, title: req ? 'Bu bina oyun için gerekli' : '' }); en.onchange = () => { p.enabled = en.checked; stPreview(); };
+      const lt = ctInput(custom ? ST.cfg.custom[id].name.tr : (p.label?.tr || ''), { placeholder: custom ? 'Ad (TR)' : 'Ek etiket (boş = yok)' }), le = ctInput(custom ? ST.cfg.custom[id].name.en : (p.label?.en || ''), { placeholder: 'EN' }); lt.style.width = le.style.width = '110px';
+      const setLabel = () => { if (custom) ST.cfg.custom[id].name = { tr: lt.value, en: le.value || lt.value }; else p.label = lt.value ? { tr: lt.value, en: le.value || lt.value } : undefined; };
+      lt.oninput = le.oninput = setLabel;
+      const hcell = ctEl('td'); if (s.hmode === 'floors' || custom) hcell.append(num('floors', 1, 9, 1), ctEl('small', { className: 'muted', textContent: ' kat' })); else if (s.hmode === 'h') hcell.append(num('h', 40, 520), ctEl('small', { className: 'muted', textContent: ' px' })); else hcell.append(ctEl('small', { className: 'muted', textContent: 'oyuncu sayısına göre' }));
+      const mv = d => () => { const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; stRender(); };
+      const other = zone === 'start' ? 'end' : 'start';
+      const acts = ctEl('td', {}, ctBtn('▲', mv(-1)), ctBtn('▼', mv(1)), ctBtn(zone === 'start' ? '⇨' : '⇦', () => { arr.splice(i, 1); (zone === 'start' ? ST.cfg.end.unshift(id) : ST.cfg.start.push(id)); stRender(); }));
+      acts.lastChild.title = `${other === 'end' ? 'Sağ' : 'Sol'} bölgeye taşı`;
+      if (custom) acts.append(ctBtn('✏', () => { ST.edit = { id, isNew: false, c: JSON.parse(JSON.stringify(ST.cfg.custom[id])) }; stRender(); }), ctBtn('🗑', () => { if (confirm(`"${ST.cfg.custom[id].name.tr}" silinsin mi?`)) { arr.splice(i, 1); delete ST.cfg.custom[id]; delete ST.cfg.props[id]; stRender(); } }));
+      tr.append(ctEl('td', { textContent: String(i + 1) }), ctEl('td', { textContent: stName(id) }), ctEl('td', {}, en), ctEl('td', {}, lt, le), ctEl('td', {}, num('w', 80, 800)), ctEl('td', {}, num('gap', 0, 400)), hcell, acts);
+      tb.append(tr);
+    });
+    body.append(tbl);
+  }
+}
+function stCustomForm() {
+  const e = ST.edit, c = e.c, wrap = ctEl('div');
+  const id = ctInput(e.id, { disabled: !e.isNew, placeholder: 'ornek-bina' }), nt = ctInput(c.name.tr), ne = ctInput(c.name.en), ic = ctInput(c.icon, { maxLength: 4 }), col = ctInput(c.color, { type: 'color' }), st = ctInput(c.sign.tr), se = ctInput(c.sign.en);
+  const it = ctArea(c.intro.tr, 3), ie = ctArea(c.intro.en, 3);
+  wrap.append(ctEl('h4', { textContent: e.isNew ? 'Yeni bilgi binası' : `Bina: ${e.id}` }), ctEl('p', { className: 'muted', textContent: 'Bu bina sokakta görünür; oyuncu girince aşağıdaki içeriği açılır pencerede görür (giriş metni, bölümler, adımlar, bağlantılar).' }),
+    ctEl('div', { className: 'row' }, ctField('Kimlik', id), ctField('Ad (TR)', nt), ctField('Ad (EN)', ne), ctField('Simge', ic), ctField('Renk', col)),
+    ctEl('div', { className: 'row' }, ctField('Tabela alt yazısı (TR)', st), ctField('(EN)', se)), ctEl('div', { className: 'row' }, ctField('Giriş metni (TR)', it, true), ctField('Giriş metni (EN)', ie, true)));
+  const secBox = ctEl('div'), drawSec = () => { secBox.replaceChildren(...c.sections.map((s, i) => { const d = ctEl('details'); d.open = true; d.append(ctEl('summary', { textContent: `Bölüm ${i + 1}: ${s.title.tr || '(başlıksız)'}` }));
+      const t1 = ctInput(s.title.tr), t2 = ctInput(s.title.en), b1 = ctArea(s.body.tr, 3), b2 = ctArea(s.body.en, 3), stp = ctArea((s.steps || []).join('\n'), 3);
+      t1.oninput = () => { s.title.tr = t1.value; }; t2.oninput = () => { s.title.en = t2.value; }; b1.oninput = () => { s.body.tr = b1.value; }; b2.oninput = () => { s.body.en = b2.value; }; stp.oninput = () => { s.steps = stp.value.split('\n').map(x => x.trim()).filter(Boolean); };
+      d.append(ctEl('div', { className: 'row' }, ctField('Başlık (TR)', t1), ctField('Başlık (EN)', t2), ctField('Metin (TR)', b1, true), ctField('Metin (EN)', b2, true), ctField('Adımlar (her satır bir adım, isteğe bağlı)', stp, true)), ctBtn('🗑 Bölümü sil', () => { c.sections.splice(i, 1); drawSec(); })); return d; })); };
+  drawSec();
+  const linkBox = ctEl('div'), drawLinks = () => { linkBox.replaceChildren(...c.links.map((l, i) => { const a = ctInput(l.label, { placeholder: 'Bağlantı adı' }), u = ctInput(l.url, { placeholder: 'https://…' }); a.oninput = () => { l.label = a.value; }; u.oninput = () => { l.url = u.value; }; a.style.width = '200px'; u.style.width = '320px'; return ctEl('div', { className: 'row' }, a, u, ctBtn('🗑', () => { c.links.splice(i, 1); drawLinks(); })); })); };
+  drawLinks();
+  wrap.append(ctEl('h4', { textContent: 'Bölümler' }), secBox, ctBtn('➕ Bölüm ekle', () => { if (c.sections.length < 8) { c.sections.push({ title: { tr: '', en: '' }, body: { tr: '', en: '' }, steps: [] }); drawSec(); } }), ctEl('h4', { textContent: 'Bağlantılar (yalnızca https)' }), linkBox, ctBtn('➕ Bağlantı ekle', () => { if (c.links.length < 8) { c.links.push({ label: '', url: 'https://' }); drawLinks(); } }),
+    ctEl('div', { className: 'row' }, ctBtn('✓ Binayı listeye ekle/güncelle', () => {
+      const bid = id.value.trim().toLowerCase(); if (!/^[a-z0-9][a-z0-9-]{1,23}$/.test(bid)) return stSay('Kimlik: 2–24 karakter, küçük harf/rakam/tire', false);
+      if (e.isNew && (ST.cfg.custom[bid] || ST.builtin[bid])) return stSay('Bu kimlik zaten kullanılıyor', false);
+      if (e.isNew && Object.keys(ST.cfg.custom).length >= ST.maxCustom) return stSay(`En fazla ${ST.maxCustom} yeni bina eklenebilir`, false);
+      c.name = { tr: nt.value, en: ne.value || nt.value }; c.icon = ic.value || '🏢'; c.color = col.value; c.sign = { tr: st.value, en: se.value || st.value }; c.intro = { tr: it.value, en: ie.value || it.value };
+      ST.cfg.custom[bid] = c; if (e.isNew) { ST.cfg.end.push(bid); ST.cfg.props[bid] = { enabled: true, w: 300, gap: 40, floors: 3 }; } ST.edit = null; stSay('Taslak güncellendi, yayınlamak için "Kaydet ve yayınla"ya basın'); stRender();
+    }, 'primary'), ctBtn('İptal', () => { ST.edit = null; stRender(); })));
+  return wrap;
+}
+$('stNew').onclick = () => { ST.edit = { id: '', isNew: true, c: { name: { tr: '', en: '' }, sign: { tr: '', en: '' }, icon: '🏢', color: '#4f8ff7', intro: { tr: '', en: '' }, sections: [], links: [] } }; stRender(); };
+$('stSave').onclick = () => socket.emit('adminSetStreet', ST.cfg, r => { if (!r?.ok) return stSay('Hata: ' + (r?.error || 'kaydedilemedi'), false); Object.assign(ST, { cfg: r.cfg, edit: null }); stSay('✓ Sokak yayınlandı, oyuncular yeni düzeni anında görür'); stRender(); });
+$('stReset').onclick = () => { if (confirm('Tüm bina yerleri, ayarlar ve eklenen yeni binalar varsayılana dönsün mü?')) socket.emit('adminResetStreet', {}, r => { if (r?.ok) { Object.assign(ST, { cfg: r.cfg, edit: null }); stSay('✓ Varsayılan sokak geri yüklendi'); stRender(); } }); };
 
 // ---------- Wholesale market (Sprint 26b) ----------
 const MK_TXT = { on: ['Pazar açık (1/0)', 'Kapalıysa teklif verilemez ve alınamaz'], fee: ['Komisyon (0–0,5)', 'Satış tutarından kesilir ve yok edilir (0,1 = %10)'], maxListings: ['Şirket başına açık teklif', 'Aynı anda en fazla bu kadar teklif'], maxBuysPerDay: ['Günlük satın alma sınırı', 'Bir şirketin oyun günü başına alım sayısı'], minPct: ['En düşük fiyat oranı', 'Satıcının perakende fiyatının bu oranından aşağı olamaz'], maxPct: ['En yüksek fiyat oranı', 'Satıcının perakende fiyatının bu oranından yukarı olamaz'], ttl: ['Teklif süresi (gün)', 'Süresi dolan teklifin stoğu satıcıya döner'] };

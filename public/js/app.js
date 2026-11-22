@@ -2,7 +2,7 @@
 // Finbuu client: scenes (street <-> zoom <-> company interior), input (keys, click, joystick), advisor (OK / Next / Auto),
 // HUD, status overlay (FPS / ping / sync), leaderboard layer, NPC dialogs with ID cards, department panels,
 // founding wizard, chat + polls, presentation (watch-only) mode. The server stays authoritative for every action.
-import { layout, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook, carX } from './world.js';
+import { layout, setStreet, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook, carX } from './world.js';
 import { paintAd, AD_SIZE } from './ads.js';
 import { renderTrMap, renderWorldMap } from './trmap.js';
 import { rankFaq, searchItems, tutorialState, FAQ_IDS } from './help.js';
@@ -191,7 +191,7 @@ $('boardBtn').onclick = () => toggleBoard();
 // ---------- Socket ----------
 const socket = io({ transports: ['websocket', 'polling'] });
 socket.on('seed', s => {
-  seed = s; renderSeed();
+  seed = s; setStreet(s.street); buildings = layout(state); renderSeed();
   if (!joined && modalOpen && $('modalBody').dataset.modes) showModes(); // seed (cities) arrived after the mode screen opened
 });
 socket.on('state', s => {
@@ -962,10 +962,11 @@ $('skipLink').onclick = e => { e.preventDefault(); cv.focus?.(); };
 cv.tabIndex = 0; cv.setAttribute('aria-label', 'Finbuu');
 // dialogs: Esc closes, Tab stays inside, focus returns to the element that opened it
 let modalReturnFocus = null;
-new MutationObserver(() => { const open = $('modal').style.display === 'flex'; if (open && !modalReturnFocus) { modalReturnFocus = document.activeElement; setTimeout(() => ($('modalBody').querySelector('[data-default], input, select, textarea, button:not(.modalX)'))?.focus?.({ preventScroll: true }), 40); } else if (!open && modalReturnFocus) { try { modalReturnFocus.focus?.({ preventScroll: true }); } catch { /* gone */ } modalReturnFocus = null; } }).observe($('modal'), { attributes: true, attributeFilter: ['style'] });
+new MutationObserver(() => { const open = $('modal').style.display === 'flex'; if (open && !modalReturnFocus) { modalReturnFocus = document.activeElement; setTimeout(() => ($('modalBody').querySelector('[data-default], input, select, textarea, button:not(.modalTools button)'))?.focus?.({ preventScroll: true }), 40); } else if (!open && modalReturnFocus) { try { modalReturnFocus.focus?.({ preventScroll: true }); } catch { /* gone */ } modalReturnFocus = null; } }).observe($('modal'), { attributes: true, attributeFilter: ['style'] });
 addEventListener('keydown', e => {
   if ($('modal').style.display !== 'flex') return;
   if (e.key === 'Escape' && modalClosable) { e.preventDefault(); closeModal(); return; }
+  if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.target.matches?.('input, textarea, select')) { e.preventDefault(); setModalFull(!ui.modalFull); return; }
   if (e.key !== 'Tab') return;
   const f = [...$('modalBody').querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
   if (!f.length) return; const first = f[0], last = f[f.length - 1];
@@ -973,6 +974,22 @@ addEventListener('keydown', e => {
   else if (!e.shiftKey && (document.activeElement === last || !$('modalBody').contains(document.activeElement))) { e.preventDefault(); first.focus(); }
 }, true);
 applyA11y();
+
+// ---------- Admin-created info buildings (Sprint 34) ----------
+const bName = b => `${b.custom?.icon || '🏢'} ${L10(b.custom?.label || b.label) || ''}`.trim();
+function openCustomBuilding(b) {
+  const c = b.custom || {};
+  openModal(body => {
+    body.append(el('h3', bName(b)));
+    if (L10(c.sign)) body.append(el('small', L10(c.sign), 'muted'));
+    if (L10(c.intro)) body.append(el('p', L10(c.intro)));
+    (c.sections || []).forEach(s => {
+      body.append(el('h4', L10(s.title)), el('p', L10(s.body)));
+      if (s.steps?.length) { const ol = el('ol', null, 'wikiSteps'); s.steps.forEach(x => ol.append(el('li', x))); body.append(ol); }
+    });
+    if (c.links?.length) { const row = el('div', null, 'row'); row.style.flexWrap = 'wrap'; c.links.forEach(l => { const u = safeUrl(l.url); if (u) row.append(extLink('🔗 ' + l.label, u)); }); body.append(row); }
+  });
+}
 // ---------- Taxi (Sprint 24b): click a taxi, it pulls up, haggle over the fare, ride anywhere ----------
 let taxiHail = null;                       // { car, t0 } while a taxi is on its way / waiting
 function hailTaxi(car) {
@@ -1110,7 +1127,7 @@ function renderStreet(now) {
     }
   }
   draw(ctx, {
-    state, ads: state?.ads || {}, view: v, time: now, bubbles, myId: myId(), player, others: isPres() ? new Map() : others, npcs, buildings,
+    state, lang: i18next.language, ads: state?.ads || {}, view: v, time: now, bubbles, myId: myId(), player, others: isPres() ? new Map() : others, npcs, buildings,
     near: isPres() ? null : near, nearNpc: isPres() ? null : nearNpc, targetId: player.targetId, met, low: perf.low, npcLimit: npcLimit(), hideMe: isPres(),
     ranks: boardOpen ? lotRanks() : null, traffic, busStops: seed?.busStops, night: nightFactor(gameMinutes()), riding: ride,
     nearStop: isPres() ? null : nearStop, stopHint: touch ? null : `E 🚏 ${t('bus.board')}`, money,
@@ -2218,10 +2235,18 @@ function openModal(fill, { closable = true, onClose = null } = {}) {
   if (modalOpen && modalOnClose) { const cb = modalOnClose; modalOnClose = null; cb(); }
   modalClosable = closable; modalOpen = true; modalOnClose = onClose;
   const body = $('modalBody'); body.replaceChildren(); body.classList.remove('wideBody'); delete body.dataset.npc; delete body.dataset.modes; fill(body);
-  if (closable) { const b = el('button', t('ui.close')); b.onclick = closeModal; body.append(b); const x = el('button', '✕', 'modalX'); x.type = 'button'; x.setAttribute('aria-label', t('ui.close')); x.onclick = closeModal; body.prepend(x); }
+  const tools = el('div', null, 'modalTools'), fsb = el('button', '', 'modalFS'); fsb.type = 'button'; fsb.onclick = () => setModalFull(!ui.modalFull); tools.append(fsb);
+  if (closable) { const b = el('button', t('ui.close')); b.onclick = closeModal; body.append(b); const x = el('button', '✕', 'modalX'); x.type = 'button'; x.setAttribute('aria-label', t('ui.close')); x.onclick = closeModal; tools.append(x); }
+  body.prepend(tools); setModalFull(!!ui.modalFull, true);
   $('modal').style.display = 'flex'; document.body.classList.add('modalOn');
   const def = body.querySelector('[data-default]');
   if (def && !touch && !body.querySelector('input:focus')) setTimeout(() => def.focus(), 30);
+}
+// Sprint 34: every dialog can be shown full screen; the choice is remembered on this device
+function setModalFull(on, silent) {
+  ui.modalFull = !!on; if (!silent) saveUi();
+  $('modal').classList.toggle('full', ui.modalFull);
+  const b = document.querySelector('#modalBody .modalFS'); if (b) { b.textContent = ui.modalFull ? '🗗' : '⛶'; b.title = b.ariaLabel = t(ui.modalFull ? 'ui.exitFullscreen' : 'ui.fullscreen'); b.setAttribute('aria-pressed', String(ui.modalFull)); }
 }
 function closeModal() {
   $('modal').style.display = 'none'; modalOpen = false; document.body.classList.remove('modalOn');
@@ -2456,6 +2481,7 @@ function openBuilding(b) {
   if (b.kind === 'oss') return openOss();
   if (b.kind === 'grants') return openGrants();
   if (b.kind === 'gamfed') return openGamFed();
+  if (b.kind === 'custom') return openCustomBuilding(b);
   if (b.kind === 'locked') return toast(t('ui.premiumAlert', { feature: t('locked.skyscraper') }));
   if (b.kind === 'home') return isPres() ? null : openApartment();
   if (b.kind === 'parking') return openParking();
@@ -2750,7 +2776,7 @@ setInterval(() => { adBannerIdx++; updateAdBanner(); }, 8000);
 // ---------- Minimap: the whole street at a glance (M key / map button), click to walk there ----------
 let minimapOpen = false, mmSig = '';
 function toggleMinimap(force) { minimapOpen = force ?? !minimapOpen; $('minimap').hidden = !minimapOpen; mmSig = ''; if (minimapOpen) renderMinimapList(); }
-const mmColor = b => { if (b.kind === 'guide') return '#f2b84b'; if (b.kind === 'plaza') return '#3987e5'; if (b.kind === 'demoday') return '#9b59b6'; if (b.kind === 'oss') return '#2ec4b6'; if (b.kind === 'grants') return '#c9a227'; if (b.kind === 'gamfed') return '#5b2a86'; if (b.kind === 'home') return '#e67e22'; if (b.kind === 'parking') return '#5b6475'; if (b.kind === 'terminal') return '#e67e22'; if (b.kind === 'locked') return '#b8c0cc';
+const mmColor = b => { if (b.kind === 'custom') return b.color || '#4f8ff7'; if (b.kind === 'guide') return '#f2b84b'; if (b.kind === 'plaza') return '#3987e5'; if (b.kind === 'demoday') return '#9b59b6'; if (b.kind === 'oss') return '#2ec4b6'; if (b.kind === 'grants') return '#c9a227'; if (b.kind === 'gamfed') return '#5b2a86'; if (b.kind === 'home') return '#e67e22'; if (b.kind === 'parking') return '#5b6475'; if (b.kind === 'terminal') return '#e67e22'; if (b.kind === 'locked') return '#b8c0cc';
   const ts = b.lot.companyIds.map(id => state.companies[id]).filter(Boolean); return !ts.length ? '#a9adb8' : ts.some(c => isMember(c)) ? '#f2b84b' : ts.some(c => c.isNpc) ? '#9b7be0' : '#3fa36b'; };
 function drawMinimap() {
   const cv = $('mmCv'); if (!minimapOpen || !state || scene.name !== 'street') return;
@@ -2778,7 +2804,7 @@ function placeItems() {
   const go = b => () => { walkTo(b.x + b.w / 2, () => openBuilding(b), b.id); if (touch) toggleMinimap(false); };
   for (const b of buildings) {
     if (b.kind === 'locked') continue;
-    const name = b.kind === 'guide' ? t('ui.guideSign') : b.kind === 'plaza' ? t('ui.plazaTitle') : b.kind === 'demoday' ? '🎤 Demo Day' : b.kind === 'oss' ? '🌱 ' + t('oss.name') : b.kind === 'grants' ? '🏛 ' + t('grants.name') : b.kind === 'gamfed' ? '🎮 ' + t('gamfed.name') : b.kind === 'home' ? '🏠 ' + t('home.title') : b.kind === 'parking' ? '🅿 ' + t('veh.parkingSign') : b.kind === 'terminal' ? '🚌 ' + t('travel.sign')
+    const name = b.kind === 'custom' ? bName(b) : b.kind === 'guide' ? t('ui.guideSign') : b.kind === 'plaza' ? t('ui.plazaTitle') : b.kind === 'demoday' ? '🎤 Demo Day' : b.kind === 'oss' ? '🌱 ' + t('oss.name') : b.kind === 'grants' ? '🏛 ' + t('grants.name') : b.kind === 'gamfed' ? '🎮 ' + t('gamfed.name') : b.kind === 'home' ? '🏠 ' + t('home.title') : b.kind === 'parking' ? '🅿 ' + t('veh.parkingSign') : b.kind === 'terminal' ? '🚌 ' + t('travel.sign')
       : b.lot.companyIds.length ? b.lot.companyIds.map(id => state.companies[id]).filter(Boolean).map(c => (isMember(c) ? '⭐ ' : '') + companyName(c)).join(', ') : null;
     if (name) items.push({ name, fn: go(b), color: mmColor(b), x: b.x + b.w / 2 });
   }

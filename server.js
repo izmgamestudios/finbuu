@@ -21,6 +21,7 @@ const TOOLS = require('./osTools');
 const CONTENT = require('./content');
 TOOLS.setCatalog(CONTENT.read('open-source-tools'));
 const { createAuth } = require('./auth');
+const STREET = require('./streetplan');
 const ECON = require('./economy').build(25); // 25 coins = blue-collar daily employer cost (2026 minimum wage)
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -186,8 +187,10 @@ const SHARED_MODES = ['multiplayer', 'presentation'];
 // ---------- HELPERS ----------
 const rooms = {};
 const LOTS_PER_STREET = 12;
-const WORLD_MAX_X = 6650; // client street width (incl. car park and bus terminal at the end)
-const SPAWN_X = 370;     // in front of the guide building
+// Sprint 34: street geometry comes from the admin-editable street plan (streetplan.js)
+const worldMaxFor = st => STREET.plan(st?.lots?.length || LOTS_PER_STREET).worldMax;
+function applyStreet() { SEED.busStops.splice(0, SEED.busStops.length, ...STREET.plan(LOTS_PER_STREET).busStops); }   // bus stops follow the building gaps (array object is shared, so it is updated in place)
+applyStreet();
 const clean = (s, max = 40) => String(s ?? '').replace(/[<>]/g, '').trim().slice(0, max);
 const cParams = c => (c.name ? { company: c.name } : { companyKey: c.nameKey });
 const addLog = (st, key, params = {}) => { st.log.unshift({ at: Date.now(), day: st.day || 0, key, params }); st.log.length = Math.min(st.log.length, 80); };
@@ -257,7 +260,7 @@ function saveBalanceCfg() { try { fs.mkdirSync(path.dirname(BAL_FILE), { recursi
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
   busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, cityMap: ECON.cityMap, intercity: ECON.intercity, life: ECON.life, tax: ECON.tax });
 const publicAdConfig = () => ({ kinds: ADS.KINDS, maxBoost: ADS.MAX_BOOST, maxSlots: ADS.MAX_SLOTS_PER_COMPANY, limits: ADS.LIMITS });
-const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops,
+const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops, street: STREET.publicDesc(),
   teamColors: SEED.teams.colors, quests: SEED.quests, badges: SEED.badges, salary: SEED.salary, custom: SEED.custom, departments: SEED.departments, marketing: SEED.marketing, itUpgrade: SEED.itUpgrade, npcTalk: { serviceCost: SEED.npcTalk.serviceCost, ids: SEED.npcTalk.ids }, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
   lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES, ads: publicAdConfig(), premium: PREMIUM, taxi: { ...TAXI, pxPerKm: PX_PER_KM } });
 const maxTenants = lot => (lot.type === 'coworking' ? WS.coworking.maxTenants : SEED.lotSizes[lot.size].maxTenants);
@@ -351,7 +354,7 @@ function costPerTick(st, c) {
 // City-based real estate: daily rent and purchase price of a lot (₺/m² converted to coins)
 const cityOf = st => (ECON.cities[st.city] ? st.city : 'istanbul');
 // ---------- Intercity travel (Sprint 11b): rooms of the same world are the streets of different cities ----------
-const terminalX = st => 720 + 244 * st.lots.length + 2530 + 190;           // centre of the bus terminal (mirrors the client layout)
+const terminalX = st => STREET.plan(st.lots.length).terminalX;           // centre of the bus terminal
 const cityMeta = key => ECON.cityMap.find(c => c.key === key);
 const findCityRoom = (worldId, city) => Object.values(rooms).find(r => r.worldId === worldId && r.city === city);
 function distanceKm(a, b) { // great-circle distance x road factor
@@ -509,10 +512,10 @@ function ensureVeh(st, c) {
 function carX(st, c) {
   const v = c.vehicle; if (!v) return null;
   if (v.park === 'street' && v.x != null) return v.x;
-  if (v.park === 'lot') { const i = Math.max(0, Object.values(st.companies).filter(o => o.vehicle?.park === 'lot').indexOf(c)); return 720 + 244 * st.lots.length + 2110 + 40 + Math.min(5, i) * 60; }
-  if (c.lotId == null) return 475 + 200 - 52;
+  if (v.park === 'lot') { const i = Math.max(0, Object.values(st.companies).filter(o => o.vehicle?.park === 'lot').indexOf(c)); return STREET.plan(st.lots.length).parkingX + 40 + Math.min(5, i) * 60; }
+  if (c.lotId == null) return STREET.plan(st.lots.length).plazaDoorX;
   const lot = st.lots[c.lotId], k = Math.max(0, lot.companyIds.filter(id => { const o = st.companies[id]; return o?.vehicle && o.vehicle.park !== 'lot' && o.vehicle.park !== 'street'; }).indexOf(c.id));
-  return 720 + 244 * c.lotId + 200 - 52 - Math.min(1, k) * 78;
+  return STREET.plan(st.lots.length).lotX(c.lotId) + 200 - 52 - Math.min(1, k) * 78;
 }
 
 // ---------- Taxi (Sprint 24b): hail a taxi, haggle over the fare, ride anywhere along the street ----------
@@ -809,7 +812,7 @@ io.on('connection', socket => {
     street = st; myWorld = st.worldId;
     me = { id: socket.id, name: clean(name, 20) || (socket.data.accountId && ACC.nameOf(socket.data.accountId)) || 'Anon-' + crypto.randomBytes(2).toString('hex'),
       coins: SEED.startCoins, role: 'role.candidate', stats: newStats(),
-      x: SPAWN_X, dir: 1, avatar: crypto.randomInt(0, 1000), busCard: 0, badges: {}, counters: {}, team: null, life: newLife(), resumeToken: crypto.randomBytes(16).toString('hex') };
+      x: STREET.plan(st.lots.length).spawnX, dir: 1, avatar: crypto.randomInt(0, 1000), busCard: 0, badges: {}, counters: {}, team: null, life: newLife(), resumeToken: crypto.randomBytes(16).toString('hex') };
     if (socket.data.accountId) hydrateFromAccount(me, socket.data.accountId);
     ensureQuests(st, me);
     st.players[socket.id] = me; ensureFlat(st, me);
@@ -878,7 +881,7 @@ io.on('connection', socket => {
   });
 
   // ---- Taxi: quote -> offer (haggle) -> go ----
-  const taxiTarget = to => { const x = Math.round(Number(to)); return Number.isFinite(x) && x >= 0 && x <= WORLD_MAX_X ? x : null; };
+  const taxiTarget = to => { const x = Math.round(Number(to)); return Number.isFinite(x) && x >= 0 && x <= worldMaxFor(street) ? x : null; };
   socket.on('taxiQuote', ({ to } = {}, cb) => {
     const reply = r => typeof cb === 'function' && cb(r), x = taxiTarget(to);
     if (!street || !me || street.mode === 'presentation' || me.drive || x == null || Math.abs(x - me.x) < 150) return reply({ ok: false, key: 'toast.taxiTooClose' });
@@ -933,14 +936,14 @@ io.on('connection', socket => {
       else {
         const step = Math.min(Math.abs(nx - me.x), MAX_STEP_PX), km = step / PX_PER_KM;
         v.fuel = Math.max(0, v.fuel - km); v.odo += km; v.cond = Math.max(0, v.cond - km * WEAR_PER_KM);
-        if (v.fuel <= 0 || v.cond <= 0) { me.x = Math.max(0, Math.min(WORLD_MAX_X, Math.round(me.x + Math.sign(nx - me.x) * step))); stopDriving(v.fuel <= 0 ? 'fuel' : 'broken'); return; }
-        me.x = Math.max(0, Math.min(WORLD_MAX_X, Math.round(me.x + Math.sign(nx - me.x) * step))); me.dir = dir < 0 ? -1 : 1;
+        if (v.fuel <= 0 || v.cond <= 0) { me.x = Math.max(0, Math.min(worldMaxFor(street), Math.round(me.x + Math.sign(nx - me.x) * step))); stopDriving(v.fuel <= 0 ? 'fuel' : 'broken'); return; }
+        me.x = Math.max(0, Math.min(worldMaxFor(street), Math.round(me.x + Math.sign(nx - me.x) * step))); me.dir = dir < 0 ? -1 : 1;
         if (!posDirty.has(street.id)) posDirty.set(street.id, new Map()); posDirty.get(street.id).set(me.id, { x: me.x, dir: me.dir });
         if (now - (me.driveInfoAt || 0) > 400) { me.driveInfoAt = now; socket.emit('driveInfo', { fuel: +v.fuel.toFixed(2), cond: +v.cond.toFixed(2), odo: +v.odo.toFixed(1), tank: v.tank }); }
         return;
       }
     }
-    me.x = Math.max(0, Math.min(WORLD_MAX_X, Math.round(nx)));
+    me.x = Math.max(0, Math.min(worldMaxFor(street), Math.round(nx)));
     me.dir = dir < 0 ? -1 : 1;
     if (!posDirty.has(street.id)) posDirty.set(street.id, new Map());
     posDirty.get(street.id).set(me.id, { x: me.x, dir: me.dir });
@@ -2425,6 +2428,14 @@ admin.on('connection', socket => {
     const cfg = MKT.setConfig(patch); saveMarketCfg(); audit('marketConfig', JSON.stringify(cfg));
     if (typeof cb === 'function') cb({ ok: true, cfg });
   });
+  // ---- Sprint 34: street plan (building order, size, sign text, new info buildings) ----
+  socket.on('adminGetStreet', (_, cb) => { if (typeof cb === 'function') cb({ ok: true, ...STREET.adminView() }); });
+  socket.on('adminSetStreet', (doc, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r);
+    try { STREET.set(doc); } catch (e) { if (e instanceof STREET.Bad) return reply({ ok: false, error: e.message }); throw e; }
+    applyStreet(); audit('street', `${STREET.get().start.length + STREET.get().end.length} buildings`); io.emit('seed', publicSeed()); reply({ ok: true, ...STREET.adminView() });
+  });
+  socket.on('adminResetStreet', (_, cb) => { STREET.reset(); applyStreet(); audit('street', 'reset'); io.emit('seed', publicSeed()); if (typeof cb === 'function') cb({ ok: true, ...STREET.adminView() }); });
   socket.on('adminGetBalanceCfg', (_, cb) => { if (typeof cb === 'function') cb({ cfg: { ...BAL.CFG }, ranges: BAL.RANGES }); });
   socket.on('adminSetBalanceCfg', (patch, cb) => {
     if (typeof patch !== 'object' || !patch) return typeof cb === 'function' && cb({ ok: false });
