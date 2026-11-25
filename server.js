@@ -19,6 +19,7 @@ const PLAN = require('./planner');
 const ERP = require('./erp');
 const TOOLS = require('./osTools');
 const CONTENT = require('./content');
+const PRJ = require('./projects');
 TOOLS.setCatalog(CONTENT.read('open-source-tools'));
 const { createAuth } = require('./auth');
 const STREET = require('./streetplan');
@@ -260,7 +261,7 @@ function saveBalanceCfg() { try { fs.mkdirSync(path.dirname(BAL_FILE), { recursi
 const publicEconomy = () => ({ rate: ECON.rate, data: ECON.data, collars: ECON.collars, vehicle: ECON.vehicle, busFare: ECON.busFare,
   busTopups: ECON.busTopups, deliveryKm: ECON.deliveryKm, cities: ECON.cities, cityMap: ECON.cityMap, intercity: ECON.intercity, life: ECON.life, tax: ECON.tax });
 const publicAdConfig = () => ({ kinds: ADS.KINDS, maxBoost: ADS.MAX_BOOST, maxSlots: ADS.MAX_SLOTS_PER_COMPANY, limits: ADS.LIMITS });
-const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops, street: STREET.publicDesc(),
+const publicSeed = () => ({ economy: publicEconomy(), startCoins: SEED.startCoins, tickSeconds: SEED.tickSeconds, busStops: SEED.busStops, street: STREET.publicDesc(), projects: PRJ.publicList(),
   teamColors: SEED.teams.colors, quests: SEED.quests, badges: SEED.badges, salary: SEED.salary, custom: SEED.custom, departments: SEED.departments, marketing: SEED.marketing, itUpgrade: SEED.itUpgrade, npcTalk: { serviceCost: SEED.npcTalk.serviceCost, ids: SEED.npcTalk.ids }, tutorial: SEED.tutorial, templates: SEED.templates, locked: SEED.lockedFeatures,
   lotSizes: SEED.lotSizes, workspaces: SEED.workspaces, benefits: SEED.benefits, modes: MODES, ads: publicAdConfig(), premium: PREMIUM, taxi: { ...TAXI, pxPerKm: PX_PER_KM } });
 const maxTenants = lot => (lot.type === 'coworking' ? WS.coworking.maxTenants : SEED.lotSizes[lot.size].maxTenants);
@@ -1789,6 +1790,51 @@ io.on('connection', socket => {
     c.offer = null; sync();
   });
 
+  // ---------- Sprint 35: Demo Day project floors ----------
+  const projOwn = p => !!(p?.owner && street && street.id === p.owner.room && founderOf(p.owner.cid));
+  const projLive = p => {
+    const c = p.owner && street && street.id === p.owner.room ? street.companies[p.owner.cid] : null;
+    if (!c) return p.snap ? { ...p.snap, stale: true } : null;
+    const r = readiness(street, c), nm = id => (street.players[id] || street.pastPlayers?.[id])?.name || '—';
+    const live = { name: c.name || null, nameKey: c.nameKey || null, cid: c.id, canvas: c.canvas || {}, pitch: c.pitch || '', score: r.score, valuation: r.valuation, blocks: canvasFilled(c),
+      partners: Object.entries(c.partners || {}).map(([pid, pct]) => ({ name: nm(pid), pct })), npcEquity: c.npcEquity || 0, demoAt: c.demoAt ?? null, angelAt: c.angelAt ?? null, granted: !!c.granted, day: street.day || 0 };
+    PRJ.setSnap(p.id, { ...live, day: undefined }); return live;
+  };
+  const projFull = p => ({ ...p, snap: undefined, mine: projOwn(p), live: projLive(p) });
+  const fbHits = [];
+  const badMsg = e => (e instanceof PRJ.Bad ? e.message : null);
+  socket.on('projectsList', (_, cb) => { if (typeof cb !== 'function') return; const mine = street ? Object.values(street.companies).filter(c => c.founders.includes(me?.id)).map(c => ({ id: c.id, taken: !!PRJ.byCompany(street.id, c.id) })) : []; cb({ ok: true, projects: PRJ.all().map(p => ({ ...PRJ.summary(p), mine: projOwn(p) })), max: PRJ.MAX, companies: mine }); });
+  socket.on('projectGet', ({ id } = {}, cb) => { const p = PRJ.get(String(id)); if (typeof cb === 'function') cb(p ? { ok: true, project: projFull(p) } : { ok: false }); });
+  socket.on('projectAdd', ({ cid, project } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = founderOf(cid);
+    if (!c || !me) return reply({ ok: false, key: 'proj.err.noCompany' });
+    if (limited()) return reply({ ok: false, key: 'proj.err.rate' });
+    if (PRJ.byCompany(street.id, c.id)) return reply({ ok: false, key: 'proj.err.hasProject' });
+    try { const p = PRJ.add({ ...(project || {}), id: undefined, board: undefined, events: [], partners: [], exit: {} }, { room: street.id, cid: c.id, name: me.name }); audit('project', `${street.id}: ${p.name}`); io.emit('seed', publicSeed()); reply({ ok: true, id: p.id }); }
+    catch (e) { if (e.message === 'full') return reply({ ok: false, key: 'proj.err.full' }); const m = badMsg(e); if (m) return reply({ ok: false, error: m }); throw e; }
+  });
+  socket.on('projectUpdate', ({ id, patch } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), p = PRJ.get(String(id));
+    if (!projOwn(p) || !patch || typeof patch !== 'object') return reply({ ok: false });
+    if (limited()) return reply({ ok: false, key: 'proj.err.rate' });
+    const { name, tagline, desc, url, icon, color, events, partners, exit, pitch } = patch;
+    try { const np = PRJ.update(p.id, Object.fromEntries(Object.entries({ name, tagline, desc, url, icon, color, events, partners, exit, pitch }).filter(([, v]) => v !== undefined))); if (name !== undefined || icon !== undefined || color !== undefined) io.emit('seed', publicSeed()); reply({ ok: true, project: projFull(np) }); }
+    catch (e) { const m = badMsg(e); if (m) return reply({ ok: false, error: m }); throw e; }
+  });
+  socket.on('projectBoardSave', ({ id, board } = {}) => { const p = PRJ.get(String(id)); if (!projOwn(p)) return; PRJ.setBoard(p.id, board); });
+  socket.on('projectDelete', ({ id } = {}, cb) => { const p = PRJ.get(String(id)); if (!projOwn(p)) return typeof cb === 'function' && cb({ ok: false }); PRJ.remove(p.id); audit('project', `${street.id}: ${p.name} silindi`); io.emit('seed', publicSeed()); if (typeof cb === 'function') cb({ ok: true }); });
+  socket.on('projectFeedback', ({ id, kind, text } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), p = PRJ.get(String(id)), now = Date.now();
+    if (!p || !me) return reply({ ok: false });
+    while (fbHits.length && now - fbHits[0] > 60000) fbHits.shift();
+    if (fbHits.length >= 5) return reply({ ok: false, key: 'proj.err.rate' });
+    if (!clean(text, 300)) return reply({ ok: false });
+    fbHits.push(now); const f = PRJ.addFeedback(p.id, { kind, text, name: me.name });
+    if (p.owner) { const ow = Object.values(street?.players || {}).find(x => x.id !== me.id && street.id === p.owner.room && street.companies[p.owner.cid]?.founders.includes(x.id)); if (ow) io.to(ow.id).emit('toast', 'proj.newFeedback'); }
+    reply({ ok: !!f, feedback: p.feedback });
+  });
+  socket.on('projectFeedbackDelete', ({ id, fid } = {}, cb) => { const p = PRJ.get(String(id)); if (!projOwn(p)) return typeof cb === 'function' && cb({ ok: false }); PRJ.removeFeedback(p.id, String(fid)); if (typeof cb === 'function') cb({ ok: true, feedback: p.feedback }); });
+
   // Latency probe for the in-game status panel
   socket.on('latency', (cb) => typeof cb === 'function' && cb(Date.now()));
 
@@ -2436,6 +2482,18 @@ admin.on('connection', socket => {
     applyStreet(); audit('street', `${STREET.get().start.length + STREET.get().end.length} buildings`); io.emit('seed', publicSeed()); reply({ ok: true, ...STREET.adminView() });
   });
   socket.on('adminResetStreet', (_, cb) => { STREET.reset(); applyStreet(); audit('street', 'reset'); io.emit('seed', publicSeed()); if (typeof cb === 'function') cb({ ok: true, ...STREET.adminView() }); });
+  // ---- Sprint 35: Demo Day projects (admin sees and edits every project, incl. feedback) ----
+  const projAdmin = () => ({ ok: true, projects: PRJ.all(), max: PRJ.MAX });
+  const projDone = (reply, fn) => { try { fn(); io.emit('seed', publicSeed()); reply(projAdmin()); } catch (e) { if (e instanceof PRJ.Bad) return reply({ ok: false, error: e.message === 'full' ? `En fazla ${PRJ.MAX} proje (bina ${PRJ.MAX} kat)` : e.message }); throw e; } };
+  socket.on('adminGetProjects', (_, cb) => { if (typeof cb === 'function') cb(projAdmin()); });
+  socket.on('adminSaveProject', ({ project } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r);
+    projDone(reply, () => { const ex = project?.id ? PRJ.get(String(project.id)) : null; if (ex) PRJ.update(ex.id, project); else PRJ.add(project); audit('project', `${project?.name || '?'} kaydedildi`); });
+  });
+  socket.on('adminDeleteProject', ({ id } = {}, cb) => projDone(r => typeof cb === 'function' && cb(r), () => { if (PRJ.remove(String(id))) audit('project', `${id} silindi`); }));
+  socket.on('adminReorderProjects', ({ ids } = {}, cb) => projDone(r => typeof cb === 'function' && cb(r), () => { PRJ.reorder(ids); audit('project', 'sıra değişti'); }));
+  socket.on('adminDeleteFeedback', ({ id, fid } = {}, cb) => { PRJ.removeFeedback(String(id), String(fid)); if (typeof cb === 'function') cb(projAdmin()); });
+  socket.on('adminResetProjects', (_, cb) => projDone(r => typeof cb === 'function' && cb(r), () => { PRJ.reset(); audit('project', 'varsayılana döndü'); }));
   socket.on('adminGetBalanceCfg', (_, cb) => { if (typeof cb === 'function') cb({ cfg: { ...BAL.CFG }, ranges: BAL.RANGES }); });
   socket.on('adminSetBalanceCfg', (patch, cb) => {
     if (typeof patch !== 'object' || !patch) return typeof cb === 'function' && cb({ ok: false });

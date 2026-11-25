@@ -28,13 +28,21 @@ const endItem = id => STREET?.end.find(e => e.id === id) || null;
 export const floorsFor = cash => Math.max(1, Math.min(MAX_FLOORS, 1 + Math.floor(Math.log2(Math.max(1, cash) / 250))));
 const heightOf = floors => GROUND_H + floors * FLOOR_H + ROOF_H;
 export const GAMFED_FLOORS = 10, GAMFED_FLOOR_H = 36;
+// Sprint 35: the Demo Day tower has one floor per project (at least 3 so the empty tower still looks like a building)
+let PROJECTS = [];
+export const DD_FLOOR_H = 36, DD_MIN = 3, DD_MAX = 12;
+export function setProjects(list) { PROJECTS = Array.isArray(list) ? list.slice(0, DD_MAX) : []; }
+const ddFloors = () => Math.max(DD_MIN, Math.min(DD_MAX, PROJECTS.length));
+const DD_SIGN_H = 96;                                   // marquee + sign above the floors
+const ddFh = () => Math.max(22, Math.min(DD_FLOOR_H, Math.floor(264 / ddFloors())));   // many projects = thinner floors, the tower must stay under the sky line (GROUND = 460)
+const ddHeight = () => GROUND_H + ddFloors() * ddFh() + ROOF_H + DD_SIGN_H;
 const GAMFED_H = GROUND_H + GAMFED_FLOORS * GAMFED_FLOOR_H + ROOF_H; // 458: ten floors still fit under the sky line
 
 export function layout(state) {
   const lots = state?.lots || [];
   const heightFor = (it, fallbackFloors) => (it.hmode === 'apt' ? aptHeight(state?.flats?.length || 1) : it.hmode === 'h' ? it.h : heightOf(it.floors || fallbackFloors));
   const seedOf = it => ({ home: 900, guide: 901, plaza: 902, oss: 907, demoday: 904, grants: 908, locked: 903, gamfed: 909, parking: 905, terminal: 906 })[it.id] ?? (1000 + [...it.id].reduce((a, c) => a + c.charCodeAt(0), 0) % 800);
-  const make = (it, x) => ({ kind: it.kind, id: it.id, seed: seedOf(it), x, w: it.w, h: heightFor(it, 3), label: it.label || null, icon: it.icon || null, color: it.color || null, custom: it.kind === 'custom' ? it : null });
+  const make = (it, x) => ({ kind: it.kind, id: it.id, seed: seedOf(it), x, w: it.w, h: it.id === 'demoday' ? ddHeight() : heightFor(it, 3), label: it.label || null, icon: it.icon || null, color: it.color || null, custom: it.kind === 'custom' ? it : null });
   const list = [];
   if (STREET) STREET.start.forEach(it => list.push(make(it, it.x)));
   else list.push({ kind: 'home', id: 'home', seed: 900, x: HOME.x, w: HOME.w, h: aptHeight(state?.flats?.length || 1) }, { kind: 'guide', id: 'guide', seed: 901, x: GUIDE.x, w: GUIDE.w, h: heightOf(2) }, { kind: 'plaza', id: 'plaza', seed: 902, x: PLAZA.x, w: PLAZA.w, h: heightOf(4) });
@@ -47,7 +55,7 @@ export function layout(state) {
   if (STREET) STREET.end.forEach(it => list.push(make(it, L + it.dx)));
   else {
     list.push({ kind: 'oss', id: 'oss', seed: 907, x: L + 10, w: 380, h: heightOf(3) });
-    list.push({ kind: 'demoday', id: 'demoday', seed: 904, x: L + 430, w: 360, h: heightOf(3) });
+    list.push({ kind: 'demoday', id: 'demoday', seed: 904, x: L + 430, w: 360, h: ddHeight() });
     list.push({ kind: 'grants', id: 'grants', seed: 908, x: L + 830, w: 380, h: heightOf(4) });
     list.push({ kind: 'locked', id: 'locked', seed: 903, x: L + 1250, w: 380, h: 320 });
     list.push({ kind: 'gamfed', id: 'gamfed', seed: 909, x: L + 1670, w: 400, h: GAMFED_H });
@@ -447,8 +455,22 @@ function drawDemoDay(ctx, b, env) {
   ctx.fillText('🎤 DEMO DAY', b.x + b.w / 2, top + ROOF_H + 50);
   ctx.font = '700 11px system-ui, sans-serif'; ctx.fillStyle = '#e9e4ff';
   ctx.fillText(env.t('demo.sign'), b.x + b.w / 2, top + ROOF_H + 84); ctx.textAlign = 'left';
-  // upper windows with investors
-  for (let i = 0; i < 4; i++) { const wx = b.x + 24 + i * 84; windowAt(ctx, wx, top + ROOF_H + 96, 60, 36, !LOW && hash(904, i, Math.floor(env.time / 9000)) < 0.5 ? npcLook(904 + i) : null); }
+  // one floor per project, numbered from the ground up: floor 1 sits right above the stage
+  const fh = ddFh(), n = ddFloors(), fy0 = GROUND - GROUND_H, small = fh < 30;
+  for (let k = 0; k < n; k++) {
+    const pr = PROJECTS[k], fy = fy0 - (k + 1) * fh;
+    ctx.fillStyle = k % 2 ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.10)'; ctx.fillRect(b.x, fy, b.w, fh);
+    if (pr) { ctx.fillStyle = pr.color || '#5b4a9a'; ctx.fillRect(b.x, fy + 2, 6, fh - 4); }
+    ctx.fillStyle = '#f2b84b'; circle(ctx, b.x + 26, fy + fh / 2, small ? 9 : 11);
+    ctx.font = `800 ${small ? 11 : 13}px "Baloo 2", system-ui, sans-serif`; ctx.fillStyle = '#3b2f63'; ctx.textAlign = 'center'; ctx.fillText(String(k + 1), b.x + 26, fy + fh / 2 + (small ? 4 : 5));
+    if (pr) {
+      ctx.textAlign = 'left'; ctx.font = `${small ? 13 : 17}px system-ui`; ctx.fillStyle = '#fff'; ctx.fillText(pr.icon || '💡', b.x + 46, fy + fh / 2 + (small ? 5 : 6));
+      ctx.font = '700 12px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#efeaff'; let nm = pr.name || ''; while (nm.length > 3 && ctx.measureText(nm).width > b.w - 160) nm = nm.slice(0, -2) + '…';
+      ctx.fillText(nm, b.x + 72, fy + fh / 2 + 4);
+    } else { ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.font = '700 11px Nunito, system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.fillText('…', b.x + 46, fy + fh / 2 + 4); }
+    windowAt(ctx, b.x + b.w - 54, fy + 3, 36, fh - 8, !LOW && hash(904, k, Math.floor(env.time / 9000)) < 0.4 ? npcLook(904 + k) : null);
+  }
+  ctx.textAlign = 'left';
   // ground floor cut-away: stage
   const gy = GROUND - GROUND_H, ix = b.x + 12, iy = gy + 8, iw = b.w - 24, ih = GROUND - iy;
   ctx.save(); ctx.beginPath(); ctx.rect(ix, iy, iw, ih); ctx.clip();

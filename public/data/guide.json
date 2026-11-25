@@ -1134,30 +1134,35 @@
    "type": "building",
    "icon": "",
    "title": {
-    "tr": "Demo Day binası",
-    "en": "Demo Day building"
+    "tr": "Demo Day binası (proje katları)",
+    "en": "Demo Day building (project floors)"
    },
    "body": {
-    "tr": "Business canvas, pitch, yatırımcı teklifleri, hibe, ortaklar ve şirket satışı (exit) burada yönetilir.",
-    "en": "Business canvas, pitch, investor offers, grants, partners and company sale (exit) are handled here."
+    "tr": "Her proje binanın bir katıdır (en fazla 12). Bir kata tıkla: Genel, Etkinlikler, İş Modeli Kanvası, Asansör Konuşması, Pitch Deck, Ortaklar, Satış (Exit), GamFed TOY Tuvali, Business Canvas ve Geri bildirim sekmeleri. Şirket projelerinde kanvas, pitch ve ortaklar şirketinle bağlantılıdır. Yatırımcı teklifi, hibe ve şirket satışı için \"Şirketimin Demo Day paneli\"ni kullan.",
+    "en": "Every project is one floor of the tower (max 12). Tap a floor for About, Events, Business Model Canvas, Elevator pitch, Pitch Deck, Partners, Sale (Exit), GamFed TOY Canvas, Business Canvas and Feedback tabs. For company projects the canvas, pitch and partners are linked to your company. Use \"My company's Demo Day panel\" for investor offers, grants and selling your company."
    },
    "tags": [
     "demo day",
+    "proje",
+    "kat",
     "yatirimci",
     "canvas",
     "pitch",
-    "hibe"
+    "hibe",
+    "geri bildirim"
    ],
    "steps": {
     "tr": [
      "Sokakta mor Demo Day binasına git",
      "W/↑ ile gir",
-     "Sekmeler: Olaylar · Canvas · Pitch · Deck · Ortaklar · Satış"
+     "Bir proje katına tıkla",
+     "Şirketin varsa \"Proje ekle\" ile kendi katını aç"
     ],
     "en": [
      "Find the purple Demo Day building",
      "Press W/↑",
-     "Tabs: Events · Canvas · Pitch · Deck · Partners · Exit"
+     "Tap a project floor",
+     "If you have a company, use \"Add project\" to open your own floor"
     ]
    },
    "go": {
@@ -1166,7 +1171,90 @@
    },
    "related": [
     "partners",
-    "exit"
+    "exit",
+    "project-add",
+    "project-feedback"
+   ]
+  },
+  {
+   "id": "project-add",
+   "cat": "b-support",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Demo Day'e nasıl proje eklerim?",
+    "en": "How do I add a project to Demo Day?"
+   },
+   "body": {
+    "tr": "Bir şirketin olmalı. Demo Day binasında \"Proje ekle\"ye bas, şirketini seç; ad, slogan, web adresi ve açıklama gir. Her şirketin bir proje katı olur. Etkinlik, ortak ve satış durumunu kendi katında düzenlersin; kanvas ve pitch şirketinden canlı gelir. Admin de projeler ekleyebilir.",
+    "en": "You need a company. In the Demo Day building press \"Add project\", pick your company and enter name, tagline, website and description. Each company gets one project floor. You edit events, partners and sale status on your floor; the canvas and pitch come live from your company. The admin can add projects too."
+   },
+   "tags": [
+    "proje ekle",
+    "kat",
+    "demo day"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day binasına gir",
+     "Proje ekle",
+     "Şirketini seç, bilgileri doldur",
+     "Katı aç"
+    ],
+    "en": [
+     "Enter the Demo Day building",
+     "Add project",
+     "Pick your company and fill the form",
+     "Open floor"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "demoday"
+   },
+   "related": [
+    "b-demoday"
+   ]
+  },
+  {
+   "id": "project-feedback",
+   "cat": "b-support",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Bir projeye nasıl geri bildirim bırakırım?",
+    "en": "How do I leave feedback on a project?"
+   },
+   "body": {
+    "tr": "Demo Day binasında bir kata tıkla, \"Geri bildirim\" sekmesinde türü seç (geri bildirim, öneri veya soru), yaz ve gönder. Proje sahibi mesajı görür ve gerekirse silebilir.",
+    "en": "In the Demo Day building tap a floor, open the \"Feedback\" tab, pick the type (feedback, suggestion or question), write and send. The project owner sees it and can delete it."
+   },
+   "tags": [
+    "geri bildirim",
+    "oneri",
+    "soru",
+    "proje"
+   ],
+   "steps": {
+    "tr": [
+     "Demo Day binasına gir",
+     "Bir kata tıkla",
+     "Geri bildirim sekmesi",
+     "Yaz ve Gönder"
+    ],
+    "en": [
+     "Enter the Demo Day building",
+     "Tap a floor",
+     "Feedback tab",
+     "Write and Send"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "demoday"
+   },
+   "related": [
+    "b-demoday"
    ]
   },
   {

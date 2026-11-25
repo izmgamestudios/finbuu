@@ -84,6 +84,7 @@
     <button data-tab="evtcfg">📰 Olaylar</button>
     <button data-tab="mktcfg">🤝 Pazar</button>
     <button data-tab="streetcfg">🏙 Sokak</button>
+    <button data-tab="prjcfg">🎤 Projeler</button>
     <button data-tab="content">📚 Bina İçerikleri</button>
     <button data-tab="audit">Denetim Kaydı</button>
   </div>
@@ -211,6 +212,15 @@
       <div id="stPreview" style="display:flex;gap:2px;align-items:flex-end;overflow:auto;padding:6px 0;margin:6px 0;min-height:70px"></div>
       <div id="stBody"></div>
       <div class="row" style="margin-top:10px"><button id="stSave" class="primary">Kaydet ve yayınla</button><button id="stNew">➕ Yeni bina</button><button id="stReset">↺ Varsayılan sokak</button></div>
+    </div>
+  </main>
+  <main id="prjcfg">
+    <div class="card">
+      <h3>Demo Day: Proje Katları</h3>
+      <p class="muted">Her proje Demo Day binasının bir katıdır (en fazla 12). Admin projeleri burada eklenir/düzenlenir; oyuncuların şirket projeleri de listelenir. Oyuncu geri bildirimlerini buradan silebilirsiniz. Değişiklikler anında yayınlanır.</p>
+      <div id="prMsg" class="muted" style="min-height:22px"></div>
+      <div id="prBody"></div>
+      <div class="row" style="margin-top:10px"><button id="prNew" class="primary">➕ Yeni proje</button><button id="prReset">↺ Varsayılan projeler</button></div>
     </div>
   </main>
   <main id="mktcfg">
@@ -355,6 +365,7 @@ $('tabs').onclick = e => {
   if (b.dataset.tab === 'evtcfg') loadEvtCfg();
   if (b.dataset.tab === 'mktcfg') loadMktCfg();
   if (b.dataset.tab === 'streetcfg') loadStreet();
+  if (b.dataset.tab === 'prjcfg') loadProjects();
   if (b.dataset.tab === 'content') ctInit();
 };
 
@@ -481,6 +492,55 @@ function stCustomForm() {
 $('stNew').onclick = () => { ST.edit = { id: '', isNew: true, c: { name: { tr: '', en: '' }, sign: { tr: '', en: '' }, icon: '🏢', color: '#4f8ff7', intro: { tr: '', en: '' }, sections: [], links: [] } }; stRender(); };
 $('stSave').onclick = () => socket.emit('adminSetStreet', ST.cfg, r => { if (!r?.ok) return stSay('Hata: ' + (r?.error || 'kaydedilemedi'), false); Object.assign(ST, { cfg: r.cfg, edit: null }); stSay('✓ Sokak yayınlandı, oyuncular yeni düzeni anında görür'); stRender(); });
 $('stReset').onclick = () => { if (confirm('Tüm bina yerleri, ayarlar ve eklenen yeni binalar varsayılana dönsün mü?')) socket.emit('adminResetStreet', {}, r => { if (r?.ok) { Object.assign(ST, { cfg: r.cfg, edit: null }); stSay('✓ Varsayılan sokak geri yüklendi'); stRender(); } }); };
+
+// ---- Sprint 35: Demo Day projects ----
+const PR = { list: [], max: 12, edit: null };
+const prSay = (t, ok = true) => { $('prMsg').textContent = t; $('prMsg').style.color = ok ? '#7fe3a1' : '#ff8a80'; };
+const BMC_K = ['keyPartners', 'keyActivities', 'keyResources', 'valueProps', 'customerRelationships', 'channels', 'customerSegments', 'costStructure', 'revenueStreams'];
+const BMC_L = { keyPartners: 'Anahtar ortaklar', keyActivities: 'Anahtar faaliyetler', keyResources: 'Anahtar kaynaklar', valueProps: 'Değer önerisi', customerRelationships: 'Müşteri ilişkileri', channels: 'Kanallar', customerSegments: 'Müşteri segmentleri', costStructure: 'Maliyet yapısı', revenueStreams: 'Gelir akışları' };
+function loadProjects() { socket.emit('adminGetProjects', {}, prApply); }
+function prApply(r) { if (!r?.ok) return prSay(r?.error || 'Yüklenemedi', false); PR.list = r.projects; PR.max = r.max; if (PR.edit && !PR.list.find(p => p.id === PR.edit.id) && !PR.edit.isNew) PR.edit = null; prRender(); }
+const prCall = (ev, payload, ok) => socket.emit(ev, payload, r => { if (!r?.ok) return prSay('Hata: ' + (r?.error || 'işlem yapılamadı'), false); prSay(ok || '✓ Yayınlandı'); prApply(r); });
+function prRender() {
+  const body = $('prBody'); body.replaceChildren();
+  if (PR.edit) return prForm(body);
+  const t = ctEl('table'); t.innerHTML = '<tr><th>Kat</th><th>Proje</th><th>Sahip</th><th>Bağlantı</th><th>💬</th><th></th></tr>';
+  PR.list.forEach((p, i) => {
+    const mv = d => () => { const ids = PR.list.map(x => x.id), j = i + d; if (j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; prCall('adminReorderProjects', { ids }, '✓ Sıra değişti'); };
+    const tr = ctEl('tr', {}, ctEl('td', { textContent: String(i + 1) }), ctEl('td', { textContent: `${p.icon} ${p.name}` }), ctEl('td', { textContent: p.owner ? `👤 ${p.owner.name}` : 'Admin' }), ctEl('td', { textContent: p.url || '—' }), ctEl('td', { textContent: String(p.feedback.length) }),
+      ctEl('td', {}, ctBtn('▲', mv(-1)), ctBtn('▼', mv(1)), ctBtn('✏', () => { PR.edit = { id: p.id, isNew: false, p: JSON.parse(JSON.stringify(p)) }; prRender(); }), ctBtn('🗑', () => { if (confirm(`"${p.name}" ve geri bildirimleri silinsin mi?`)) prCall('adminDeleteProject', { id: p.id }, '✓ Silindi'); })));
+    t.append(tr);
+  });
+  body.append(t);
+  if (!PR.list.length) body.append(ctEl('p', { className: 'muted', textContent: 'Proje yok.' }));
+}
+function prForm(body) {
+  const e = PR.edit, p = e.p, row = (label, node) => ctEl('label', { style: 'display:flex;flex-direction:column;gap:3px;margin:6px 0' }, ctEl('b', { textContent: label }), node);
+  const inp = (k, max, ph = '') => { const i = ctEl('input', { value: p[k] || '', maxLength: max, placeholder: ph }); i.oninput = () => (p[k] = i.value); return i; };
+  const ta = (get, set, max, rows = 3) => { const a = ctEl('textarea', { value: get() || '', maxLength: max, rows }); a.oninput = () => set(a.value); return a; };
+  p.board ||= { title: '', toy: [], bmc: {}, deck: [] }; p.events ||= []; p.partners ||= []; p.exit ||= { status: 'none', note: '' };
+  p.board.toy = Array.from({ length: 10 }, (_, i) => p.board.toy?.[i] || ''); p.board.bmc ||= {};
+  body.append(ctEl('h4', { textContent: e.isNew ? 'Yeni proje' : `${p.icon} ${p.name}` }),
+    row('Proje adı', inp('name', 40)), row('Slogan', inp('tagline', 80)), row('Simge (emoji)', inp('icon', 8)), row('Renk (#rrggbb)', inp('color', 7, '#5b4a9a')), row('Web adresi (http/https)', inp('url', 200, 'https://')),
+    row('Açıklama', ta(() => p.desc, v => (p.desc = v), 600, 4)), row('Asansör konuşması', ta(() => p.pitch, v => (p.pitch = v), 900, 5)));
+  const exit = ctEl('select'); [['none', 'Satışta değil'], ['seeking', 'Satılık / yatırım arıyor'], ['sold', 'Satıldı']].forEach(([v, l]) => exit.append(new Option(l, v))); exit.value = p.exit.status; exit.onchange = () => (p.exit.status = exit.value);
+  body.append(row('Satış (Exit) durumu', exit), row('Satış notu', ta(() => p.exit.note, v => (p.exit.note = v), 200, 2)));
+  const list = (title, arr, fields, max) => { const box = ctEl('div'), draw = () => { box.replaceChildren(ctEl('b', { textContent: title })); arr.forEach((x, i) => { const r = ctEl('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;margin:4px 0' }); fields.forEach(([k, ph, mx]) => { const i2 = ctEl('input', { value: x[k] || '', placeholder: ph, maxLength: mx }); i2.oninput = () => (x[k] = i2.value); r.append(i2); }); r.append(ctBtn('✕', () => { arr.splice(i, 1); draw(); })); box.append(r); }); box.append(ctBtn('➕ Ekle', () => { if (arr.length < max) { arr.push({}); draw(); } })); }; draw(); return box; };
+  body.append(list('Etkinlikler', p.events, [['title', 'Etkinlik adı', 60], ['when', 'Ne zaman', 30], ['url', 'https://', 200]], 8), list('Ortaklar / ekip', p.partners, [['name', 'Ad', 40], ['role', 'Rol', 40]], 10));
+  body.append(ctEl('h4', { textContent: 'GamFed panosu (TOY · Business Canvas · Pitch Deck)' }), row('Pano başlığı', ta(() => p.board.title, v => (p.board.title = v), 80, 1)));
+  p.board.toy.forEach((v, i) => body.append(row(`TOY adım ${i + 1}`, ta(() => p.board.toy[i], x => (p.board.toy[i] = x), 300, 2))));
+  BMC_K.forEach(k => body.append(row(BMC_L[k], ta(() => p.board.bmc[k], x => (p.board.bmc[k] = x), 400, 2))));
+  p.board.deck ||= [];
+  const deckBox = ctEl('div'), drawDeck = () => { deckBox.replaceChildren(ctEl('b', { textContent: 'Pitch Deck slaytları (en fazla 12)' })); p.board.deck.forEach((s, i) => { const t1 = ctEl('input', { value: s.title || '', placeholder: 'Slayt başlığı', maxLength: 80 }); t1.oninput = () => (s.title = t1.value); deckBox.append(t1, ta(() => s.body, x => (s.body = x), 600, 3), ctBtn('✕ Slaytı sil', () => { p.board.deck.splice(i, 1); drawDeck(); })); }); deckBox.append(ctBtn('➕ Slayt', () => { if (p.board.deck.length < 12) { p.board.deck.push({ id: 'custom', title: '', body: '' }); drawDeck(); } })); };
+  drawDeck(); body.append(deckBox);
+  if (!e.isNew && p.feedback?.length) {
+    body.append(ctEl('h4', { textContent: `Geri bildirimler (${p.feedback.length})` }));
+    p.feedback.slice().reverse().forEach(f => body.append(ctEl('div', { style: 'margin:4px 0' }, ctEl('b', { textContent: `${f.kind} · ${f.name}: ` }), document.createTextNode(f.text + ' '), ctBtn('🗑', () => socket.emit('adminDeleteFeedback', { id: p.id, fid: f.id }, r => { if (r?.ok) { PR.list = r.projects; e.p.feedback = (r.projects.find(x => x.id === p.id)?.feedback) || []; prRender(); } })))));
+  }
+  body.append(ctEl('div', { className: 'row', style: 'margin-top:10px' }, ctBtn('Kaydet ve yayınla', () => { const send = { ...p }; delete send.feedback; delete send.snap; socket.emit('adminSaveProject', { project: send }, r => { if (!r?.ok) return prSay('Hata: ' + (r?.error || 'kaydedilemedi'), false); PR.edit = null; prSay('✓ Proje yayınlandı'); prApply(r); }); }, 'primary'), ctBtn('İptal', () => { PR.edit = null; prRender(); })));
+}
+$('prNew').onclick = () => { PR.edit = { id: '', isNew: true, p: { name: '', tagline: '', icon: '💡', color: '#5b4a9a', url: '', desc: '', pitch: '', events: [], partners: [], exit: { status: 'none', note: '' }, board: { title: '', toy: [], bmc: {}, deck: [] } } }; prRender(); };
+$('prReset').onclick = () => { if (confirm('Tüm projeler (oyuncu projeleri ve geri bildirimler dahil) silinip 6 varsayılan proje geri yüklensin mi?')) prCall('adminResetProjects', {}, '✓ Varsayılan projeler geri yüklendi'); };
 
 // ---------- Wholesale market (Sprint 26b) ----------
 const MK_TXT = { on: ['Pazar açık (1/0)', 'Kapalıysa teklif verilemez ve alınamaz'], fee: ['Komisyon (0–0,5)', 'Satış tutarından kesilir ve yok edilir (0,1 = %10)'], maxListings: ['Şirket başına açık teklif', 'Aynı anda en fazla bu kadar teklif'], maxBuysPerDay: ['Günlük satın alma sınırı', 'Bir şirketin oyun günü başına alım sayısı'], minPct: ['En düşük fiyat oranı', 'Satıcının perakende fiyatının bu oranından aşağı olamaz'], maxPct: ['En yüksek fiyat oranı', 'Satıcının perakende fiyatının bu oranından yukarı olamaz'], ttl: ['Teklif süresi (gün)', 'Süresi dolan teklifin stoğu satıcıya döner'] };

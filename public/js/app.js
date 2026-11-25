@@ -2,7 +2,7 @@
 // Finbuu client: scenes (street <-> zoom <-> company interior), input (keys, click, joystick), advisor (OK / Next / Auto),
 // HUD, status overlay (FPS / ping / sync), leaderboard layer, NPC dialogs with ID cards, department panels,
 // founding wizard, chat + polls, presentation (watch-only) mode. The server stays authoritative for every action.
-import { layout, setStreet, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook, carX } from './world.js';
+import { layout, setStreet, setProjects, draw, createNpcs, createTraffic, worldWidth, WORLD_H, GROUND, MAX_FLOORS, drawPerson, lookFor, teamLook, carX } from './world.js';
 import { paintAd, AD_SIZE } from './ads.js';
 import { renderTrMap, renderWorldMap } from './trmap.js';
 import { rankFaq, searchItems, tutorialState, FAQ_IDS } from './help.js';
@@ -11,6 +11,7 @@ import { createBoardUi } from './gfboard.js';
 import { cleanBoard } from './board.js';
 import { createAccountUi } from './account.js';
 import { createWiki } from './wiki.js';
+import { createProjectsUi } from './projects.js';
 import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON, HOME_ROOMS, HOME_FLOORS } from './interior.js';
 
 const { i18next, io, Chart } = window;
@@ -191,7 +192,7 @@ $('boardBtn').onclick = () => toggleBoard();
 // ---------- Socket ----------
 const socket = io({ transports: ['websocket', 'polling'] });
 socket.on('seed', s => {
-  seed = s; setStreet(s.street); buildings = layout(state); renderSeed();
+  seed = s; setStreet(s.street); setProjects(s.projects); buildings = layout(state); renderSeed();
   if (!joined && modalOpen && $('modalBody').dataset.modes) showModes(); // seed (cities) arrived after the mode screen opened
 });
 socket.on('state', s => {
@@ -1857,6 +1858,9 @@ function openGrants() {
     if (demo) body.append(btn('🎤 ' + t('grants.demo'), () => { closeModal(); walkTo(demo.x + demo.w / 2, () => openBuilding(demo), demo.id); }, { primary: true }));
   }));
 }
+// Sprint 35: Demo Day project floors
+let prjUi = null;
+const projectsUi = () => (prjUi ||= createProjectsUi({ el, btn, kpi, toast, openModal, closeModal, socket, getState: () => state, companyName, demoFacts, openDemoDay, createBoardUi, openWizard }));
 let gfUi = null;
 function openGamFed(startFloor = 1, startTab = 'floors') {
   gfUi ||= createBoardUi({ el, btn, toast, loadJSON, saveJSON, onChange: () => acctUi?.pushBoard(), facts: () => { const c = Object.values(state?.companies || {}).find(x => x.founders.includes(myId())); return c ? demoFacts(c) : {}; } });
@@ -2477,7 +2481,7 @@ function openBuilding(b) {
   cancelPlan();
   const forThis = ranked.find(s => buildingOf(s.target)?.id === b.id);
   if (b.kind === 'guide') return openGuideBuilding();
-  if (b.kind === 'demoday') return openDemoDay();
+  if (b.kind === 'demoday') return projectsUi().open();
   if (b.kind === 'oss') return openOss();
   if (b.kind === 'grants') return openGrants();
   if (b.kind === 'gamfed') return openGamFed();
@@ -3371,7 +3375,7 @@ $('sendText').onclick = () => {
 
 // Test hook (only with ?debug): lets automated UI tests reach NPCs / scenes without pixel hunting
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__fb = { npcs, player, perf, openNpc, enterCompany, openDept, toggleBoard, openWizard, openDemoDay, openStop, socket, traffic, state: () => state, seed: () => seed, myId, inner, scene };
+  window.__fb = { projectsUi, npcs, player, perf, openNpc, enterCompany, openDept, toggleBoard, openWizard, openDemoDay, openStop, socket, traffic, state: () => state, seed: () => seed, myId, inner, scene };
 }
 
 // ---------- Boot ----------
