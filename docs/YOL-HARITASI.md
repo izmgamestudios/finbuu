@@ -328,3 +328,19 @@ Sıra: önce **oynanış döngüsü** (oyuncuyu geri getiren şeyler), sonra **s
 - **Geri bildirim:** oyuncular geri bildirim / öneri / soru bırakır (300 karakter, dakikada 5, projede son 40), sahibine bildirim gider, sahibi ve admin siler.
 - **Teknik:** `projects.js` (doğrulama + kalıcılık `data/projects.json`, deploy'dan etkilenmez); tohum (`seed.projects`) kule çizimini besler; yapısal değişiklikte `seed` yeniden yayınlanır. Şirket başka odadaysa son anlık görüntü ("snap") gösterilir.
 - **Sınırlar:** proje verisi tüm odalarda ortaktır (global); canlı şirket bilgisi yalnız şirketin odasındaki oyunculara canlı, diğerlerine son bilinen. Admin projeleri şirkete bağlanmaz (Etkinlik/Ortak/Satış alanları elle girilir).
+
+## Sprint 36: Açık Kaynak Merkezi · Resmî Kaynaklar + sanal belgeler
+- **Açık Kaynak binası artık 3 sekme:** 🧰 Araçlar (eski liste) · 📚 Resmî kaynaklar · 📄 Belgelerim.
+- **Üç resmî liste, detaylı arama (istemcide, anında):**
+  - **NACE Rev.2.1 (altılı)** – T.C. Ticaret Bakanlığı "Sektör Meslek NACE Kodları" (güncel liste, Mart 2026 Excel): 2.141 faaliyet kodu; 11 esnaf sektörü, 184 meslek kolu, 1.534 kodun esnaf meslek kolu eşleşmesi. Filtre: esnaf sektörü, meslek kolu, kapsam (esnaf listesinde / değil), NACE bölümü.
+  - **Türk Meslekler Sözlüğü** – İŞKUR (esube.iskur.gov.tr/meslek): meslek kodu + ad, 10 ana meslek grubu filtresi. Veri sayfadan harf harf kazındı (aralıklı, tek seferlik); `public/data/meslek.json`.
+  - **HS (Harmonized System 2022)** – `datasets/harmonized-system` (ODC-PDDL, kaynak UN Comtrade/WCO): 6.939 kayıt, 21 kesim, fasıl/pozisyon/alt pozisyon düzeyi; tanımlar İngilizce. Not: Türkiye'nin 12 haneli GTİP'i bu listenin üzerine kuruludur, burada yalnız 6 haneli HS vardır.
+  - Arama: Türkçe karakter duyarsız (kuafor = kuaför), çok kelimeli, kod öneki (47.79), alaka sırası; "Ayrıntı" ile ilişkili meslek kolları / HS hiyerarşisi. **Kaynakça** listenin altında (başlık, adres, erişim tarihi, lisans, kayıt sayısı).
+- **Sanal belgeler (Belgelerim):** koddan şirkete ekle → belge yayımla. 🧾 **Sanal Vergi Levhası** (NACE, ≤5 kod) · 🛃 **Sanal Gümrük Belgesi** (HS, ≤10) · 👷 **Sanal Meslek Belgesi** (İŞKUR, ≤10). Belge tuvale çizilir (ünvan, sanal vergi no, belge no, gün, kod tablosu, mühür); **PNG / PDF** indirilir. Her belgede "OYUN BELGESİ · RESMÎ DEĞİLDİR" bandı vardır; kurum logosu/arması kullanılmaz. Üçü de yayımlanınca **📄 Evrak Ustası** rozeti.
+- **Teknik:** `refdata.js` (sunucu yalnız kod doğrular, tanımı kendi dosyasından alır → istemci kod uyduramaz); olaylar `docsGet / docsAdd / docsRemove / docIssue`; veri `company.docs` içinde (oda dosyasıyla kalıcı). Listeler statik dosya (`public/data/nace.json` ≈ 0,28 MB, `hs.json` ≈ 0,9 MB, `meslek.json`) ve **yalnız sekme açılınca** yüklenir.
+- **Sınırlar:** belgeler ekonomiye etki etmez (bilgi + rozet); NACE/meslek/HS listeleri admin panelinden düzenlenmez (resmî kaynak, dosyayı yenileyerek güncellenir); İŞKUR sözlüğü yalnız kod+ad içerir (meslek bilgi dosyası/tanım metni yok).
+
+## Sprint 37: Ses kontrolleri
+- Üst menüde **🔊** düğmesi (telefonda ☰ menüsünde "Ses ayarları"): **Hoparlör (genel ses) · Fon müziği · Efektler · Mikrofon** için ayrı aç/kapa + seviye çubuğu, **"Hepsini sessize al"** (düğme simgesi 🔇'ya döner). Ayarlar cihazda saklanır (`finbuu.audio`).
+- **Ses dosyası yok:** müzik ve efektler Web Audio ile üretilir (sakin, üretken pentatonik müzik; tık, bildirim, rozet, başarı sesleri). Tarayıcı kuralı gereği ilk dokunuştan önce ses çıkmaz; **müzik varsayılan kapalı** (atölyede herkesi rahatsız etmesin). Sekme arka plandayken durur.
+- **Mikrofon:** "Mikrofonu dene" izin ister ve seviye çubuğunu gösterir; **ses kaydedilmez, gönderilmez**. Sesli sohbet (Sprint 18/19) "pek yakında"; mikrofon/hoparlör seviyeleri o zaman kullanılacak.

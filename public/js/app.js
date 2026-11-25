@@ -12,6 +12,8 @@ import { cleanBoard } from './board.js';
 import { createAccountUi } from './account.js';
 import { createWiki } from './wiki.js';
 import { createProjectsUi } from './projects.js';
+import { createAudio, createAudioPanel } from './audio.js';
+import { createRefsUi } from './refs.js';
 import { drawInterior, staffLooks, IW, IH, FH, FLOORS, ELEV, floorBase, roomOf, roomCenter, DEPT_ICON, HOME_ROOMS, HOME_FLOORS } from './interior.js';
 
 const { i18next, io, Chart } = window;
@@ -81,7 +83,14 @@ const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).
 function loadJSON(k, d) { try { const v = localStorage.getItem('finbuu.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } }
 function saveJSON(k, v) { try { localStorage.setItem('finbuu.' + k, JSON.stringify(v)); } catch { /* private mode */ } }
 
+// Sprint 37: sound (music, effects, speaker, microphone levels) — header 🔊 button opens the panel
+const audio = createAudio({ loadJSON, saveJSON });
+const audioPanel = createAudioPanel({ audio, el, toast: m => toast(m), t: (k, o) => t(k, o) });
+function paintAudio() { const ic = audioPanel.icon(); const b = $('audioBtn'); if (b) { b.textContent = ic; b.title = b.ariaLabel = t('audio.title'); } const d = $('dwAudio'); if (d) d.textContent = `${ic} ${t('audio.open')}`; }
+audio.onChange(paintAudio);
+document.addEventListener('click', e => { if (e.target.closest?.('button, a, summary, select')) audio.sfx('click'); }, true);
 function toast(msg) {
+  audio.sfx('notify');
   const tEl = $('toast'); tEl.textContent = msg; tEl.style.display = 'block';
   clearTimeout(toast.timer); toast.timer = setTimeout(() => (tEl.style.display = 'none'), 3000);
 }
@@ -97,7 +106,7 @@ async function loadLang(lng) {
   document.querySelectorAll('[data-i18n-ph]').forEach(e => (e.placeholder = t(e.dataset.i18nPh)));
   $('recAudio').textContent = '☁🔒 ' + t('ui.recAudio');
   $('recVideo').textContent = '☁🔒 ' + t('ui.recVideo');
-  updateControls(); renderSeed(); renderRoomBar(); render(); updateAutoBtn(); applyTheme(); updateSpeedBtn();
+  updateControls(); renderSeed(); renderRoomBar(); render(); updateAutoBtn(); applyTheme(); updateSpeedBtn(); paintAudio();
   document.querySelectorAll('#side .card > h3.fold').forEach(h => (h.title = t('ui.collapse')));
 }
 function renderSeed() {
@@ -152,6 +161,9 @@ $('dwMap').onclick = () => { openDrawer(false); if (state) toggleMinimap(true); 
 $('dwBoard').onclick = () => { openDrawer(false); if (state) toggleBoard(true); };
 $('dwHelp').onclick = () => { openDrawer(false); $('helpBtn').click(); };
 $('dwTheme').onclick = () => $('themeBtn').click();
+$('audioBtn').onclick = () => audioPanel.toggle($('audioBtn'));
+$('dwAudio').onclick = () => { openDrawer(false); audioPanel.open($('audioBtn')); };
+paintAudio();
 $('openIdeas').onclick = () => { openDrawer(false); showTab('ideas'); };
 $('openGuide').onclick = () => { openDrawer(false); showTab('guide'); };
 $('toggleStatus').onclick = () => { showStatus = !showStatus; saveJSON('status', showStatus); $('status').hidden = !showStatus; };
@@ -241,7 +253,7 @@ socket.on('joined', info => {
   if (isPres()) { showTab(matchMedia('(max-width:820px)').matches ? 'street' : 'chat'); setAuto(false); }
   setTimeout(() => ($('hint').style.display = 'none'), 10000);
 });
-socket.on('badge', ({ id }) => { toast(`🏅 ${t('badge.unlocked')}: ${t('badge.' + id)}`); profSig = ''; });
+socket.on('badge', ({ id }) => { audio.sfx('success'); toast(`🏅 ${t('badge.unlocked')}: ${t('badge.' + id)}`); profSig = ''; });
 socket.on('marketEvent', e => { toast(t('event.started', { name: t('event.' + e.id) })); hudSig = ''; });
 socket.on('goalEnd', e => { toast(e.ok ? t('goal.ok', { progress: fmt0(e.progress), target: fmt0(e.target) }) + (e.coins ? t('goal.okCoins', e) : t('goal.okNoShare')) : t('goal.miss', { progress: fmt0(e.progress), target: fmt0(e.target) })); profSig = ''; });
 socket.on('streak', e => { toast(t('daily.streakToast', e)); profSig = ''; });
@@ -1757,7 +1769,7 @@ function fetchToolStates(cb) {
 }
 function openOss() {
   loadData('open-source-tools', cat => fetchToolStates(states => openModal(body => {
-    body.classList.add('wideBody'); body.append(el('h3', '🌱 ' + t('oss.title')), el('p', t('oss.intro'), 'muted'));
+    body.classList.add('wideBody'); body.append(refsUi().tabBar('tools'), el('h3', '🌱 ' + t('oss.title')), el('p', t('oss.intro'), 'muted'));
     const q = el('input'); q.placeholder = t('oss.search'); q.maxLength = 40;
     const catSel = el('select'), typeSel = el('select');
     catSel.append(new Option(t('oss.all'), '')); Object.entries(cat.categories).forEach(([k, v]) => catSel.append(new Option(v, k)));
@@ -1858,6 +1870,9 @@ function openGrants() {
     if (demo) body.append(btn('🎤 ' + t('grants.demo'), () => { closeModal(); walkTo(demo.x + demo.w / 2, () => openBuilding(demo), demo.id); }, { primary: true }));
   }));
 }
+// Sprint 36: official reference lists (NACE, İŞKUR occupations, HS) + virtual company documents, inside the Open Source building
+let rfUi = null;
+const refsUi = () => (rfUi ||= createRefsUi({ el, btn, kpi, toast, socket, openModal, closeModal, getState: () => ({ companies: state?.companies || {}, cityName: seed?.economy?.cities?.[state?.city]?.name || '' }), companyName, founderCos, openOss }));
 // Sprint 35: Demo Day project floors
 let prjUi = null;
 const projectsUi = () => (prjUi ||= createProjectsUi({ el, btn, kpi, toast, openModal, closeModal, socket, getState: () => state, companyName, demoFacts, openDemoDay, createBoardUi, openWizard }));
@@ -2134,7 +2149,7 @@ function openHelp() {
 $('helpBtn').onclick = openHelp;
 addEventListener('keydown', e => { if ((e.key === 'F1' || (e.key === '?' && !typing(e))) && !modalOpen) { e.preventDefault(); openHelp(); } });
 
-const BADGE_ICON = { trader: '🤝', streak7: '🔥', seasonStar: '🏅', teamGoal: '🎯', hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
+const BADGE_ICON = { paperwork: '📄', trader: '🤝', streak7: '🔥', seasonStar: '🏅', teamGoal: '🎯', hobbyist: '🎸', scholar: '🎓', firstCompany: '🏁', sales10: '🛒', sales100: '🛍', sales1000: '💎', floor3: '🏢', floor6: '🏙', firstHire: '🤝', marketer: '📣', secure: '🛡',
   social: '👋', commuter: '🚌', teamPlayer: '👥', questHero: '🎯', survivor: '🔥', investor: '💸', tycoon: '👑', landlord: '🔑', driver: '🚗', closer: '🤝', stockMaster: '📦', stackPro: '🧰' };
 let extraSig = '';
 function renderExtras(p) {

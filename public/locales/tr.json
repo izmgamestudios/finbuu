@@ -1032,7 +1032,8 @@
     "seasonStar": "Sezon Yıldızı",
     "trader": "Tüccar",
     "partner": "Ortak",
-    "exit": "Exit"
+    "exit": "Exit",
+    "paperwork": "Evrak Ustası"
   },
   "badgeDesc": {
     "firstCompany": "İlk şirketini kur",
@@ -1066,7 +1067,8 @@
     "seasonStar": "Bir sezonda 500 puana ulaş",
     "trader": "5 toptan pazar işlemi yap",
     "partner": "Bir oyuncu ortaklığına katıl veya ortak al",
-    "exit": "Bir şirketi başarıyla sat"
+    "exit": "Bir şirketi başarıyla sat",
+    "paperwork": "Sanal vergi levhası, gümrük belgesi ve meslek belgesini al"
   },
   "bus": {
     "arrived": "Durağa vardın.",
@@ -2396,6 +2398,151 @@
       "hasProject": "Bu şirketin zaten bir projesi var",
       "full": "Bina dolu",
       "rate": "Çok hızlı; biraz bekle"
+    }
+  },
+  "audio": {
+    "title": "Ses",
+    "open": "Ses ayarları",
+    "on": "aç/kapat",
+    "volume": "seviye",
+    "speaker": "Hoparlör (genel ses)",
+    "music": "Fon müziği",
+    "sfx": "Efektler",
+    "mic": "Mikrofon",
+    "testSpeaker": "Hoparlörü dene",
+    "testMic": "Mikrofonu dene",
+    "stopMic": "Denemeyi durdur",
+    "micHint": "Dene'ye basınca tarayıcı mikrofon izni ister; ses kaydedilmez, gönderilmez.",
+    "micLive": "Konuş: çubuk sesini gösterir. Ses kaydedilmiyor.",
+    "micOff": "Mikrofon kapalı: önce aç",
+    "micDenied": "Mikrofon izni verilmedi. Tarayıcı ayarlarından izin ver.",
+    "micNone": "Mikrofon bulunamadı.",
+    "muteAll": "Hepsini sessize al",
+    "unmuteAll": "Sesi aç",
+    "note": "Sesli sohbet \"pek yakında\"; mikrofon ve hoparlör seviyeleri o zaman kullanılacak. Ayarlar bu cihazda saklanır."
+  },
+  "refs": {
+    "tab": {
+      "tools": "Açık kaynak araçlar",
+      "lists": "Resmî kaynaklar",
+      "docs": "Belgelerim"
+    },
+    "title": "Resmî Kaynaklar: Faaliyet, Meslek ve Eşya Kodları",
+    "intro": "Girişimcilikte kullanılan üç resmî listeyi detaylı arayabilirsin: NACE faaliyet kodları (vergi levhası), Türk Meslekler Sözlüğü (işe alım) ve HS eşya kodları (gümrük). Beğendiğin kodu şirketine ekleyip \"Belgelerim\" sekmesinde sanal belgeye dönüştür.",
+    "set": {
+      "nace": "NACE faaliyet kodları",
+      "jobs": "Türk Meslekler (İŞKUR)",
+      "hs": "HS eşya kodları (gümrük)"
+    },
+    "loading": "Liste yükleniyor…",
+    "loadFail": "Liste yüklenemedi. Sayfayı yenile.",
+    "count": {
+      "nace": "{{n}} faaliyet kodu · NACE Rev.2.1 (altılı). Esnaf listesindeki kodlar sektör ve meslek koluyla eşleşir.",
+      "jobs": "{{n}} meslek · İŞKUR Türk Meslekler Sözlüğü (meslek kodu + ad).",
+      "hs": "{{n}} kayıt · {{v}} · 2 hane bölüm, 4 hane pozisyon, 6 hane alt pozisyon (resmî tanımlar İngilizce)."
+    },
+    "search": {
+      "nace": "Ara: kod (47.79), faaliyet veya meslek adı… (ör. kuaför, yazılım, 62.10)",
+      "jobs": "Ara: meslek kodu (2512) veya meslek adı… (ör. yazılım, aşçı)",
+      "hs": "Ara: kod (8471) veya ürün (İngilizce)… (ör. computers, 0901)"
+    },
+    "f": {
+      "all": "Tümü",
+      "sector": "Esnaf sektörü",
+      "meslek": "Esnaf meslek kolu",
+      "scope": "Kapsam",
+      "scopeAll": "Tüm kodlar",
+      "scopeEsnaf": "Yalnız esnaf listesindekiler",
+      "scopeOther": "Esnaf listesinde olmayanlar",
+      "division": "NACE bölümü (ilk 2 hane)",
+      "section": "HS kesimi",
+      "level": "Düzey",
+      "group": "Ana meslek grubu"
+    },
+    "hs": {
+      "l2": "Fasıl (2 hane)",
+      "l4": "Pozisyon (4 hane)",
+      "l6": "Alt pozisyon (6 hane)",
+      "path": "Hiyerarşi",
+      "section": "Kesim"
+    },
+    "results": "{{n}} sonuç",
+    "noResults": "Sonuç yok. Aramayı kısalt ya da filtreleri temizle.",
+    "showMore": "{{n}} sonuç daha göster",
+    "nace": {
+      "esnaf": "Esnaf listesinde",
+      "other": "Esnaf listesinde yok",
+      "trades": "İlişkili esnaf meslek kolları"
+    },
+    "detail": "Ayrıntı",
+    "noCompany": "Belge eklemek için önce bir şirket kur.",
+    "add": "Şirketime ekle",
+    "added": "Şirket belgelerine eklendi. \"Belgelerim\" sekmesinde yayımla.",
+    "err": {
+      "generic": "İşlem yapılamadı",
+      "unknown": "Bu kod listede yok",
+      "dup": "Bu kod zaten ekli",
+      "max": "En fazla {{n}} kod eklenebilir",
+      "empty": "Önce en az bir kod ekle"
+    },
+    "bib": {
+      "title": "Kaynakça",
+      "intro": "Bu sayfadaki veriler aşağıdaki kamuya açık kaynaklardan alınmıştır. Oyunda eğitim amacıyla, değiştirilmeden kullanılır; güncel ve bağlayıcı bilgi için kaynağa bakın.",
+      "url": "Adres",
+      "access": "Erişim tarihi",
+      "srcPublic": "Kamuya açık yayın",
+      "srcPddl": "Lisans: ODC-PDDL (kamu malı)",
+      "records": "{{n}} kayıt",
+      "note": "Finbuu bu kurumlarla bağlantılı değildir; kurumların logoları ve resmî belgeleri kullanılmaz."
+    },
+    "docs": {
+      "title": "Sanal Şirket Belgeleri",
+      "intro": "Şirketin için resmî kodlardan sanal belgeler üret: vergi levhası (NACE), gümrük belgesi (HS), meslek belgesi (İŞKUR). Kodları \"Resmî kaynaklar\"da arayıp ekle, sonra belgeyi yayımla; PNG veya PDF indir. Üçünü de alırsan \"Evrak Ustası\" rozeti kazanırsın.",
+      "disclaimer": "Bu belgeler Finbuu oyunu içindir; resmî değildir ve gerçek bir işlemde kullanılamaz."
+    },
+    "doc": {
+      "taxPlate": "Sanal Vergi Levhası",
+      "taxPlateDesc": "Şirketin faaliyet (NACE) kodları · en fazla 5",
+      "taxPlateTitle": "SANAL VERGİ LEVHASI",
+      "taxPlateTable": "Faaliyet kodları (NACE Rev.2.1)",
+      "customs": "Sanal Gümrük Belgesi",
+      "customsDesc": "Ticaretini yaptığın eşyaların HS kodları · en fazla 10",
+      "customsTitle": "SANAL GÜMRÜK BELGESİ",
+      "customsTable": "Eşya kodları (HS)",
+      "jobs": "Sanal Meslek Belgesi",
+      "jobsDesc": "Şirkette çalışan meslekler (İŞKUR kodları) · en fazla 10",
+      "jobsTitle": "SANAL İŞYERİ MESLEK BELGESİ",
+      "jobsTable": "Meslekler (Türk Meslekler Sözlüğü)",
+      "noCodes": "Henüz kod eklenmedi.",
+      "count": "{{n}}/{{max}} kod",
+      "find": "Listede ara",
+      "issue": "Belgeyi yayımla",
+      "reissue": "Güncelle ve yeniden yayımla",
+      "issued": "Belge yayımlandı",
+      "issuedInfo": "Belge no {{no}} · gün {{day}}",
+      "view": "Belgeyi göster",
+      "back": "Belgelerime dön",
+      "issuer": "Finbuu Sanal Vergi Dairesi · {{city}}",
+      "watermark": "OYUN BELGESİ · RESMÎ DEĞİLDİR",
+      "company": "Ünvan",
+      "taxNo": "Sanal vergi no",
+      "docNo": "Belge no",
+      "date": "Düzenleme günü",
+      "dayN": "Gün {{n}}",
+      "staff": "Çalışan sayısı",
+      "city": "Şehir",
+      "office": "Vergi dairesi",
+      "officeName": "{{city}} Sanal VD",
+      "started": "İşe başlama",
+      "code": "KOD",
+      "desc": "TANIM",
+      "stamp": "SANAL ONAY",
+      "footer": "Finbuu simülasyonunda eğitim amacıyla oluşturulmuştur. Resmî kurum belgesi değildir. Kodlar T.C. Ticaret Bakanlığı, İŞKUR ve HS (UN Comtrade) listelerinden alınmıştır.",
+      "remove": "Kodu kaldır",
+      "issuerCustoms": "Finbuu Sanal Gümrük İdaresi · {{city}}",
+      "issuerJobs": "Finbuu Sanal İş Kurumu · {{city}}",
+      "customsOffice": "Gümrük idaresi",
+      "customsOfficeName": "{{city}} Sanal Gümrük"
     }
   }
 }

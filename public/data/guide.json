@@ -1263,26 +1263,34 @@
    "type": "building",
    "icon": "",
    "title": {
-    "tr": "Açık Kaynak Destek Merkezi",
-    "en": "Open Source Support Center"
+    "tr": "Açık Kaynak Merkezi (araçlar ve resmî listeler)",
+    "en": "Open Source Center (tools and official lists)"
    },
    "body": {
-    "tr": "65 açık kaynak aracın listesi; her araç için kurulum adımları, bağlantılar ve oyundaki etkisi. Araçları şirketine kurabilirsin.",
-    "en": "A catalog of 65 open-source tools with setup steps, links and their in-game effect. You can install tools into your company."
+    "tr": "Üç sekme: 🧰 65 açık kaynak araç (kurulum adımları, bağlantılar, oyundaki etki), 📚 resmî listelerde detaylı arama (NACE faaliyet kodları, İŞKUR Türk Meslekler Sözlüğü, HS eşya kodları; altta kaynakça) ve 📄 şirketin için sanal belgeler (vergi levhası, gümrük belgesi, meslek belgesi).",
+    "en": "Three tabs: 🧰 65 open-source tools (setup steps, links, in-game effect), 📚 detailed search in official lists (NACE activity codes, İŞKUR Turkish Occupations Dictionary, HS goods codes; bibliography at the bottom) and 📄 virtual documents for your company (tax plate, customs document, occupation sheet)."
    },
    "tags": [
     "acik kaynak",
     "arac",
-    "yazilim"
+    "yazilim",
+    "nace",
+    "meslek",
+    "hs",
+    "gumruk",
+    "vergi levhasi",
+    "belge"
    ],
    "steps": {
     "tr": [
      "Demo Day'in yanındaki turkuaz binaya gir",
-     "Kategori seç, bir araca dokun, \"Kur\" düğmesine bas"
+     "Üstteki sekmelerden birini seç",
+     "Araçlarda bir araca dokun ve \"Kur\"a bas; listelerde ara ve \"Şirketime ekle\"ye bas"
     ],
     "en": [
      "Enter the teal building beside Demo Day",
-     "Pick a category, tap a tool and press \"Install\""
+     "Pick one of the tabs at the top",
+     "For tools tap one and press \"Install\"; for lists search and press \"Add to my company\""
     ]
    },
    "go": {
@@ -1290,7 +1298,133 @@
     "target": "oss"
    },
    "related": [
-    "install-tools"
+    "install-tools",
+    "refs-search",
+    "virtual-docs"
+   ]
+  },
+  {
+   "id": "refs-search",
+   "cat": "b-support",
+   "type": "faq",
+   "icon": "",
+   "title": {
+    "tr": "Resmî listelerde nasıl arama yaparım?",
+    "en": "How do I search the official lists?"
+   },
+   "body": {
+    "tr": "Açık Kaynak Merkezi › Resmî kaynaklar sekmesinde NACE, Meslekler veya HS listesini seç. Arama kutusuna kod (47.79, 8471, 2512) ya da ad yaz; Türkçe harfler fark etmez (kuafor = kuaför). NACE'de esnaf sektörü / meslek kolu / kapsam, HS'de kesim ve düzey, mesleklerde ana grup filtresi var. Satırdaki \"Ayrıntı\" ilişkili meslek kollarını veya HS hiyerarşisini gösterir. Listenin altında kaynakça yer alır.",
+    "en": "In Open Source Center › Official lists pick NACE, Occupations or HS. Type a code (47.79, 8471, 2512) or a name; Turkish letters do not matter (kuafor = kuaför). NACE has tradesman sector / trade / scope filters, HS has section and level, occupations have a major-group filter. \"Details\" shows related trades or the HS hierarchy. The bibliography is under the list."
+   },
+   "tags": [
+    "arama",
+    "nace",
+    "hs",
+    "meslek",
+    "kaynakca"
+   ],
+   "steps": {
+    "tr": [
+     "Açık Kaynak Merkezi'ne gir",
+     "Resmî kaynaklar sekmesi",
+     "Liste seç, ara, filtrele"
+    ],
+    "en": [
+     "Enter the Open Source Center",
+     "Official lists tab",
+     "Pick a list, search, filter"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "oss"
+   },
+   "related": [
+    "virtual-docs"
+   ]
+  },
+  {
+   "id": "virtual-docs",
+   "cat": "b-support",
+   "type": "feature",
+   "icon": "",
+   "title": {
+    "tr": "Sanal belgeler (vergi levhası, gümrük, meslek)",
+    "en": "Virtual documents (tax plate, customs, occupation sheet)"
+   },
+   "body": {
+    "tr": "Resmî listelerde bulduğun kodları \"Şirketime ekle\" ile şirketine bağla. Belgelerim sekmesinde NACE kodlarından Sanal Vergi Levhası (en çok 5 kod), HS kodlarından Sanal Gümrük Belgesi (10), meslek kodlarından Sanal Meslek Belgesi (10) yayımla; PNG veya PDF indir. Üçünü de alırsan \"Evrak Ustası\" rozeti gelir. Belgeler oyun içindir, resmî değildir.",
+    "en": "Link the codes you find in the official lists to your company with \"Add to my company\". In My documents issue a Virtual Tax Plate from NACE codes (max 5), a Virtual Customs Document from HS codes (10) and a Virtual Occupation Sheet from occupation codes (10); download as PNG or PDF. Get all three for the \"Paperwork Pro\" badge. Documents are for the game only and are not official."
+   },
+   "tags": [
+    "belge",
+    "vergi levhasi",
+    "gumruk",
+    "meslek belgesi",
+    "rozet"
+   ],
+   "steps": {
+    "tr": [
+     "Resmî kaynaklarda kod ara",
+     "Şirketime ekle",
+     "Belgelerim sekmesinde \"Belgeyi yayımla\"",
+     "Belgeyi göster, PNG/PDF indir"
+    ],
+    "en": [
+     "Search a code in Official lists",
+     "Add to my company",
+     "In My documents press \"Issue document\"",
+     "View it and download PNG/PDF"
+    ]
+   },
+   "go": {
+    "kind": "building",
+    "target": "oss"
+   },
+   "related": [
+    "refs-search"
+   ]
+  },
+  {
+   "id": "audio-settings",
+   "cat": "ui-panels",
+   "type": "menu",
+   "icon": "",
+   "title": {
+    "tr": "Ses ayarları (müzik, efekt, mikrofon)",
+    "en": "Sound settings (music, effects, microphone)"
+   },
+   "body": {
+    "tr": "Üst menüdeki 🔊 düğmesi (mobilde ☰ menüsündeki \"Ses ayarları\") hoparlör (genel ses), fon müziği, efektler ve mikrofon için ayrı aç/kapa ve seviye çubuğu verir; \"Hepsini sessize al\" tek tuşla susturur. Mikrofon denemesi seviyeni gösterir, ses kaydedilmez ve gönderilmez. Ayarlar bu cihazda saklanır. Sesli sohbet \"pek yakında\"; seviyeler o zaman kullanılır.",
+    "en": "The 🔊 button in the top bar (on phones \"Sound settings\" in the ☰ menu) gives on/off and a volume slider for the speaker (master), background music, effects and microphone; \"Mute everything\" silences all in one tap. The microphone test shows your level; nothing is recorded or sent. Settings are saved on this device. Voice chat is \"coming soon\"; the levels will be used then."
+   },
+   "tags": [
+    "ses",
+    "muzik",
+    "efekt",
+    "mikrofon",
+    "hoparlor",
+    "mute",
+    "sessiz"
+   ],
+   "steps": {
+    "tr": [
+     "Üstteki 🔊 düğmesine bas (mobilde ☰ › Ses ayarları)",
+     "Kanalı aç/kapat, çubuğu ayarla",
+     "İstersen \"Hepsini sessize al\""
+    ],
+    "en": [
+     "Press 🔊 in the top bar (phones: ☰ › Sound settings)",
+     "Switch a channel on/off and set its slider",
+     "Use \"Mute everything\" if needed"
+    ]
+   },
+   "go": {
+    "kind": "",
+    "target": ""
+   },
+   "related": [
+    "fullscreen"
    ]
   },
   {

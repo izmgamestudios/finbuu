@@ -1032,7 +1032,8 @@
     "seasonStar": "Season Star",
     "trader": "Trader",
     "partner": "Partner",
-    "exit": "Exit"
+    "exit": "Exit",
+    "paperwork": "Paperwork Pro"
   },
   "badgeDesc": {
     "firstCompany": "Found your first company",
@@ -1066,7 +1067,8 @@
     "seasonStar": "Reach 500 points in one season",
     "trader": "Complete 5 wholesale trades",
     "partner": "Join or take on a player partnership",
-    "exit": "Sell a company successfully"
+    "exit": "Sell a company successfully",
+    "paperwork": "Get a virtual tax plate, customs document and occupation sheet"
   },
   "bus": {
     "arrived": "You arrived at the stop.",
@@ -2396,6 +2398,151 @@
       "hasProject": "This company already has a project",
       "full": "The tower is full",
       "rate": "Too fast; wait a little"
+    }
+  },
+  "audio": {
+    "title": "Sound",
+    "open": "Sound settings",
+    "on": "on/off",
+    "volume": "volume",
+    "speaker": "Speaker (master volume)",
+    "music": "Background music",
+    "sfx": "Effects",
+    "mic": "Microphone",
+    "testSpeaker": "Test speaker",
+    "testMic": "Test microphone",
+    "stopMic": "Stop test",
+    "micHint": "Pressing Test asks the browser for microphone permission; nothing is recorded or sent.",
+    "micLive": "Speak: the bar shows your level. Nothing is recorded.",
+    "micOff": "Microphone is off: switch it on first",
+    "micDenied": "Microphone permission was denied. Allow it in your browser settings.",
+    "micNone": "No microphone found.",
+    "muteAll": "Mute everything",
+    "unmuteAll": "Unmute",
+    "note": "Voice chat is \"coming soon\"; the microphone and speaker levels will be used then. Settings are saved on this device."
+  },
+  "refs": {
+    "tab": {
+      "tools": "Open source tools",
+      "lists": "Official lists",
+      "docs": "My documents"
+    },
+    "title": "Official lists: activity, occupation and goods codes",
+    "intro": "Search three official lists used in business in detail: NACE activity codes (tax plate), the Turkish Occupations Dictionary (hiring) and HS goods codes (customs). Add a code to your company, then turn it into a virtual document in the \"My documents\" tab.",
+    "set": {
+      "nace": "NACE activity codes",
+      "jobs": "Turkish occupations (İŞKUR)",
+      "hs": "HS goods codes (customs)"
+    },
+    "loading": "Loading the list…",
+    "loadFail": "Could not load the list. Reload the page.",
+    "count": {
+      "nace": "{{n}} activity codes · NACE Rev.2.1 (6-digit). Codes on the tradesman list are linked to sector and trade.",
+      "jobs": "{{n}} occupations · İŞKUR Turkish Occupations Dictionary (code + name, in Turkish).",
+      "hs": "{{n}} entries · {{v}} · 2-digit chapters, 4-digit headings, 6-digit subheadings."
+    },
+    "search": {
+      "nace": "Search: code (47.79), activity or trade name… (Turkish, e.g. kuaför, yazılım, 62.10)",
+      "jobs": "Search: occupation code (2512) or name (Turkish)… (e.g. yazılım, aşçı)",
+      "hs": "Search: code (8471) or product… (e.g. computers, 0901)"
+    },
+    "f": {
+      "all": "All",
+      "sector": "Tradesman sector",
+      "meslek": "Trade",
+      "scope": "Scope",
+      "scopeAll": "All codes",
+      "scopeEsnaf": "Only on the tradesman list",
+      "scopeOther": "Not on the tradesman list",
+      "division": "NACE division (first 2 digits)",
+      "section": "HS section",
+      "level": "Level",
+      "group": "Major occupation group"
+    },
+    "hs": {
+      "l2": "Chapter (2-digit)",
+      "l4": "Heading (4-digit)",
+      "l6": "Subheading (6-digit)",
+      "path": "Hierarchy",
+      "section": "Section"
+    },
+    "results": "{{n}} results",
+    "noResults": "No results. Shorten the search or clear the filters.",
+    "showMore": "Show {{n}} more",
+    "nace": {
+      "esnaf": "On the tradesman list",
+      "other": "Not on the tradesman list",
+      "trades": "Related tradesman trades"
+    },
+    "detail": "Details",
+    "noCompany": "Found a company first to add documents.",
+    "add": "Add to my company",
+    "added": "Added to your company documents. Issue it in \"My documents\".",
+    "err": {
+      "generic": "Could not do that",
+      "unknown": "That code is not in the list",
+      "dup": "That code is already added",
+      "max": "At most {{n}} codes",
+      "empty": "Add at least one code first"
+    },
+    "bib": {
+      "title": "Bibliography",
+      "intro": "The data on this page comes from the public sources below. It is used unchanged for education in the game; check the source for current, binding information.",
+      "url": "URL",
+      "access": "Accessed",
+      "srcPublic": "Public publication",
+      "srcPddl": "License: ODC-PDDL (public domain)",
+      "records": "{{n}} records",
+      "note": "Finbuu is not affiliated with these institutions; their logos and official documents are not used."
+    },
+    "docs": {
+      "title": "Virtual company documents",
+      "intro": "Create virtual documents for your company from the official codes: tax plate (NACE), customs document (HS), occupation sheet (İŞKUR). Search and add codes in \"Official lists\", then issue the document and download it as PNG or PDF. Get all three to earn the \"Paperwork Pro\" badge.",
+      "disclaimer": "These documents are for the Finbuu game only; they are not official and cannot be used for any real procedure."
+    },
+    "doc": {
+      "taxPlate": "Virtual Tax Plate",
+      "taxPlateDesc": "The company's activity (NACE) codes · up to 5",
+      "taxPlateTitle": "VIRTUAL TAX PLATE",
+      "taxPlateTable": "Activity codes (NACE Rev.2.1)",
+      "customs": "Virtual Customs Document",
+      "customsDesc": "HS codes of the goods you trade · up to 10",
+      "customsTitle": "VIRTUAL CUSTOMS DOCUMENT",
+      "customsTable": "Goods codes (HS)",
+      "jobs": "Virtual Occupation Sheet",
+      "jobsDesc": "Occupations working in the company (İŞKUR codes) · up to 10",
+      "jobsTitle": "VIRTUAL WORKPLACE OCCUPATION SHEET",
+      "jobsTable": "Occupations (Turkish Occupations Dictionary)",
+      "noCodes": "No codes added yet.",
+      "count": "{{n}}/{{max}} codes",
+      "find": "Search the list",
+      "issue": "Issue document",
+      "reissue": "Update and re-issue",
+      "issued": "Document issued",
+      "issuedInfo": "Document no. {{no}} · day {{day}}",
+      "view": "View document",
+      "back": "Back to my documents",
+      "issuer": "Finbuu Virtual Tax Office · {{city}}",
+      "watermark": "GAME DOCUMENT · NOT OFFICIAL",
+      "company": "Company",
+      "taxNo": "Virtual tax no.",
+      "docNo": "Document no.",
+      "date": "Issued on",
+      "dayN": "Day {{n}}",
+      "staff": "Employees",
+      "city": "City",
+      "office": "Tax office",
+      "officeName": "{{city}} Virtual TO",
+      "started": "Started",
+      "code": "CODE",
+      "desc": "DESCRIPTION",
+      "stamp": "VIRTUAL SEAL",
+      "footer": "Created for education in the Finbuu simulation. Not an official document. Codes come from the Turkish Ministry of Trade, İŞKUR and HS (UN Comtrade) lists.",
+      "remove": "Remove code",
+      "issuerCustoms": "Finbuu Virtual Customs Authority · {{city}}",
+      "issuerJobs": "Finbuu Virtual Employment Agency · {{city}}",
+      "customsOffice": "Customs office",
+      "customsOfficeName": "{{city}} Virtual Customs"
     }
   }
 }

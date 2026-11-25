@@ -20,6 +20,7 @@ const ERP = require('./erp');
 const TOOLS = require('./osTools');
 const CONTENT = require('./content');
 const PRJ = require('./projects');
+const REF = require('./refdata');
 TOOLS.setCatalog(CONTENT.read('open-source-tools'));
 const { createAuth } = require('./auth');
 const STREET = require('./streetplan');
@@ -148,7 +149,7 @@ const SEED = {
     { id: 'chat', metric: 'chat', goal: 1, xp: 5, coins: 10, shared: true }
   ],
   badges: ['firstCompany', 'sales10', 'sales100', 'sales1000', 'floor3', 'floor6', 'firstHire', 'marketer', 'secure', 'social',
-    'commuter', 'teamPlayer', 'teamGoal', 'streak7', 'seasonStar', 'trader', 'partner', 'exit', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro'],
+    'commuter', 'teamPlayer', 'teamGoal', 'streak7', 'seasonStar', 'trader', 'partner', 'exit', 'questHero', 'survivor', 'investor', 'tycoon', 'landlord', 'driver', 'pitcher', 'funded', 'grantee', 'hobbyist', 'scholar', 'closer', 'stockMaster', 'stackPro', 'paperwork'],
   demoDay: { canvasMax: 300, pitchMax: 900, demoCooldown: 30, angelCooldown: 15, offerDays: 3, grantAmount: 2000, grantMinDays: 10, grantMinBlocks: 7, demoMin: 60, angelMin: 45 },
   npcCompanies: [
     { key: 'npc.simit', lotType: 'shop', size: 10, price: 3, sector: 'sector.food' },
@@ -1834,6 +1835,36 @@ io.on('connection', socket => {
     reply({ ok: !!f, feedback: p.feedback });
   });
   socket.on('projectFeedbackDelete', ({ id, fid } = {}, cb) => { const p = PRJ.get(String(id)); if (!projOwn(p)) return typeof cb === 'function' && cb({ ok: false }); PRJ.removeFeedback(p.id, String(fid)); if (typeof cb === 'function') cb({ ok: true, feedback: p.feedback }); });
+
+  // ---------- Sprint 36: virtual company documents (tax plate, customs document, occupation sheet) built from official code lists ----------
+  const DOCS = { taxPlate: { list: 'nace', max: 5 }, customs: { list: 'hs', max: 10 }, jobs: { list: 'jobs', max: 10 } };
+  const docsOf = c => (c.docs ||= { nace: [], hs: [], jobs: [], issued: {} });
+  const taxNoOf = c => String(parseInt(crypto.createHash('sha1').update(String(c.id)).digest('hex').slice(0, 10), 16) % 9000000000 + 1000000000);
+  const docsView = c => { const d = docsOf(c); return { ok: true, docs: { nace: d.nace, hs: d.hs, jobs: d.jobs, issued: d.issued }, taxNo: taxNoOf(c), day: street.day || 0, foundedDay: c.fin?.foundedDay ?? 0, max: { nace: DOCS.taxPlate.max, hs: DOCS.customs.max, jobs: DOCS.jobs.max } }; };
+  const maxOf = list => Object.values(DOCS).find(x => x.list === list)?.max;
+  socket.on('docsGet', ({ cid } = {}, cb) => { const c = founderOf(cid); if (typeof cb === 'function') cb(c ? docsView(c) : { ok: false }); });
+  socket.on('docsAdd', ({ cid, list, code } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = founderOf(cid), max = maxOf(list);
+    if (!c || !max || limited()) return reply({ ok: false });
+    if (!REF.has(list, code)) return reply({ ok: false, key: 'refs.err.unknown' });
+    const d = docsOf(c); if (d[list].includes(String(code))) return reply({ ...docsView(c), key: 'refs.err.dup', ok: false });
+    if (d[list].length >= max) return reply({ ...docsView(c), ok: false, key: 'refs.err.max', params: { n: max } });
+    d[list].push(String(code)); reply(docsView(c));
+  });
+  socket.on('docsRemove', ({ cid, list, code } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = founderOf(cid);
+    if (!c || !maxOf(list) || limited()) return reply({ ok: false });
+    const d = docsOf(c); d[list] = d[list].filter(x => x !== String(code)); reply(docsView(c));
+  });
+  socket.on('docIssue', ({ cid, kind } = {}, cb) => {
+    const reply = r => typeof cb === 'function' && cb(r), c = founderOf(cid), spec = DOCS[kind];
+    if (!c || !spec || limited()) return reply({ ok: false });
+    const d = docsOf(c), codes = REF.pick(spec.list, d[spec.list], spec.max);
+    if (!codes.length) return reply({ ...docsView(c), ok: false, key: 'refs.err.empty' });
+    d.issued[kind] = { day: street.day || 0, no: 'FNB-' + kind.slice(0, 1).toUpperCase() + '-' + crypto.randomBytes(3).toString('hex').toUpperCase(), codes };
+    if (Object.keys(DOCS).every(k => d.issued[k])) award(street, me, 'paperwork');
+    sync(); reply(docsView(c));
+  });
 
   // Latency probe for the in-game status panel
   socket.on('latency', (cb) => typeof cb === 'function' && cb(Date.now()));
