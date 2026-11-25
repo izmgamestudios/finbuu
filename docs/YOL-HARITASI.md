@@ -333,7 +333,7 @@ Sıra: önce **oynanış döngüsü** (oyuncuyu geri getiren şeyler), sonra **s
 - **Açık Kaynak binası artık 3 sekme:** 🧰 Araçlar (eski liste) · 📚 Resmî kaynaklar · 📄 Belgelerim.
 - **Üç resmî liste, detaylı arama (istemcide, anında):**
   - **NACE Rev.2.1 (altılı)** – T.C. Ticaret Bakanlığı "Sektör Meslek NACE Kodları" (güncel liste, Mart 2026 Excel): 2.141 faaliyet kodu; 11 esnaf sektörü, 184 meslek kolu, 1.534 kodun esnaf meslek kolu eşleşmesi. Filtre: esnaf sektörü, meslek kolu, kapsam (esnaf listesinde / değil), NACE bölümü.
-  - **Türk Meslekler Sözlüğü** – İŞKUR (esube.iskur.gov.tr/meslek): meslek kodu + ad, 10 ana meslek grubu filtresi. Veri sayfadan harf harf kazındı (aralıklı, tek seferlik); `public/data/meslek.json`.
+  - **Türk Meslekler Sözlüğü** – İŞKUR (esube.iskur.gov.tr/meslek): 7.742 meslek (kod + ad), 10 ana meslek grubu filtresi. Veri sayfadan harf harf kazındı (aralıklı, tek seferlik; harf başına toplamlar sitedekiyle birebir doğrulandı); `public/data/meslek.json`.
   - **HS (Harmonized System 2022)** – `datasets/harmonized-system` (ODC-PDDL, kaynak UN Comtrade/WCO): 6.939 kayıt, 21 kesim, fasıl/pozisyon/alt pozisyon düzeyi; tanımlar İngilizce. Not: Türkiye'nin 12 haneli GTİP'i bu listenin üzerine kuruludur, burada yalnız 6 haneli HS vardır.
   - Arama: Türkçe karakter duyarsız (kuafor = kuaför), çok kelimeli, kod öneki (47.79), alaka sırası; "Ayrıntı" ile ilişkili meslek kolları / HS hiyerarşisi. **Kaynakça** listenin altında (başlık, adres, erişim tarihi, lisans, kayıt sayısı).
 - **Sanal belgeler (Belgelerim):** koddan şirkete ekle → belge yayımla. 🧾 **Sanal Vergi Levhası** (NACE, ≤5 kod) · 🛃 **Sanal Gümrük Belgesi** (HS, ≤10) · 👷 **Sanal Meslek Belgesi** (İŞKUR, ≤10). Belge tuvale çizilir (ünvan, sanal vergi no, belge no, gün, kod tablosu, mühür); **PNG / PDF** indirilir. Her belgede "OYUN BELGESİ · RESMÎ DEĞİLDİR" bandı vardır; kurum logosu/arması kullanılmaz. Üçü de yayımlanınca **📄 Evrak Ustası** rozeti.
@@ -344,3 +344,8 @@ Sıra: önce **oynanış döngüsü** (oyuncuyu geri getiren şeyler), sonra **s
 - Üst menüde **🔊** düğmesi (telefonda ☰ menüsünde "Ses ayarları"): **Hoparlör (genel ses) · Fon müziği · Efektler · Mikrofon** için ayrı aç/kapa + seviye çubuğu, **"Hepsini sessize al"** (düğme simgesi 🔇'ya döner). Ayarlar cihazda saklanır (`finbuu.audio`).
 - **Ses dosyası yok:** müzik ve efektler Web Audio ile üretilir (sakin, üretken pentatonik müzik; tık, bildirim, rozet, başarı sesleri). Tarayıcı kuralı gereği ilk dokunuştan önce ses çıkmaz; **müzik varsayılan kapalı** (atölyede herkesi rahatsız etmesin). Sekme arka plandayken durur.
 - **Mikrofon:** "Mikrofonu dene" izin ister ve seviye çubuğunu gösterir; **ses kaydedilmez, gönderilmez**. Sesli sohbet (Sprint 18/19) "pek yakında"; mikrofon/hoparlör seviyeleri o zaman kullanılacak.
+
+## Logo ve marka varlıkları
+- `public/img/`: `finbuu-logo.svg` (açık zemin) · `finbuu-logo-dark.svg` (koyu zemin) · `finbuu-mark.svg` / `finbuu-mark-dark.svg` (simge: lacivert kare içinde altın "F" jetonu) · `favicon.svg`, `favicon-32.png`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` · `og-image.png` (1200×630 paylaşım görseli).
+- Yazı logosu **yazı tipine bağlı değil** (harfler yuvarlak uçlu çizgilerle çizili SVG), her boyutta aynı görünür. "i"nin noktası jeton rengidir. Renkler: lacivert `#1d2b53`, altın `#ffb703`, krem `#f6edd8`.
+- Siteye bağlandı: favicon + Apple ikonu + Open Graph/Twitter etiketleri (index, admin, board); masaüstü header'da simge (telefonda düğmelere yer kalsın diye gizli).

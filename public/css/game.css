@@ -693,3 +693,7 @@ body.inBuilding #tutBox, body.inBuilding #hint { display: none !important }
 .audMeter { height: 10px; border-radius: 6px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; margin: 6px 0 } .audMeter > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--good), var(--warn), var(--bad)); transition: width .06s linear }
 .audAll { min-height: 40px }
 @media (max-width: 480px) { #audioBtn { display: none } .audPanel { top: 52px; right: 8px; max-height: calc(100dvh - 130px) } }
+
+/* ---- brand mark in the header (desktop/tablet only; phones keep the space for the buttons) ---- */
+.brandMark { width: 34px; height: 34px; flex: none; border-radius: 9px }
+@media (max-width: 600px) { .brandMark { display: none } }
